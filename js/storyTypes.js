@@ -98,7 +98,39 @@ export function getFieldLabel(key) {
     return def ? def.label : key;
 }
 
-// 导出时从节点上清理的"空值键"：值为 '' / [] / {} / undefined 的字段会被去掉
+// ---------- 节点模板 ----------
+const TEMPLATE_KEY = 'storyeditor_template';
+
+export const DEFAULT_NODE_TEMPLATE = {
+    id: '',
+    speaker: { zh: '', en: '' },
+    headimage: '',
+    text: { zh: '', en: '' },
+    room: '',
+    bgm: '',
+    transition: '',
+    fx: '',
+    cg: '',
+    voice: '',
+};
+
+export function loadTemplate() {
+    try {
+        const raw = localStorage.getItem(TEMPLATE_KEY);
+        return raw ? JSON.parse(raw) : { ...DEFAULT_NODE_TEMPLATE };
+    } catch { return { ...DEFAULT_NODE_TEMPLATE }; }
+}
+
+export function saveTemplate(tpl) {
+    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(tpl));
+}
+
+export function createNodeFromTemplate(id) {
+    const tpl = loadTemplate();
+    return { ...tpl, id: String(id) };
+}
+
+// 导出时从节点上清理的"空值键"
 const I18N_EMPTY = { zh: '', en: '' };
 export function isEmpty(val) {
     if (val === '' || val === undefined || val === null) return true;

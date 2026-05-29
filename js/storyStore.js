@@ -2,7 +2,7 @@
 // storyStore.js — 数据管理层
 // ==========================================
 
-import { createChapter, createNode, createOption, isEmpty } from './storyTypes.js';
+import { createChapter, createNodeFromTemplate, createOption, isEmpty } from './storyTypes.js';
 
 class StoryStore {
     constructor() {
@@ -47,9 +47,9 @@ class StoryStore {
 
     // ---------- 节点 CRUD ----------
     _normalizeNode(raw) {
-        const defaults = createNode(raw.id || String(this.chapter.content.length));
+        const defaults = createNodeFromTemplate('_');
+        delete defaults.id; // id 由 raw 决定
         const merged = { ...defaults, ...raw };
-        // 确保 speaker / text 是对象格式
         if (typeof merged.speaker === 'string') {
             merged.speaker = { zh: merged.speaker, en: '' };
         }
@@ -70,7 +70,7 @@ class StoryStore {
 
     addNode() {
         const id = String(this.chapter.content.length);
-        const node = createNode(id);
+        const node = createNodeFromTemplate(id);
         this.chapter.content.push(node);
         this.selectedId = id;
         this._emit();

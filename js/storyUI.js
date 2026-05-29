@@ -2,7 +2,7 @@
 // storyUI.js — 界面渲染
 // ==========================================
 
-import { NODE_FIELDS, FILTERABLE_FIELDS, isEmpty, getFieldLabel, saveLabel } from './storyTypes.js';
+import { NODE_FIELDS, FILTERABLE_FIELDS, isEmpty, getFieldLabel, saveLabel, loadTemplate, saveTemplate } from './storyTypes.js';
 import { store } from './storyStore.js';
 import { renderTree } from './storyTree.js';
 
@@ -24,6 +24,18 @@ export function initUI(store, io) {
         if (confirm('将清空当前内容并创建新 JSON，确定？')) {
             store.loadChapter({ meta: { name: 'Untitled' }, content: [] });
         }
+    });
+
+    // ---- 编辑模板 ----
+    $('#btn-edit-template').addEventListener('click', () => {
+        _editingTemplate = !_editingTemplate;
+        if (_editingTemplate) {
+            $('#btn-edit-template').textContent = '📋 返回数据';
+            $('#tab-form').click(); // 切换到表单tab
+        } else {
+            $('#btn-edit-template').textContent = '📋 编辑模板';
+        }
+        store._emit();
     });
 
     // ---- 章节名 ----
@@ -133,6 +145,7 @@ function buildLayout() {
         </div>
         <div class="toolbar-right">
             <button id="btn-add-node" class="btn btn-success">＋ 新建 JSON</button>
+            <button id="btn-edit-template" class="btn btn-sm">📋 编辑模板</button>
         </div>
     </div>
 
@@ -227,8 +240,10 @@ function initSplitters() {
 let _editorVersion = '';
 let _jsonTabVersion = '';
 let _searchTerm = '';
+let _editingTemplate = false;
 
 function editorVersion(store) {
+    if (_editingTemplate) return '__template__';
     const path = store.currentPath;
     return (path && path.length > 0) ? path.join('|') : '__root__';
 }
@@ -397,7 +412,84 @@ function renderTreePanel(store) {
 
 // ========== 编辑区 ==========
 
+/**
+ * 模板编辑器 - 跟普通对象编辑器一样，但存储到 localStorage
+ */
+function renderTemplateEditor(tpl) {
+    const entries = Object.entries(tpl).filter(([k]) => k !== 'id');
+    const rows = entries.map(([key, v]) => renderTemplateField(key, v)).join('');
+
+    $('#panel-form').innerHTML = `
+        <div class="editor-header">
+            <h3>📋 节点模板</h3>
+        </div>
+        <div class="editor-fields">${rows}</div>`;
+
+    // 绑定输入
+    $$('.tmpl-field').forEach(inp => {
+        const key = inp.dataset.field;
+        inp.addEventListener('input', debounce(() => {
+            const current = loadTemplate();
+            current[key] = inp.value;
+            saveTemplate(current);
+        }, 250));
+    });
+    $$('.tmpl-i18n-zh').forEach(inp => {
+        const key = inp.dataset.field;
+        inp.addEventListener('input', debounce(() => {
+            const current = loadTemplate();
+            if (typeof current[key] !== 'object') current[key] = { zh: '', en: '' };
+            current[key].zh = inp.value;
+            saveTemplate(current);
+        }, 250));
+    });
+    $$('.tmpl-i18n-en').forEach(inp => {
+        const key = inp.dataset.field;
+        inp.addEventListener('input', debounce(() => {
+            const current = loadTemplate();
+            if (typeof current[key] !== 'object') current[key] = { zh: '', en: '' };
+            current[key].en = inp.value;
+            saveTemplate(current);
+        }, 250));
+    });
+
+    // JSON Tab 也显示模板
+    const jsonStr = JSON.stringify(tpl, null, 4);
+    const pc = $('#path-editor-center');
+    if (pc) pc.value = jsonStr;
+    const hlPre = $('#path-mirror-center code');
+    if (hlPre && window.hljs) {
+        try { hlPre.innerHTML = window.hljs.highlight(jsonStr, { language: 'json' }).value; }
+        catch (e) { hlPre.textContent = jsonStr; }
+    }
+}
+
+function renderTemplateField(key, v) {
+    const labelText = getFieldLabel(key);
+    if (typeof v === 'object' && !Array.isArray(v) && v.zh !== undefined && v.en !== undefined) {
+        return `<div class="field-row">
+            <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
+            <div class="i18n-group">
+                <input class="input tmpl-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" />
+                <input class="input tmpl-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" />
+            </div>
+        </div>`;
+    }
+    const strVal = v === null || v === undefined ? '' : String(v);
+    return `<div class="field-row">
+        <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
+        <input class="input tmpl-field" data-field="${key}" value="${esc(strVal)}" />
+    </div>`;
+}
+
 function renderEditor(store) {
+    // ---- 模板编辑模式 ----
+    if (_editingTemplate) {
+        const tpl = loadTemplate();
+        renderTemplateEditor(tpl);
+        return;
+    }
+
     const path = store.currentPath;
     if (!path || path.length === 0) {
         $('#panel-form').innerHTML = '<div class="empty-hint">← 点击左侧节点开始编辑</div>';
@@ -428,6 +520,11 @@ function renderEditor(store) {
         const rows = entries.map(([key, v]) => renderFormField(key, v, path, store)).join('');
         formHtml += `<div class="editor-fields">${rows}</div>`;
 
+        // 对象类型加 "+" 按钮
+        if (!Array.isArray(val)) {
+            formHtml += `<button id="btn-add-field" class="btn btn-sm btn-success" style="margin-top:4px">＋ 添加属性</button>`;
+        }
+
         // 如果是 content 节点且有 options，显示选项编辑器
         if (path.length === 2 && path[0] === 'content' && val.options) {
             formHtml += `<div class="editor-options">${renderOptions(val, store)}</div>`;
@@ -446,6 +543,34 @@ function renderEditor(store) {
 
     // 标签编辑
     bindLabelEdit();
+
+    // "+ 添加属性" 按钮
+    const addFieldBtn = $('#btn-add-field');
+    if (addFieldBtn) {
+        addFieldBtn.addEventListener('click', () => {
+            const obj = store.getByPath(path);
+            if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+            // 找唯一键名
+            let newKey = 'new_key';
+            let i = 1;
+            while (newKey in obj) { newKey = 'new_key_' + i; i++; }
+            obj[newKey] = '';
+            store.setByPath(path, obj);
+        });
+    }
+
+    // 删除属性按钮
+    $$('.btn-del-field').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const key = btn.dataset.delKey;
+            const obj = store.getByPath(path);
+            if (obj && typeof obj === 'object' && key in obj) {
+                delete obj[key];
+                store.setByPath(path, obj);
+            }
+        });
+    });
 }
 
 /**
@@ -478,6 +603,7 @@ function renderFormField(key, v, parentPath, store) {
         return `<div class="field-row" data-field="${key}">
             <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
             <input class="input form-field" data-field="${key}" value="" placeholder="null" />
+            <button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button>
         </div>`;
     }
 
@@ -489,6 +615,7 @@ function renderFormField(key, v, parentPath, store) {
                 <input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" />
                 <input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" />
             </div>
+            <button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button>
         </div>`;
     }
 
@@ -499,6 +626,7 @@ function renderFormField(key, v, parentPath, store) {
             <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
             <span class="nested-preview">[ ${v.length} 项 ]</span>
             <button class="btn btn-sm btn-jump" data-jump="${esc(pathKey)}" title="跳转到此节点">→</button>
+            <button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button>
         </div>`;
     }
 
@@ -510,6 +638,7 @@ function renderFormField(key, v, parentPath, store) {
             <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
             <span class="nested-preview">{ ${keys.length} 个属性 }</span>
             <button class="btn btn-sm btn-jump" data-jump="${esc(pathKey)}" title="跳转到此节点">→</button>
+            <button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button>
         </div>`;
     }
 
@@ -517,6 +646,7 @@ function renderFormField(key, v, parentPath, store) {
     return `<div class="field-row" data-field="${key}">
         <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
         <input class="input form-field" data-field="${key}" value="${esc(String(v))}" />
+        <button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button>
     </div>`;
 }
 

@@ -505,6 +505,18 @@ html, body {
     background: rgba(255,255,255,0.1);
     color: var(--text);
 }
+.btn-del-field {
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+.field-row:hover .btn-del-field {
+    opacity: 1;
+}
+.btn-del-field:hover {
+    background: rgba(233,69,96,0.2);
+    color: var(--accent);
+}
 
 .input {
     padding: 6px 10px;
