@@ -35,4 +35,4 @@
 
 ## 许可
 
-MIT
+[Mulan PSL v2](https://license.coscl.org.cn/MulanPSL2)（木兰宽松许可证，第2版）
