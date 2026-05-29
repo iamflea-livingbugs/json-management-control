@@ -248,12 +248,10 @@ function editorVersion(store) {
     const path = store.currentPath;
     if (!path || path.length === 0) return '__root__';
     const val = store.getByPath(path);
-    if (val && typeof val === 'object') {
-        // 值变化不重建DOM，key增删才重建
-        const keySig = Array.isArray(val) ? `[${val.length}]` : Object.keys(val).sort().join(',');
-        return path.join('|') + '|' + keySig;
-    }
-    return path.join('|') + '|' + JSON.stringify(val).length;
+    const keyCount = (val && typeof val === 'object' && !Array.isArray(val))
+        ? Object.keys(val).length
+        : (Array.isArray(val) ? val.length : 0);
+    return path.join('|') + '|' + keyCount;
 }
 
 function jsonTabVersion(store) {
