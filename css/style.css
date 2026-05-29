@@ -514,6 +514,7 @@ html, body {
     opacity: 1;
 }
 .btn-del-field:hover {
+    opacity: 1;
     background: rgba(233,69,96,0.2);
     color: var(--accent);
 }
@@ -526,6 +527,7 @@ html, body {
     opacity: 1;
 }
 .btn-del-tmpl:hover {
+    opacity: 1;
     background: rgba(233,69,96,0.2);
     color: var(--accent);
 }

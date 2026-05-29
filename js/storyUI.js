@@ -244,14 +244,9 @@ let _editingTemplate = false;
 let _templateCtx = 'content';
 
 function editorVersion(store) {
-    if (_editingTemplate) return '__template__|' + Object.keys(loadTemplates()[_templateCtx] || {}).length;
+    if (_editingTemplate) return '__template__';
     const path = store.currentPath;
-    if (!path || path.length === 0) return '__root__';
-    const val = store.getByPath(path);
-    const keySig = (val && typeof val === 'object' && !Array.isArray(val))
-        ? Object.keys(val).length + '|' + Object.keys(val).join(',')
-        : '';
-    return path.join('|') + '|' + keySig;
+    return (path && path.length > 0) ? path.join('|') : '__root__';
 }
 
 function jsonTabVersion(store) {
@@ -611,11 +606,10 @@ function renderEditor(store) {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const key = btn.dataset.delKey;
-            const curPath = store.currentPath;
-            const obj = store.getByPath(curPath);
+            const obj = store.getByPath(path);
             if (obj && typeof obj === 'object' && key in obj) {
                 delete obj[key];
-                store.setByPath(curPath, obj);
+                store.setByPath(path, obj);
             }
         });
     });
