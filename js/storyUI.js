@@ -281,16 +281,17 @@ function renderFilterBar(store) {
 /**
  * 路径感知的键搜索：
  * - "image"     → 全局搜索所有 key 含 "image" 的节点
- * - "content.0.headimage" → 精确匹配路径
  * - "content.headimage"   → 在 content 下找 key=headimage
  * - "content.0."  → 列出 content[0] 的所有子节点
+ * 匹配行的所有祖先自动展开 + 显示，保证上下文可见。
  */
 function applyTreeSearch(term) {
-    const rows = $$('.tree-row');
     const rawTerm = term.trim();
 
+    // 清除搜索
     if (!rawTerm) {
-        rows.forEach(row => { row.style.display = ''; row.classList.remove('search-dim'); });
+        $$('.tree-row').forEach(r => { r.style.display = ''; r.classList.remove('search-dim'); });
+        $$('.tree-children').forEach(c => { if (c._wasExpanded !== undefined) { c.style.display = c._wasExpanded; delete c._wasExpanded; } });
         return;
     }
 
@@ -304,24 +305,56 @@ function applyTreeSearch(term) {
         keyPattern = rawTerm.slice(dotIdx + 1).toLowerCase();
     }
 
+    // Pass 1: 找出直接匹配的行，存 pathStr
+    const matchSet = new Set();
+    const rows = $$('.tree-row');
     rows.forEach(row => {
         const pathArr = JSON.parse(row.dataset.path || '[]');
         const pathStr = pathArr.join('.').toLowerCase();
         const lastKey = (pathArr[pathArr.length - 1] || '').toLowerCase();
 
-        let match = false;
+        let hit = false;
         if (!keyPattern) {
-            // 只有前缀 "content.0." → 匹配 scopePath 下的所有子孙
-            match = pathStr.startsWith(scopePath + '.') || pathStr === scopePath;
+            hit = pathStr.startsWith(scopePath + '.') || pathStr === scopePath;
         } else if (dotIdx >= 0) {
-            // 有 scope：必须在 scopePath 下，且最后一个 key 匹配
-            match = (pathStr.startsWith(scopePath + '.') || (scopePath === '' && pathStr.length > 0)) && lastKey.includes(keyPattern);
+            hit = (pathStr.startsWith(scopePath + '.') || pathStr === scopePath) && lastKey.includes(keyPattern);
         } else {
-            // 无 scope：任何 key 匹配
-            match = pathArr.some(seg => seg.toLowerCase().includes(keyPattern));
+            hit = pathArr.some(seg => seg.toLowerCase().includes(keyPattern));
         }
+        if (hit) matchSet.add(pathStr);
+    });
 
-        if (match) {
+    // Pass 2: 收集所有祖先路径 + 展开祖先容器
+    const ancestorSet = new Set();
+    for (const matchedPath of matchSet) {
+        const segs = matchedPath.split('.');
+        for (let i = 0; i < segs.length; i++) {
+            ancestorSet.add(segs.slice(0, i + 1).join('.'));
+        }
+    }
+
+    // 展开所有祖先的 tree-children 容器
+    rows.forEach(row => {
+        const pathArr = JSON.parse(row.dataset.path || '[]');
+        const pathStr = pathArr.join('.').toLowerCase();
+        if (ancestorSet.has(pathStr)) {
+            // 找到这个 row 对应的 tree-children（它的下一个兄弟 div）
+            let childDiv = row.nextElementSibling;
+            if (childDiv && childDiv.classList.contains('tree-children')) {
+                if (childDiv._wasExpanded === undefined) {
+                    childDiv._wasExpanded = childDiv.style.display;
+                }
+                childDiv.style.display = '';
+                row.querySelector('.tree-icon').textContent = '▼';
+            }
+        }
+    });
+
+    // Pass 3: 应用显示/隐藏
+    rows.forEach(row => {
+        const pathArr = JSON.parse(row.dataset.path || '[]');
+        const pathStr = pathArr.join('.').toLowerCase();
+        if (ancestorSet.has(pathStr)) {
             row.style.display = '';
             row.classList.remove('search-dim');
         } else {
