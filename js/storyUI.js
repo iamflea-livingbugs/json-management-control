@@ -25,25 +25,24 @@ export function initUI(store, io) {
             store.loadChapter({ meta: { name: 'Untitled' }, content: [] });
         }
     });
-    $('#btn-clear-filter').addEventListener('click', () => {
-        store.clearFilters();
-        $('#filter-search').value = '';
-    });
 
     // ---- 章节名 ----
     $('#chapter-name').addEventListener('input', (e) => {
         store.setChapterName(e.target.value);
     });
 
-    // ---- 筛选栏 ----
-    renderFilterBar(store);
-    for (const f of FILTERABLE_FIELDS) {
-        $(`#filter-${f}`).addEventListener('change', (e) => store.setFilter(f, e.target.value));
-    }
-    $('#filter-search').addEventListener('input', debounce((e) => {
-        const val = e.target.value;
-        store.setFilter('_search', val || '');
-    }, 300));
+    // ---- Tab 切换 ----
+    $$('.tab-label').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            // active class
+            $$('.tab-label').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            // show/hide panels
+            $('#panel-form').classList.toggle('hidden', target !== 'form');
+            $('#panel-json').classList.toggle('hidden', target !== 'json');
+        });
+    });
 
     // ---- 初次渲染 ----
     store.onChange(() => renderAll(store));
@@ -104,13 +103,6 @@ function buildLayout() {
         </div>
     </div>
 
-    <div class="filter-bar">
-        <label>筛选：</label>
-        ${FILTERABLE_FIELDS.map(f => `<select id="filter-${f}"><option value="">${getFieldLabel(f)}(全部)</option></select>`).join('')}
-        <input id="filter-search" class="input-sm" placeholder="🔍 通用搜索..." style="width:160px" />
-        <button id="btn-clear-filter" class="btn btn-sm">清除筛选</button>
-    </div>
-
     <div class="main-area">
         <div class="panel panel-left" id="panel-left">
             <div class="panel-header">层级导航</div>
@@ -118,8 +110,19 @@ function buildLayout() {
         </div>
         <div class="splitter" data-target="left"></div>
         <div class="panel panel-center" id="panel-center">
-            <div class="panel-header">节点编辑</div>
-            <div id="editor-area" class="editor-area"></div>
+            <div class="panel-header">
+                <span class="tab-label active" data-tab="form" id="tab-form">表单</span>
+                <span class="tab-label" data-tab="json" id="tab-json">JSON</span>
+            </div>
+            <div id="editor-area" class="editor-area">
+                <div class="editor-tab-panel" id="panel-form"></div>
+                <div class="editor-tab-panel hidden" id="panel-json">
+                    <div class="path-mirror" id="path-mirror-center">
+                        <pre class="json-highlight"><code class="language-json"></code></pre>
+                        <textarea class="json-editor" id="path-editor-center" spellcheck="false"></textarea>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="splitter" data-target="right"></div>
         <div class="panel panel-right" id="panel-right">
@@ -188,14 +191,11 @@ function initSplitters() {
 let _editorVersion = '';
 
 function editorVersion(store) {
-    const pathStr = store.currentPath.join('|') || '__root__';
-    if (!store.selectedId) return pathStr;
-    const node = store.getNode(store.selectedId);
-    if (!node) return pathStr + '|__missing__';
-    const opts = node.options || [];
-    const keyCount = Object.keys(node).length;
-    return pathStr + '|' + opts.length + '|' +
-        opts.map(o => (o.actions || []).length).join(',') + '|' + keyCount;
+    const path = store.currentPath;
+    if (!path || path.length === 0) return '__root__';
+    const val = store.getByPath(path);
+    const hash = JSON.stringify(val).length;
+    return path.join('|') + '|' + hash;
 }
 
 function renderAll(store) {
@@ -209,7 +209,6 @@ function renderAll(store) {
 
     renderJSONPreview(store);
     navigateJSONToPath(store);
-    renderFilterBar(store);
     $('#chapter-name').value = store.getChapterName();
 }
 
@@ -233,27 +232,6 @@ function renderTreePanel(store) {
     if (!container) return;
 
     const data = store.chapter;
-    const hasFilters = Object.keys(store.filters).length > 0;
-    const filteredNodes = store.getFilteredNodes();
-    const filteredIds = new Set(filteredNodes.map(n => n.id));
-
-    // 如果有筛选条件且搜索结果为空
-    if (hasFilters) {
-        const contentNodeCount = (store.chapter.content || []).length;
-        const filteredCount = filteredNodes.length;
-        // 更新筛选提示
-        let hint = container.querySelector('.filter-hint');
-        if (!hint) {
-            hint = document.createElement('div');
-            hint.className = 'filter-hint';
-            hint.style.cssText = 'padding:4px 12px;font-size:11px;color:var(--warn);border-bottom:1px solid var(--border)';
-            container.appendChild(hint);
-        }
-        hint.textContent = `筛选结果: ${filteredCount} / ${contentNodeCount}`;
-    } else {
-        const hint = container.querySelector('.filter-hint');
-        if (hint) hint.remove();
-    }
 
     renderTree(
         container,
@@ -265,8 +243,7 @@ function renderTreePanel(store) {
             if (confirm('确定删除该节点吗？')) {
                 store.deleteAt(path);
             }
-        },
-        hasFilters ? filteredIds : new Set()
+        }
     );
 
     // 添加底部按钮
@@ -284,167 +261,204 @@ function renderTreePanel(store) {
 // ========== 编辑区 ==========
 
 function renderEditor(store) {
-    const area = $('#editor-area');
     const path = store.currentPath;
-
-    if (!store.selectedId) {
-        // 非 content 节点的路径，显示该路径的 JSON 摘要
-        if (path && path.length > 0) {
-            const val = store.getByPath(path);
-            const pathLabel = path.join(' → ');
-            const jsonStr = JSON.stringify(val, null, 4);
-            const hlHtml = window.hljs
-                ? window.hljs.highlight(jsonStr, { language: 'json' }).value
-                : esc(jsonStr);
-            area.innerHTML = `
-            <div class="editor-header">
-                <h3>${esc(pathLabel)}</h3>
-            </div>
-            <div class="editor-fields" style="flex:1;display:flex;flex-direction:column">
-                <div class="path-mirror">
-                    <pre class="json-highlight"><code class="language-json">${hlHtml}</code></pre>
-                    <textarea class="json-editor" id="path-value-editor" spellcheck="false">${esc(jsonStr)}</textarea>
-                </div>
-            </div>`;
-            const ta = $('#path-value-editor');
-            const hlPre = area.querySelector('.path-mirror .json-highlight code');
-            if (ta) {
-                ta.addEventListener('input', () => {
-                    const text = ta.value;
-                    if (window.hljs && hlPre) {
-                        try { hlPre.innerHTML = window.hljs.highlight(text, { language: 'json' }).value; }
-                        catch (e) { hlPre.textContent = text; }
-                    } else if (hlPre) { hlPre.textContent = text; }
-                    try {
-                        const parsed = JSON.parse(text);
-                        store.setByPath(path, parsed);
-                    } catch (e) { /* invalid JSON */ }
-                });
-                ta.addEventListener('scroll', () => {
-                    if (ta.previousElementSibling) {
-                        ta.previousElementSibling.scrollTop = ta.scrollTop;
-                        ta.previousElementSibling.scrollLeft = ta.scrollLeft;
-                    }
-                });
-            }
-            return;
-        }
-        area.innerHTML = '<div class="empty-hint">← 点击左侧节点开始编辑</div>';
+    if (!path || path.length === 0) {
+        $('#panel-form').innerHTML = '<div class="empty-hint">← 点击左侧节点开始编辑</div>';
         return;
     }
 
-    const node = store.getNode(store.selectedId);
-    if (!node) {
-        area.innerHTML = '<div class="empty-hint">节点不存在</div>';
-        return;
-    }
+    const val = store.getByPath(path);
+    const pathLabel = path.join(' → ');
 
-    const knownKeys = NODE_FIELDS.map(f => f.key);
-    const allKeys = Object.keys(node);
-    const orderedKeys = [...new Set([...knownKeys.filter(k => allKeys.includes(k)), ...allKeys.filter(k => !knownKeys.includes(k))])];
-    const displayKeys = orderedKeys.filter(k => k !== 'id');
+    // ---- 表单 Tab ----
+    let formHtml = `<div class="editor-header"><h3>${esc(pathLabel)}</h3></div>`;
 
-    const fieldRows = displayKeys.map(key => {
-        const known = NODE_FIELDS.find(f => f.key === key);
-        return renderFieldDynamic(key, node[key], known, node, store);
-    }).join('');
+    if (val === null || val === undefined) {
+        formHtml += '<div class="empty-hint">null</div>';
+    } else if (typeof val !== 'object') {
+        // 纯值：显示一个文本输入框
+        formHtml += `
+        <div class="field-row">
+            <label>值</label>
+            <input class="input form-simple-value" data-pathkey="${esc(path.join('|'))}" value="${esc(String(val))}" />
+        </div>`;
+    } else {
+        // 对象或数组：遍历 key
+        const entries = Array.isArray(val)
+            ? val.map((item, i) => [String(i), item])
+            : Object.entries(val);
 
-    area.innerHTML = `
-    <div class="editor-header">
-        <h3>节点 [${esc(node.id)}]</h3>
-    </div>
-    <div class="editor-fields">
-        ${fieldRows}
-    </div>
-    <div class="editor-options">
-        ${renderOptions(node, store)}
-    </div>
-    `;
+        const rows = entries.map(([key, v]) => renderFormField(key, v, path, store)).join('');
+        formHtml += `<div class="editor-fields">${rows}</div>`;
 
-    for (const key of displayKeys) {
-        const known = NODE_FIELDS.find(f => f.key === key);
-        if (known && known.type === 'i18n') {
-            bindI18nInputs(key, node, store);
-        } else {
-            bindStringInput(key, node, store);
+        // 如果是 content 节点且有 options，显示选项编辑器
+        if (path.length === 2 && path[0] === 'content' && val.options) {
+            formHtml += `<div class="editor-options">${renderOptions(val, store)}</div>`;
         }
     }
 
-    bindOptionButtons(node, store);
+    $('#panel-form').innerHTML = formHtml;
+
+    // 绑定表单输入事件
+    bindFormInputs(path, val, store);
+
+    // 如果是 content 节点，绑定选项按钮
+    if (path.length === 2 && path[0] === 'content' && val && val.options) {
+        bindOptionButtons(val, store);
+    }
+
+    // 标签编辑
     bindLabelEdit();
+
+    // ---- JSON Tab ----
+    const jsonStr = JSON.stringify(val, null, 4);
+    const hlHtml = window.hljs
+        ? window.hljs.highlight(jsonStr, { language: 'json' }).value
+        : esc(jsonStr);
+    const pc = $('#path-editor-center');
+    if (pc) pc.value = jsonStr;
+    const hlPre = $('#path-mirror-center code');
+    if (hlPre) hlPre.innerHTML = hlHtml;
+
+    // 绑定 JSON Tab 的事件（每次 renderEditor 都重新绑，覆盖旧的）
+    bindCenterJSONEvents(path, store);
 }
 
 /**
- * 动态渲染任意字段。已知字段用 NODE_FIELDS 类型，未知字段从值推断。
+ * 渲染表单中的单个字段
  */
-function renderFieldDynamic(key, val, known, node, store) {
+function renderFormField(key, v, parentPath, store) {
     const labelText = getFieldLabel(key);
-    const type = known ? known.type : inferType(val);
+    const childPath = [...parentPath, key];
 
-    if (type === 'i18n') {
-        const zhVal = val?.zh || '';
-        const enVal = val?.en || '';
-        return `
-        <div class="field-row" data-field="${key}">
+    // null/undefined
+    if (v === null || v === undefined) {
+        return `<div class="field-row" data-field="${key}">
+            <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
+            <input class="input form-field" data-field="${key}" value="" placeholder="null" />
+        </div>`;
+    }
+
+    // i18n 双语对象 {zh, en}
+    if (typeof v === 'object' && !Array.isArray(v) && v.zh !== undefined && v.en !== undefined) {
+        return `<div class="field-row" data-field="${key}">
             <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
             <div class="i18n-group">
-                <input class="input i18n-zh" data-field="${key}" value="${esc(zhVal)}" placeholder="zh" />
-                <input class="input i18n-en" data-field="${key}" value="${esc(enVal)}" placeholder="en" />
+                <input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" />
+                <input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" />
             </div>
         </div>`;
     }
-    if (type === 'object' || type === 'array') {
-        const jsonStr = val ? JSON.stringify(val) : '';
-        return `
-        <div class="field-row" data-field="${key}">
+
+    // 数组
+    if (Array.isArray(v)) {
+        const pathKey = childPath.join('|');
+        return `<div class="field-row" data-field="${key}">
             <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
-            <textarea class="input json-field-value" data-field="${key}" rows="3" style="min-height:40px;font-family:monospace;font-size:11px">${esc(jsonStr)}</textarea>
+            <span class="nested-preview">[ ${v.length} 项 ]</span>
+            <button class="btn btn-sm btn-jump" data-jump="${esc(pathKey)}" title="跳转到此节点">→</button>
         </div>`;
     }
-    const strVal = val === null || val === undefined ? '' : String(val);
-    return `
-    <div class="field-row" data-field="${key}">
+
+    // 嵌套对象
+    if (typeof v === 'object') {
+        const keys = Object.keys(v);
+        const pathKey = childPath.join('|');
+        return `<div class="field-row" data-field="${key}">
+            <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
+            <span class="nested-preview">{ ${keys.length} 个属性 }</span>
+            <button class="btn btn-sm btn-jump" data-jump="${esc(pathKey)}" title="跳转到此节点">→</button>
+        </div>`;
+    }
+
+    // 简单值（string / number / boolean）
+    return `<div class="field-row" data-field="${key}">
         <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
-        <input class="input string-input" data-field="${key}" value="${esc(strVal)}" />
+        <input class="input form-field" data-field="${key}" value="${esc(String(v))}" />
     </div>`;
 }
 
-function inferType(val) {
-    if (val === null || val === undefined) return 'string';
-    if (typeof val === 'object' && val.zh !== undefined && val.en !== undefined) return 'i18n';
-    if (Array.isArray(val)) return 'array';
-    if (typeof val === 'object') return 'object';
-    return 'string';
+/**
+ * 绑定表单输入事件，写回 store
+ */
+function bindFormInputs(path, parentVal, store) {
+    // 简单值 input
+    $$('.form-simple-value').forEach(inp => {
+        inp.addEventListener('input', debounce(() => {
+            store.setByPath(path, inp.value);
+        }, 250));
+    });
+
+    // 字段 input
+    $$('.form-field').forEach(inp => {
+        const key = inp.dataset.field;
+        inp.addEventListener('input', debounce(() => {
+            const childPath = [...path, key];
+            store.setByPath(childPath, inp.value);
+        }, 250));
+    });
+
+    // i18n zh
+    $$('.form-i18n-zh').forEach(inp => {
+        const key = inp.dataset.field;
+        inp.addEventListener('input', debounce(() => {
+            const childPath = [...path, key];
+            const val = store.getByPath(childPath) || {};
+            val.zh = inp.value;
+            store.setByPath(childPath, val);
+        }, 250));
+    });
+
+    // i18n en
+    $$('.form-i18n-en').forEach(inp => {
+        const key = inp.dataset.field;
+        inp.addEventListener('input', debounce(() => {
+            const childPath = [...path, key];
+            const val = store.getByPath(childPath) || {};
+            val.en = inp.value;
+            store.setByPath(childPath, val);
+        }, 250));
+    });
+
+    // 跳转按钮
+    $$('.btn-jump').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const jumpPath = btn.dataset.jump.split('|');
+            store.selectPath(jumpPath);
+        });
+    });
 }
 
-function bindI18nInputs(field, node, store) {
-    const zhInput = $(`.i18n-zh[data-field="${field}"]`);
-    const enInput = $(`.i18n-en[data-field="${field}"]`);
-    if (!zhInput || !enInput) return;
+/**
+ * 中间 JSON Tab 的编辑事件
+ */
+function bindCenterJSONEvents(path, store) {
+    const ta = $('#path-editor-center');
+    const hlPre = $('#path-mirror-center code');
+    if (!ta) return;
 
-    const handler = debounce(() => {
-        store.updateNodeField(node.id, field, zhInput.value, enInput.value);
-    }, 250);
-    zhInput.addEventListener('input', handler);
-    enInput.addEventListener('input', handler);
-}
+    // 用闭包捕获当前 path
+    const _path = [...path];
 
-function bindStringInput(field, node, store) {
-    const input = $(`.string-input[data-field="${field}"]`) || $(`.json-field-value[data-field="${field}"]`);
-    if (!input) return;
-    const handler = debounce(() => {
-        if (input.classList.contains('json-field-value')) {
-            try {
-                const parsed = JSON.parse(input.value);
-                store.updateNodeField(node.id, field, parsed, '');
-            } catch (e) {
-                store.updateNodeField(node.id, field, input.value, '');
-            }
-        } else {
-            store.updateNodeField(node.id, field, input.value, '');
+    ta.addEventListener('input', () => {
+        const text = ta.value;
+        if (window.hljs && hlPre) {
+            try { hlPre.innerHTML = window.hljs.highlight(text, { language: 'json' }).value; }
+            catch (e) { hlPre.textContent = text; }
         }
-    }, 250);
-    input.addEventListener('input', handler);
+        try {
+            const parsed = JSON.parse(text);
+            store.setByPath(_path, parsed);
+        } catch (e) { /* invalid JSON */ }
+    });
+
+    ta.addEventListener('scroll', () => {
+        const preEl = $('#path-mirror-center pre');
+        if (preEl) {
+            preEl.scrollTop = ta.scrollTop;
+            preEl.scrollLeft = ta.scrollLeft;
+        }
+    });
 }
 
 // ========== 选项区 ==========

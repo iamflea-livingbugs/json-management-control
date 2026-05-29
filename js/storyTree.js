@@ -19,31 +19,28 @@ function pathKey(path) {
     return path.join('/');
 }
 
-export function renderTree(container, data, selectedPath, onSelect, onAdd, onDelete, filteredOutIds = new Set()) {
+export function renderTree(container, data, selectedPath, onSelect, onAdd, onDelete) {
     container.innerHTML = '';
-    renderNode(container, data, [], '', selectedPath, onSelect, onAdd, onDelete, 0, filteredOutIds);
+    renderNode(container, data, [], '', selectedPath, onSelect, onAdd, onDelete, 0);
 }
 
-function renderNode(parent, value, path, key, selectedPath, onSelect, onAdd, onDelete, depth, filteredOutIds) {
+function renderNode(parent, value, path, key, selectedPath, onSelect, onAdd, onDelete, depth) {
     if (value === null || value === undefined) {
-        renderPrimitive(parent, value, path, key, selectedPath, onSelect, onDelete, depth, filteredOutIds);
+        renderPrimitive(parent, value, path, key, selectedPath, onSelect, onDelete, depth);
         return;
     }
-
     if (Array.isArray(value)) {
-        renderArray(parent, value, path, key, selectedPath, onSelect, onAdd, onDelete, depth, filteredOutIds);
+        renderArray(parent, value, path, key, selectedPath, onSelect, onAdd, onDelete, depth);
         return;
     }
-
     if (typeof value === 'object') {
-        renderObject(parent, value, path, key, selectedPath, onSelect, onAdd, onDelete, depth, filteredOutIds);
+        renderObject(parent, value, path, key, selectedPath, onSelect, onAdd, onDelete, depth);
         return;
     }
-
     renderPrimitive(parent, value, path, key, selectedPath, onSelect, onDelete, depth);
 }
 
-function renderObject(container, obj, path, key, selectedPath, onSelect, onAdd, onDelete, depth, filteredOutIds) {
+function renderObject(container, obj, path, key, selectedPath, onSelect, onAdd, onDelete, depth) {
     const keys = Object.keys(obj);
     const isSelected = pathsEqual(path, selectedPath);
     const pk = pathKey(path);
@@ -57,7 +54,6 @@ function renderObject(container, obj, path, key, selectedPath, onSelect, onAdd, 
         path,
         isSelected,
         type: 'object',
-        isFilteredOut: false,
         onSelect,
         onAdd,
         onDelete
@@ -71,7 +67,7 @@ function renderObject(container, obj, path, key, selectedPath, onSelect, onAdd, 
 
     keys.forEach(k => {
         const childPath = [...path, k];
-        renderNode(childContainer, obj[k], childPath, k, selectedPath, onSelect, onAdd, onDelete, depth + 1, filteredOutIds);
+        renderNode(childContainer, obj[k], childPath, k, selectedPath, onSelect, onAdd, onDelete, depth + 1);
     });
 
     row.addEventListener('click', (e) => {
@@ -88,11 +84,10 @@ function renderObject(container, obj, path, key, selectedPath, onSelect, onAdd, 
     });
 }
 
-function renderArray(container, arr, path, key, selectedPath, onSelect, onAdd, onDelete, depth, filteredOutIds) {
+function renderArray(container, arr, path, key, selectedPath, onSelect, onAdd, onDelete, depth) {
     const isSelected = pathsEqual(path, selectedPath);
     const pk = pathKey(path);
     const isExpanded = _expandedPaths.has(pk) || depth === 0;
-    const isContent = path.length === 1 && path[0] === 'content';
 
     const row = makeRow(container, {
         icon: isExpanded ? '▼' : '▶',
@@ -102,7 +97,6 @@ function renderArray(container, arr, path, key, selectedPath, onSelect, onAdd, o
         path,
         isSelected,
         type: 'array',
-        isFilteredOut: false,
         onSelect,
         onAdd,
         onDelete
@@ -116,8 +110,7 @@ function renderArray(container, arr, path, key, selectedPath, onSelect, onAdd, o
 
     arr.forEach((item, i) => {
         const childPath = [...path, String(i)];
-        const isFiltered = isContent && filteredOutIds.has(String(i));
-        renderArrayChild(childContainer, item, childPath, `[${i}]`, selectedPath, onSelect, onAdd, onDelete, depth + 1, filteredOutIds, isFiltered);
+        renderNode(childContainer, item, childPath, `[${i}]`, selectedPath, onSelect, onAdd, onDelete, depth + 1);
     });
 
     row.addEventListener('click', (e) => {
@@ -134,62 +127,7 @@ function renderArray(container, arr, path, key, selectedPath, onSelect, onAdd, o
     });
 }
 
-function renderArrayChild(container, value, path, key, selectedPath, onSelect, onAdd, onDelete, depth, filteredOutIds, isFilteredOut) {
-    const node = value;
-
-    // 如果是 content 数组中的节点对象，用对象渲染器
-    if (node && typeof node === 'object' && !Array.isArray(node)) {
-        const keys = Object.keys(node);
-        const isSelected = pathsEqual(path, selectedPath);
-        const pk = pathKey(path);
-        const isExpanded = _expandedPaths.has(pk) || depth <= 1;
-
-        const speakerVal = node.speaker?.zh || node.speaker?.en || '(旁白)';
-        const textVal = (node.text?.zh || node.text?.en || '').slice(0, 25);
-
-        const row = makeRow(container, {
-            icon: isExpanded ? '▼' : '▶',
-            key: key,
-            summary: `${speakerVal} : ${textVal}`,
-            depth,
-            path,
-            isSelected,
-            type: 'object',
-            isFilteredOut,
-            onSelect,
-            onAdd,
-            onDelete
-        });
-
-        const childContainer = document.createElement('div');
-        childContainer.className = 'tree-children';
-        childContainer.style.paddingLeft = (depth + 2) * 14 + 'px';
-        childContainer.style.display = isExpanded ? '' : 'none';
-        container.appendChild(childContainer);
-
-        keys.forEach(k => {
-            const childPath = [...path, k];
-            renderNode(childContainer, node[k], childPath, k, selectedPath, onSelect, onAdd, onDelete, depth + 1, filteredOutIds);
-        });
-
-        row.addEventListener('click', (e) => {
-            if (e.target.closest('.tree-add-btn') || e.target.closest('.tree-del-btn')) return;
-            const willHide = childContainer.style.display !== 'none';
-            childContainer.style.display = willHide ? 'none' : '';
-            row.querySelector('.tree-icon').textContent = willHide ? '▶' : '▼';
-            if (willHide) {
-                _expandedPaths.delete(pk);
-            } else {
-                _expandedPaths.add(pk);
-            }
-            onSelect(path);
-        });
-    } else {
-        renderNode(container, node, path, key, selectedPath, onSelect, onAdd, onDelete, depth, filteredOutIds);
-    }
-}
-
-function renderPrimitive(container, value, path, key, selectedPath, onSelect, onDelete, depth, filteredOutIds) {
+function renderPrimitive(container, value, path, key, selectedPath, onSelect, onDelete, depth) {
     const displayVal = value === null ? 'null' : value === undefined ? 'undefined' : String(value).slice(0, 50);
     const isSelected = pathsEqual(path, selectedPath);
 
@@ -201,7 +139,6 @@ function renderPrimitive(container, value, path, key, selectedPath, onSelect, on
         path,
         isSelected,
         type: typeof value === 'string' ? 'string' : 'value',
-        isFilteredOut: false,
         onSelect,
         onAdd: null,
         onDelete
@@ -210,9 +147,7 @@ function renderPrimitive(container, value, path, key, selectedPath, onSelect, on
 
 function makeRow(container, opts) {
     const row = document.createElement('div');
-    row.className = 'tree-row' +
-        (opts.isSelected ? ' selected' : '') +
-        (opts.isFilteredOut ? ' filtered-out' : '');
+    row.className = 'tree-row' + (opts.isSelected ? ' selected' : '');
     row.dataset.path = JSON.stringify(opts.path);
     row.style.paddingLeft = (opts.depth + 1) * 14 + 'px';
 
