@@ -189,6 +189,16 @@ html, body {
 }
 
 /* ===== 树形导航 ===== */
+.tree-search-box {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.tree-search-input {
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 12px;
+}
 .tree-container {
     flex: 1;
     overflow-y: auto;
@@ -205,7 +215,7 @@ html, body {
     user-select: none;
     font-size: 13px;
     white-space: nowrap;
-    transition: background 0.1s;
+    transition: opacity 0.15s;
 }
 .tree-row:hover {
     background: rgba(255,255,255,0.06);
@@ -215,8 +225,8 @@ html, body {
     border-left: 2px solid var(--accent);
     padding-left: calc((var(--depth)) * 14px + 6px);
 }
-.tree-row.filtered-out {
-    opacity: 0.3;
+.tree-row.search-dim {
+    opacity: 0.25;
 }
 .tree-icon {
     width: 14px;

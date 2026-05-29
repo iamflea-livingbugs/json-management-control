@@ -83,9 +83,15 @@ export function initUI(store, io) {
     });
 
     // ---- 分隔条拖拽 ----
-    initSplitters();
+   initSplitters();
 
-    // ---- 中间 JSON Tab 编辑事件（一次性绑定，通过 data 传递 path）----
+    // ---- 树形搜索 ----
+    $('#tree-search').addEventListener('input', () => {
+        _searchTerm = $('#tree-search').value.toLowerCase().trim();
+        applyTreeSearch(_searchTerm);
+    });
+
+    // ---- 中间 JSON Tab 编辑事件（一次性绑定）----
     const centerTa = $('#path-editor-center');
     if (centerTa) {
         centerTa.addEventListener('input', () => {
@@ -133,6 +139,9 @@ function buildLayout() {
     <div class="main-area">
         <div class="panel panel-left" id="panel-left">
             <div class="panel-header">层级导航</div>
+            <div class="tree-search-box">
+                <input id="tree-search" class="input-sm tree-search-input" placeholder="🔍 搜索节点..." />
+            </div>
             <div id="tree-container" class="tree-container"></div>
         </div>
         <div class="splitter" data-target="left"></div>
@@ -217,6 +226,7 @@ function initSplitters() {
 
 let _editorVersion = '';
 let _jsonTabVersion = '';
+let _searchTerm = '';
 
 function editorVersion(store) {
     const path = store.currentPath;
@@ -232,6 +242,7 @@ function jsonTabVersion(store) {
 
 function renderAll(store) {
     renderTreePanel(store);
+    applyTreeSearch(_searchTerm);
 
     const ver = editorVersion(store);
     if (ver !== _editorVersion) {
@@ -266,6 +277,28 @@ function renderFilterBar(store) {
 }
 
 // ========== 树形面板 ==========
+
+/**
+ * 搜索筛选树节点，模仿 json处理页面.html 的 searchData 逻辑
+ */
+function applyTreeSearch(term) {
+    const rows = $$('.tree-row');
+    rows.forEach(row => {
+        if (!term) {
+            row.style.display = '';
+            row.classList.remove('search-dim');
+            return;
+        }
+        const text = (row.textContent || '').toLowerCase();
+        if (text.includes(term)) {
+            row.style.display = '';
+            row.classList.remove('search-dim');
+        } else {
+            row.style.display = 'none';
+            row.classList.add('search-dim');
+        }
+    });
+}
 
 function renderTreePanel(store) {
     const container = $('#tree-container');
