@@ -246,7 +246,14 @@ let _templateCtx = 'content';
 function editorVersion(store) {
     if (_editingTemplate) return '__template__';
     const path = store.currentPath;
-    return (path && path.length > 0) ? path.join('|') : '__root__';
+    if (!path || path.length === 0) return '__root__';
+    const val = store.getByPath(path);
+    if (val && typeof val === 'object') {
+        // 值变化不重建DOM，key增删才重建
+        const keySig = Array.isArray(val) ? `[${val.length}]` : Object.keys(val).sort().join(',');
+        return path.join('|') + '|' + keySig;
+    }
+    return path.join('|') + '|' + JSON.stringify(val).length;
 }
 
 function jsonTabVersion(store) {
