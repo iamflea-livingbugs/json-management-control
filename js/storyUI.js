@@ -431,12 +431,37 @@ function renderTemplateEditor() {
             <h3>📋 模板编辑</h3>
             <select id="template-ctx-select" class="input-sm" style="width:auto">${ctxOptions}</select>
         </div>
-        <div class="editor-fields">${rows}</div>`;
+        <div class="editor-fields">${rows}</div>
+        <button id="btn-add-tmpl-field" class="btn btn-sm btn-success" style="margin-top:4px">＋ 添加字段</button>`;
 
     // 上下文切换
     $('#template-ctx-select').addEventListener('change', (e) => {
         _templateCtx = e.target.value;
         store._emit();
+    });
+
+    // 添加字段
+    $('#btn-add-tmpl-field').addEventListener('click', () => {
+        const all = loadTemplates();
+        const ctx = all[_templateCtx] || {};
+        let k = 'new_field';
+        let i = 1;
+        while (k in ctx) { k = 'new_field_' + i; i++; }
+        ctx[k] = '';
+        saveTemplate(_templateCtx, ctx);
+        store._emit();
+    });
+
+    // 删除字段
+    $$('.btn-del-tmpl').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const all = loadTemplates();
+            const ctx = all[_templateCtx] || {};
+            delete ctx[btn.dataset.delKey];
+            saveTemplate(_templateCtx, ctx);
+            store._emit();
+        });
     });
 
     // 绑定输入
@@ -489,12 +514,14 @@ function renderTemplateField(key, v) {
                 <input class="input tmpl-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" />
                 <input class="input tmpl-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" />
             </div>
+            <button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button>
         </div>`;
     }
     const strVal = v === null || v === undefined ? '' : String(v);
     return `<div class="field-row">
         <label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>
         <input class="input tmpl-field" data-field="${key}" value="${esc(strVal)}" />
+        <button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button>
     </div>`;
 }
 
