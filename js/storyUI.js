@@ -28,14 +28,17 @@ export function initUI(store, io) {
 
     // ---- 编辑模板 ----
     $('#btn-edit-template').addEventListener('click', () => {
-        _editingTemplate = !_editingTemplate;
         if (_editingTemplate) {
+            // 关闭模板模式，直接退出
+            _editingTemplate = false;
+            $('#btn-edit-template').textContent = '📋 编辑模板';
+            store._emit();
+        } else {
+            _editingTemplate = true;
             $('#btn-edit-template').textContent = '📋 返回数据';
             $('#tab-form').click();
-        } else {
-            $('#btn-edit-template').textContent = '📋 编辑模板';
+            store._emit();
         }
-        store._emit();
     });
 
     // ---- 章节名 ----
@@ -395,7 +398,16 @@ function renderTreePanel(store) {
         container,
         data,
         store.currentPath,
-        (path) => store.selectPath(path),
+        (path) => {
+            if (_editingTemplate) {
+                if (confirm('当前正在编辑模板，是否保存修改？')) {
+                    // 已自动保存到 localStorage
+                }
+                _editingTemplate = false;
+                $('#btn-edit-template').textContent = '📋 编辑模板';
+            }
+            store.selectPath(path);
+        },
         (path, type) => store.addAt(path, type),
         (path) => {
             if (confirm('确定删除该节点吗？')) {
@@ -568,7 +580,7 @@ function renderEditor(store) {
         formHtml += `<div class="editor-fields">${rows}</div>`;
 
         // 对象类型加 "+" 按钮
-        if (!Array.isArray(val)) {
+        if (typeof val === 'object' && !Array.isArray(val) && val !== null) {
             formHtml += `<button id="btn-add-field" class="btn btn-sm btn-success" style="margin-top:4px">＋ 添加属性</button>`;
         }
 
