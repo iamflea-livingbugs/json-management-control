@@ -85,6 +85,33 @@ export function initUI(store, io) {
     // ---- 分隔条拖拽 ----
     initSplitters();
 
+    // ---- 中间 JSON Tab 编辑事件（一次性绑定，通过 data 传递 path）----
+    const centerTa = $('#path-editor-center');
+    if (centerTa) {
+        centerTa.addEventListener('input', () => {
+            const text = centerTa.value;
+            const hlPre = $('#path-mirror-center code');
+            if (window.hljs && hlPre) {
+                try { hlPre.innerHTML = window.hljs.highlight(text, { language: 'json' }).value; }
+                catch (e) { hlPre.textContent = text; }
+            }
+            try {
+                const parsed = JSON.parse(text);
+                const path = store.currentPath;
+                if (path && path.length > 0) {
+                    store.setByPath([...path], parsed);
+                }
+            } catch (e) { /* invalid JSON */ }
+        });
+        centerTa.addEventListener('scroll', () => {
+            const preEl = $('#path-mirror-center pre');
+            if (preEl) {
+                preEl.scrollTop = centerTa.scrollTop;
+                preEl.scrollLeft = centerTa.scrollLeft;
+            }
+        });
+    }
+
     renderAll(store);
 }
 
@@ -189,13 +216,18 @@ function initSplitters() {
 // ========== 全局渲染 ==========
 
 let _editorVersion = '';
+let _jsonTabVersion = '';
 
 function editorVersion(store) {
     const path = store.currentPath;
-    if (!path || path.length === 0) return '__root__';
+    return (path && path.length > 0) ? path.join('|') : '__root__';
+}
+
+function jsonTabVersion(store) {
+    const path = store.currentPath;
+    if (!path || path.length === 0) return '';
     const val = store.getByPath(path);
-    const hash = JSON.stringify(val).length;
-    return path.join('|') + '|' + hash;
+    return JSON.stringify(val).length;
 }
 
 function renderAll(store) {
@@ -204,7 +236,15 @@ function renderAll(store) {
     const ver = editorVersion(store);
     if (ver !== _editorVersion) {
         _editorVersion = ver;
+        _jsonTabVersion = '';
         renderEditor(store);
+    }
+
+    // JSON Tab 内容更新（不重建表单，只刷新 textarea + 高亮）
+    const jv = jsonTabVersion(store);
+    if (jv !== _jsonTabVersion) {
+        _jsonTabVersion = jv;
+        updateJSONTabContent(store);
     }
 
     renderJSONPreview(store);
@@ -309,19 +349,24 @@ function renderEditor(store) {
 
     // 标签编辑
     bindLabelEdit();
+}
 
-    // ---- JSON Tab ----
+/**
+ * 仅更新 JSON Tab 的内容（不重建 DOM，不丢焦点）
+ */
+function updateJSONTabContent(store) {
+    const path = store.currentPath;
+    if (!path || path.length === 0) return;
+    const val = store.getByPath(path);
     const jsonStr = JSON.stringify(val, null, 4);
-    const hlHtml = window.hljs
-        ? window.hljs.highlight(jsonStr, { language: 'json' }).value
-        : esc(jsonStr);
     const pc = $('#path-editor-center');
     if (pc) pc.value = jsonStr;
     const hlPre = $('#path-mirror-center code');
-    if (hlPre) hlPre.innerHTML = hlHtml;
-
-    // 绑定 JSON Tab 的事件（每次 renderEditor 都重新绑，覆盖旧的）
-    bindCenterJSONEvents(path, store);
+    if (hlPre && window.hljs) {
+        try {
+            hlPre.innerHTML = window.hljs.highlight(jsonStr, { language: 'json' }).value;
+        } catch (e) { hlPre.textContent = jsonStr; }
+    }
 }
 
 /**
@@ -426,38 +471,6 @@ function bindFormInputs(path, parentVal, store) {
             const jumpPath = btn.dataset.jump.split('|');
             store.selectPath(jumpPath);
         });
-    });
-}
-
-/**
- * 中间 JSON Tab 的编辑事件
- */
-function bindCenterJSONEvents(path, store) {
-    const ta = $('#path-editor-center');
-    const hlPre = $('#path-mirror-center code');
-    if (!ta) return;
-
-    // 用闭包捕获当前 path
-    const _path = [...path];
-
-    ta.addEventListener('input', () => {
-        const text = ta.value;
-        if (window.hljs && hlPre) {
-            try { hlPre.innerHTML = window.hljs.highlight(text, { language: 'json' }).value; }
-            catch (e) { hlPre.textContent = text; }
-        }
-        try {
-            const parsed = JSON.parse(text);
-            store.setByPath(_path, parsed);
-        } catch (e) { /* invalid JSON */ }
-    });
-
-    ta.addEventListener('scroll', () => {
-        const preEl = $('#path-mirror-center pre');
-        if (preEl) {
-            preEl.scrollTop = ta.scrollTop;
-            preEl.scrollLeft = ta.scrollLeft;
-        }
     });
 }
 
