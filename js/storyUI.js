@@ -279,18 +279,49 @@ function renderFilterBar(store) {
 // ========== 树形面板 ==========
 
 /**
- * 搜索筛选树节点，模仿 json处理页面.html 的 searchData 逻辑
+ * 路径感知的键搜索：
+ * - "image"     → 全局搜索所有 key 含 "image" 的节点
+ * - "content.0.headimage" → 精确匹配路径
+ * - "content.headimage"   → 在 content 下找 key=headimage
+ * - "content.0."  → 列出 content[0] 的所有子节点
  */
 function applyTreeSearch(term) {
     const rows = $$('.tree-row');
+    const rawTerm = term.trim();
+
+    if (!rawTerm) {
+        rows.forEach(row => { row.style.display = ''; row.classList.remove('search-dim'); });
+        return;
+    }
+
+    const lowerTerm = rawTerm.toLowerCase();
+    const dotIdx = rawTerm.lastIndexOf('.');
+    let scopePath = '';
+    let keyPattern = lowerTerm;
+
+    if (dotIdx >= 0) {
+        scopePath = rawTerm.slice(0, dotIdx).toLowerCase();
+        keyPattern = rawTerm.slice(dotIdx + 1).toLowerCase();
+    }
+
     rows.forEach(row => {
-        if (!term) {
-            row.style.display = '';
-            row.classList.remove('search-dim');
-            return;
+        const pathArr = JSON.parse(row.dataset.path || '[]');
+        const pathStr = pathArr.join('.').toLowerCase();
+        const lastKey = (pathArr[pathArr.length - 1] || '').toLowerCase();
+
+        let match = false;
+        if (!keyPattern) {
+            // 只有前缀 "content.0." → 匹配 scopePath 下的所有子孙
+            match = pathStr.startsWith(scopePath + '.') || pathStr === scopePath;
+        } else if (dotIdx >= 0) {
+            // 有 scope：必须在 scopePath 下，且最后一个 key 匹配
+            match = (pathStr.startsWith(scopePath + '.') || (scopePath === '' && pathStr.length > 0)) && lastKey.includes(keyPattern);
+        } else {
+            // 无 scope：任何 key 匹配
+            match = pathArr.some(seg => seg.toLowerCase().includes(keyPattern));
         }
-        const text = (row.textContent || '').toLowerCase();
-        if (text.includes(term)) {
+
+        if (match) {
             row.style.display = '';
             row.classList.remove('search-dim');
         } else {

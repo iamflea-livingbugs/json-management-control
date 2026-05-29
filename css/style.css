@@ -257,7 +257,7 @@ html, body {
 .tree-row:hover .tree-actions {
     opacity: 1;
 }
-.tree-add-btn, .tree-del-btn {
+.tree-add-btn, .tree-del-btn, .tree-search-btn {
     padding: 1px 5px;
     border: none;
     border-radius: 2px;
@@ -269,6 +269,7 @@ html, body {
 }
 .tree-add-btn:hover { background: rgba(78,204,163,0.2); color: var(--success); }
 .tree-del-btn:hover { background: rgba(233,69,96,0.2); color: var(--accent); }
+.tree-search-btn:hover { background: rgba(97,174,238,0.25); color: #61aeee; }
 .tree-children {
     /* children are rendered directly */
 }

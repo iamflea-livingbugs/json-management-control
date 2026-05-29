@@ -156,6 +156,8 @@ function makeRow(container, opts) {
         <span class="tree-key">${esc(opts.key)}</span>
         <span class="tree-summary">${esc(opts.summary)}</span>
         <span class="tree-actions">
+            ${opts.path && opts.path.length > 0
+                ? `<button class="tree-search-btn" title="搜索此路径">🔍</button>` : ''}
             ${opts.onAdd && (opts.type === 'object' || opts.type === 'array')
                 ? `<button class="tree-add-btn" title="添加子项">＋</button>` : ''}
             ${opts.onDelete && opts.path.length > 0
@@ -164,6 +166,18 @@ function makeRow(container, opts) {
 
     row.addEventListener('click', (e) => {
         const target = e.target;
+        if (target.closest('.tree-search-btn')) {
+            e.stopPropagation();
+            const searchInput = document.getElementById('tree-search');
+            if (searchInput) {
+                const pathStr = opts.path.join('.');
+                searchInput.value = pathStr + '.';
+                searchInput.focus();
+                // 触发 input 事件让搜索生效
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            return;
+        }
         if (target.closest('.tree-add-btn')) {
             opts.onAdd(opts.path, opts.type);
             return;
