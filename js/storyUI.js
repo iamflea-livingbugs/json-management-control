@@ -2,7 +2,7 @@
 // storyUI.js — 界面渲染
 // ==========================================
 
-import { NODE_FIELDS, FILTERABLE_FIELDS, isEmpty, getFieldLabel, saveLabel, loadTemplate, saveTemplate } from './storyTypes.js';
+import { NODE_FIELDS, FILTERABLE_FIELDS, isEmpty, getFieldLabel, saveLabel, loadTemplates, saveTemplate, DEFAULT_TEMPLATES } from './storyTypes.js';
 import { store } from './storyStore.js';
 import { renderTree } from './storyTree.js';
 
@@ -31,7 +31,7 @@ export function initUI(store, io) {
         _editingTemplate = !_editingTemplate;
         if (_editingTemplate) {
             $('#btn-edit-template').textContent = '📋 返回数据';
-            $('#tab-form').click(); // 切换到表单tab
+            $('#tab-form').click();
         } else {
             $('#btn-edit-template').textContent = '📋 编辑模板';
         }
@@ -241,6 +241,7 @@ let _editorVersion = '';
 let _jsonTabVersion = '';
 let _searchTerm = '';
 let _editingTemplate = false;
+let _templateCtx = 'content';
 
 function editorVersion(store) {
     if (_editingTemplate) return '__template__';
@@ -413,50 +414,65 @@ function renderTreePanel(store) {
 // ========== 编辑区 ==========
 
 /**
- * 模板编辑器 - 跟普通对象编辑器一样，但存储到 localStorage
+ * 模板编辑器 - 多上下文
  */
-function renderTemplateEditor(tpl) {
-    const entries = Object.entries(tpl).filter(([k]) => k !== 'id');
+function renderTemplateEditor() {
+    const allTpls = loadTemplates();
+    const ctxKeys = Object.keys(DEFAULT_TEMPLATES);
+    const ctxOptions = ctxKeys.map(k =>
+        `<option value="${k}" ${k === _templateCtx ? 'selected' : ''}>${k}</option>`
+    ).join('');
+    const tpl = allTpls[_templateCtx] || {};
+    const entries = Object.entries(tpl);
     const rows = entries.map(([key, v]) => renderTemplateField(key, v)).join('');
 
     $('#panel-form').innerHTML = `
         <div class="editor-header">
-            <h3>📋 节点模板</h3>
+            <h3>📋 模板编辑</h3>
+            <select id="template-ctx-select" class="input-sm" style="width:auto">${ctxOptions}</select>
         </div>
         <div class="editor-fields">${rows}</div>`;
+
+    // 上下文切换
+    $('#template-ctx-select').addEventListener('change', (e) => {
+        _templateCtx = e.target.value;
+        store._emit();
+    });
 
     // 绑定输入
     $$('.tmpl-field').forEach(inp => {
         const key = inp.dataset.field;
         inp.addEventListener('input', debounce(() => {
-            const current = loadTemplate();
-            current[key] = inp.value;
-            saveTemplate(current);
+            const current = loadTemplates();
+            const ctx = current[_templateCtx] || {};
+            ctx[key] = inp.value;
+            saveTemplate(_templateCtx, ctx);
         }, 250));
     });
     $$('.tmpl-i18n-zh').forEach(inp => {
         const key = inp.dataset.field;
         inp.addEventListener('input', debounce(() => {
-            const current = loadTemplate();
-            if (typeof current[key] !== 'object') current[key] = { zh: '', en: '' };
-            current[key].zh = inp.value;
-            saveTemplate(current);
+            const all = loadTemplates();
+            const ctx = all[_templateCtx] || {};
+            if (typeof ctx[key] !== 'object') ctx[key] = { zh: '', en: '' };
+            ctx[key].zh = inp.value;
+            saveTemplate(_templateCtx, ctx);
         }, 250));
     });
     $$('.tmpl-i18n-en').forEach(inp => {
         const key = inp.dataset.field;
         inp.addEventListener('input', debounce(() => {
-            const current = loadTemplate();
-            if (typeof current[key] !== 'object') current[key] = { zh: '', en: '' };
-            current[key].en = inp.value;
-            saveTemplate(current);
+            const all = loadTemplates();
+            const ctx = all[_templateCtx] || {};
+            if (typeof ctx[key] !== 'object') ctx[key] = { zh: '', en: '' };
+            ctx[key].en = inp.value;
+            saveTemplate(_templateCtx, ctx);
         }, 250));
     });
 
-    // JSON Tab 也显示模板
+    // JSON Tab
     const jsonStr = JSON.stringify(tpl, null, 4);
-    const pc = $('#path-editor-center');
-    if (pc) pc.value = jsonStr;
+    $('#path-editor-center').value = jsonStr;
     const hlPre = $('#path-mirror-center code');
     if (hlPre && window.hljs) {
         try { hlPre.innerHTML = window.hljs.highlight(jsonStr, { language: 'json' }).value; }
@@ -485,8 +501,7 @@ function renderTemplateField(key, v) {
 function renderEditor(store) {
     // ---- 模板编辑模式 ----
     if (_editingTemplate) {
-        const tpl = loadTemplate();
-        renderTemplateEditor(tpl);
+        renderTemplateEditor();
         return;
     }
 

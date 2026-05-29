@@ -2,7 +2,7 @@
 // storyStore.js — 数据管理层
 // ==========================================
 
-import { createChapter, createNodeFromTemplate, createOption, isEmpty } from './storyTypes.js';
+import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from './storyTypes.js';
 
 class StoryStore {
     constructor() {
@@ -47,8 +47,8 @@ class StoryStore {
 
     // ---------- 节点 CRUD ----------
     _normalizeNode(raw) {
-        const defaults = createNodeFromTemplate('_');
-        delete defaults.id; // id 由 raw 决定
+        const defaults = createNodeFromTemplate('content', '_');
+        delete defaults.id;
         const merged = { ...defaults, ...raw };
         if (typeof merged.speaker === 'string') {
             merged.speaker = { zh: merged.speaker, en: '' };
@@ -70,7 +70,7 @@ class StoryStore {
 
     addNode() {
         const id = String(this.chapter.content.length);
-        const node = createNodeFromTemplate(id);
+        const node = createNodeFromTemplate('content', id);
         this.chapter.content.push(node);
         this.selectedId = id;
         this._emit();
@@ -358,16 +358,16 @@ class StoryStore {
             parent[key] = '';
             this._emit();
         } else if (type === 'array') {
-            // 如果是 content 数组，添加标准节点
             if (path.length === 1 && path[0] === 'content') {
                 this.addNode();
                 return;
             }
-            // 通用数组，添加空对象
-            if (Array.isArray(parent)) {
-                parent.push({});
-                this._emit();
-            }
+            // 根据路径上下文用对应模板
+            const ctx = resolveTemplateContext([...path, '0']);
+            const tpl = createNodeFromTemplate(ctx);
+            delete tpl.id;
+            parent.push(tpl);
+            this._emit();
         }
     }
 

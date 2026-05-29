@@ -99,35 +99,91 @@ export function getFieldLabel(key) {
 }
 
 // ---------- 节点模板 ----------
-const TEMPLATE_KEY = 'storyeditor_template';
+const TEMPLATE_KEY = 'storyeditor_templates';
 
-export const DEFAULT_NODE_TEMPLATE = {
-    id: '',
-    speaker: { zh: '', en: '' },
-    headimage: '',
-    text: { zh: '', en: '' },
-    room: '',
-    bgm: '',
-    transition: '',
-    fx: '',
-    cg: '',
-    voice: '',
+/** 各上下文默认模板 */
+export const DEFAULT_TEMPLATES = {
+    content: {
+        speaker: { zh: '', en: '' },
+        headimage: '',
+        text: { zh: '', en: '' },
+        room: '',
+        bgm: '',
+        transition: '',
+        fx: '',
+        cg: '',
+        voice: '',
+    },
+    option: {
+        text: { zh: '', en: '' },
+        next: '',
+        showif: {},
+        actions: [],
+    },
+    action: {
+        cmd: '',
+        params: [],
+    },
+    default: {},
 };
 
-export function loadTemplate() {
+/**
+ * 根据路径解析模板上下文 key
+ * content      → content
+ * content.*.options  → option
+ * content.*.options.*.actions → action
+ * 其他         → default
+ */
+export function resolveTemplateContext(path) {
+    const str = path.join('.');
+    if (str === 'content') return 'content';
+    if (/^content\.\d+\.options(\.\d+)?$/.test(str)) return 'option';
+    if (/^content\.\d+\.options\.\d+\.actions$/.test(str)) return 'action';
+    if (/actions$/.test(str)) return 'action';
+    if (/options(\.\d+)?$/.test(str)) return 'option';
+    return 'default';
+}
+
+/** 加载全部模板 */
+export function loadTemplates() {
     try {
         const raw = localStorage.getItem(TEMPLATE_KEY);
-        return raw ? JSON.parse(raw) : { ...DEFAULT_NODE_TEMPLATE };
-    } catch { return { ...DEFAULT_NODE_TEMPLATE }; }
+        const saved = raw ? JSON.parse(raw) : {};
+        return { ...DEFAULT_TEMPLATES, ...saved };
+    } catch { return { ...DEFAULT_TEMPLATES }; }
 }
 
-export function saveTemplate(tpl) {
-    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(tpl));
+/** 保存全部模板 */
+export function saveTemplates(tpls) {
+    // 只保存跟默认不同的
+    const toSave = {};
+    for (const [k, v] of Object.entries(tpls)) {
+        const def = JSON.stringify(DEFAULT_TEMPLATES[k] || {});
+        const cur = JSON.stringify(v);
+        if (def !== cur) toSave[k] = v;
+    }
+    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(toSave));
 }
 
-export function createNodeFromTemplate(id) {
-    const tpl = loadTemplate();
-    return { ...tpl, id: String(id) };
+/** 获取某个上下文的模板 */
+export function loadTemplate(ctx) {
+    const all = loadTemplates();
+    return all[ctx] || all.default || {};
+}
+
+/** 保存某个上下文的模板 */
+export function saveTemplate(ctx, tpl) {
+    const all = loadTemplates();
+    all[ctx] = tpl;
+    saveTemplates(all);
+}
+
+/** 用模板创建节点 */
+export function createNodeFromTemplate(ctx, id) {
+    const tpl = loadTemplate(ctx);
+    const node = { ...tpl };
+    if (id !== undefined) node.id = String(id);
+    return node;
 }
 
 // 导出时从节点上清理的"空值键"
