@@ -163,6 +163,9 @@ html, body {
     border-left: 2px solid var(--accent);
     padding-left: calc((var(--depth)) * 14px + 6px);
 }
+.tree-row.filtered-out {
+    opacity: 0.3;
+}
 .tree-icon {
     width: 14px;
     font-size: 14px;

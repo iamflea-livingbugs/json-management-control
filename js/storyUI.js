@@ -41,13 +41,8 @@ export function initUI(store, io) {
         $(`#filter-${f}`).addEventListener('change', (e) => store.setFilter(f, e.target.value));
     }
     $('#filter-search').addEventListener('input', debounce((e) => {
-        // 通用搜索：匹配 speaker / text / id
         const val = e.target.value;
-        if (!val) {
-            store.clearFilters();
-        } else {
-            store.setFilter('_search', val);
-        }
+        store.setFilter('_search', val || '');
     }, 300));
 
     // ---- 初次渲染 ----
@@ -238,6 +233,27 @@ function renderTreePanel(store) {
     if (!container) return;
 
     const data = store.chapter;
+    const hasFilters = Object.keys(store.filters).length > 0;
+    const filteredNodes = store.getFilteredNodes();
+    const filteredIds = new Set(filteredNodes.map(n => n.id));
+
+    // 如果有筛选条件且搜索结果为空
+    if (hasFilters) {
+        const contentNodeCount = (store.chapter.content || []).length;
+        const filteredCount = filteredNodes.length;
+        // 更新筛选提示
+        let hint = container.querySelector('.filter-hint');
+        if (!hint) {
+            hint = document.createElement('div');
+            hint.className = 'filter-hint';
+            hint.style.cssText = 'padding:4px 12px;font-size:11px;color:var(--warn);border-bottom:1px solid var(--border)';
+            container.appendChild(hint);
+        }
+        hint.textContent = `筛选结果: ${filteredCount} / ${contentNodeCount}`;
+    } else {
+        const hint = container.querySelector('.filter-hint');
+        if (hint) hint.remove();
+    }
 
     renderTree(
         container,
@@ -249,10 +265,11 @@ function renderTreePanel(store) {
             if (confirm('确定删除该节点吗？')) {
                 store.deleteAt(path);
             }
-        }
+        },
+        hasFilters ? filteredIds : new Set()
     );
 
-    // 添加底部按钮：新建节点（快捷操作）
+    // 添加底部按钮
     let footer = container.querySelector('.tree-footer');
     if (!footer) {
         footer = document.createElement('div');
