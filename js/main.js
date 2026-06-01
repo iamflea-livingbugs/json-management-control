@@ -1,8 +1,8 @@
 // ==========================================
-// main.js — 入口（只引用 app.js）
+// main.js — 入口（只引用 barrel.js）
 // ==========================================
 
-import { store, io, initUI, loadContextsConfig, loadSavedConfig, loadContentConfig } from './app.js';
+import { store, io, initUI, loadContextsConfig, loadSavedConfig, loadContentConfig } from './barrel.js';
 
 // 加载配置文件（不影响页面渲染，失败会用硬编码默认值）
 Promise.all([loadContextsConfig(), loadContentConfig()]).then(() => {
