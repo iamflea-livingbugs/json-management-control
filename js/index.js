@@ -1,5 +1,5 @@
 // ==========================================
-// main.js — 入口（只引用 app.js）
+// index.js — 入口（只引用 app.js）
 // ==========================================
 
 import { store, io, initUI, loadContextsConfig, loadSavedConfig, loadContentConfig } from './app.js';
