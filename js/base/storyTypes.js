@@ -11,9 +11,6 @@ export function createI18nText(zh = '', en = '') {
 // 配置系统：JSON 驱动
 // ========================
 
-// ---- config/template-content.json ----
-// 定义了：空白章节的结构、空白节点的结构、空白选项的结构、各上下文默认模板
-
 const HARDCODED_CONTENT = {
     chapter: { meta: {}, content: [] },
     node: {
@@ -65,13 +62,9 @@ export function createChapter(name = 'Untitled') {
     return ch;
 }
 
-/** 从 config/template-content.json 读取的默认模板 */
 function getDefaultTemplates() {
     return cc().templates;
 }
-
-// ---- config/template-contexts.json ----
-// 定义了：模板编辑器中有哪些上下文按钮、显示名称、路径匹配规则
 
 const HARDCODED_CONTEXTS = {
     meta: { label: '元数据', description: '章节元数据', match: 'meta' },
@@ -97,7 +90,6 @@ export function getContextKeys() {
     return Object.keys(getContextsConfig());
 }
 
-/** 根据 JSON 路径匹配上下文 key */
 export function resolveTemplateContext(path) {
     const str = path.join('.');
     for (const [key, cfg] of Object.entries(getContextsConfig())) {
@@ -107,8 +99,6 @@ export function resolveTemplateContext(path) {
     }
     return 'default';
 }
-
-// ---- localStorage 配置（用户通过 UI 修改后保存到这里）----
 
 const CONFIG_KEY = 'storyeditor_config';
 
@@ -132,10 +122,6 @@ export function exportConfigJSON() {
     a.download = 'template-contexts.json';
     a.click();
 }
-
-// ========================
-// 模板系统（localStorage）
-// ========================
 
 const TEMPLATE_KEY = 'storyeditor_templates';
 
@@ -161,17 +147,12 @@ export function saveTemplate(ctx, tpl) {
     saveTemplates(all);
 }
 
-/** 用模板创建一个节点 */
 export function createNodeFromTemplate(ctx, id) {
     const tpl = loadTemplates();
     const node = { ...(tpl[ctx] || tpl.default || {}) };
     if (id !== undefined) node.id = String(id);
     return node;
 }
-
-// ========================
-// 字段定义
-// ========================
 
 export const NODE_FIELDS = [
     { key: 'id',           label: 'ID',           type: 'string' },
@@ -194,7 +175,6 @@ export const NODE_FIELDS = [
     { key: 'roomHotspot',  label: '房间热点',      type: 'string' },
 ];
 
-// ---------- 字段标签 ----------
 const LABEL_STORAGE_KEY = 'storyeditor_labels';
 
 export function loadLabels() {
@@ -215,7 +195,6 @@ export function getFieldLabel(key) {
     return def ? def.label : key;
 }
 
-// ---------- 清理空值 ----------
 export function isEmpty(val) {
     if (val === '' || val === undefined || val === null) return true;
     if (Array.isArray(val) && val.length === 0) return true;
