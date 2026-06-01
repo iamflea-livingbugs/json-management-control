@@ -2,19 +2,18 @@
 // storyStore.js — 数据管理层
 // ==========================================
 
-import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from './storyTypes.js';
-import { ensureExpanded } from './storyTree.js';
+import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from '../base/storyTypes.js';
+import { ensureExpanded } from '../ui/storyTree.js';
 
 class StoryStore {
     constructor() {
         this.chapter = createChapter();
-        this.currentPath = [];       // 当前选中路径，如 ['content','0'] 或 ['meta']
+        this.currentPath = [];
         this.selectedId = null;
         this.filters = {};
         this._listeners = [];
     }
 
-    // ---------- 事件订阅 ----------
     onChange(fn) {
         this._listeners.push(fn);
         return () => {
@@ -26,7 +25,6 @@ class StoryStore {
         this._listeners.forEach(fn => fn(this));
     }
 
-    // ---------- 章节操作 ----------
     loadChapter(json) {
         this.chapter = json;
         if (!this.chapter.meta) this.chapter.meta = { name: 'Untitled' };
@@ -38,7 +36,6 @@ class StoryStore {
         this._emit();
     }
 
-    /** 加载配置文件到编辑器（优先读取 localStorage 中保存的版本） */
     loadConfig(url) {
         this._configUrl = url;
         const filename = url.split('/').pop();
@@ -62,23 +59,17 @@ class StoryStore {
         });
     }
 
-    /** 保存当前配置（存 localStorage + 下载文件） */
     saveConfig() {
         if (!this._configUrl) return;
         const url = this._configUrl;
         const filename = url.split('/').pop();
         const json = this.toCleanJSON();
-
-        // 存到 localStorage（Key 加上文件名前缀）
         localStorage.setItem('storyeditor_config_' + filename, JSON.stringify(json));
-
-        // 下载文件
         const blob = new Blob([JSON.stringify(json, null, 4)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = filename;
         a.click();
-
         return filename;
     }
 
@@ -91,7 +82,6 @@ class StoryStore {
         this._emit();
     }
 
-    // ---------- 节点 CRUD ----------
     _normalizeNode(raw) {
         const defaults = createNodeFromTemplate('content', '_');
         delete defaults.id;
@@ -104,7 +94,6 @@ class StoryStore {
         }
         if (!merged.speaker) merged.speaker = { zh: '', en: '' };
         if (!merged.text) merged.text = { zh: '', en: '' };
-        // 选项规范化
         merged.options = (merged.options || []).map(opt => ({
             text: typeof opt.text === 'string' ? { zh: opt.text, en: '' } : (opt.text || { zh: '', en: '' }),
             next: opt.next || '',
@@ -171,7 +160,6 @@ class StoryStore {
         this._emit();
     }
 
-    // ---------- 选项操作 ----------
     addOption(nodeId) {
         const node = this.getNode(nodeId);
         if (!node) return;
@@ -201,7 +189,6 @@ class StoryStore {
         this._emit();
     }
 
-    // ---------- 选项 actions ----------
     addAction(nodeId, optIndex) {
         const node = this.getNode(nodeId);
         if (!node || !node.options[optIndex]) return;
@@ -222,11 +209,8 @@ class StoryStore {
         if (!node || !node.options[optIndex]) return;
         const act = node.options[optIndex].actions[actionIndex];
         if (act) {
-            try {
-                act.params = JSON.parse(paramsStr);
-            } catch {
-                act.params = paramsStr.split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
-            }
+            try { act.params = JSON.parse(paramsStr); }
+            catch { act.params = paramsStr.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')); }
         }
         this._emit();
     }
@@ -238,13 +222,9 @@ class StoryStore {
         this._emit();
     }
 
-    // ---------- 筛选 ----------
     setFilter(field, value) {
-        if (value === '' || value === undefined) {
-            delete this.filters[field];
-        } else {
-            this.filters[field] = value;
-        }
+        if (value === '' || value === undefined) delete this.filters[field];
+        else this.filters[field] = value;
         this._emit();
     }
 
@@ -258,27 +238,25 @@ class StoryStore {
         for (const [field, value] of Object.entries(this.filters)) {
             if (field === '_search') {
                 const q = value.toLowerCase();
-                nodes = nodes.filter(n => {
-                    return (n.id || '').toLowerCase().includes(q)
-                        || (n.speaker?.zh || '').toLowerCase().includes(q)
-                        || (n.speaker?.en || '').toLowerCase().includes(q)
-                        || (n.text?.zh || '').toLowerCase().includes(q)
-                        || (n.text?.en || '').toLowerCase().includes(q);
-                });
+                nodes = nodes.filter(n =>
+                    (n.id || '').toLowerCase().includes(q)
+                    || (n.speaker?.zh || '').toLowerCase().includes(q)
+                    || (n.speaker?.en || '').toLowerCase().includes(q)
+                    || (n.text?.zh || '').toLowerCase().includes(q)
+                    || (n.text?.en || '').toLowerCase().includes(q)
+                );
                 continue;
             }
             nodes = nodes.filter(n => {
                 const val = n[field];
-                if (typeof val === 'object' && val.zh !== undefined) {
+                if (typeof val === 'object' && val.zh !== undefined)
                     return (val.zh || '').toLowerCase().includes(value.toLowerCase());
-                }
                 return (val || '').toLowerCase().includes(value.toLowerCase());
             });
         }
         return nodes;
     }
 
-    // ---------- 筛选候选值 ----------
     getFieldValues(field) {
         const set = new Set();
         for (const node of this.chapter.content) {
@@ -294,15 +272,11 @@ class StoryStore {
         return [...set].sort();
     }
 
-    // ---------- 导出 ----------
     toCleanJSON() {
         function clean(obj) {
-            if (Array.isArray(obj)) {
-                return obj.map(clean);
-            }
+            if (Array.isArray(obj)) return obj.map(clean);
             if (obj && typeof obj === 'object') {
                 if (obj.zh !== undefined && obj.en !== undefined) {
-                    // I18n 对象：至少有一个非空才保留
                     if (!obj.zh && !obj.en) return undefined;
                     const out = {};
                     if (obj.zh) out.zh = obj.zh;
@@ -322,7 +296,6 @@ class StoryStore {
         return clean(this.chapter);
     }
 
-    // ---------- 内部辅助 ----------
     getNode(id) {
         return this.chapter.content.find(n => n.id === String(id));
     }
@@ -343,104 +316,67 @@ class StoryStore {
         this._emit();
     }
 
-    // ---------- 树形路径操作 ----------
-
-    /**
-     * 根据路径获取 JSON 值（导航到树中任意层级）
-     */
     getByPath(path) {
         if (!path || path.length === 0) return this.chapter;
         let cur = this.chapter;
         for (const seg of path) {
             if (cur === null || cur === undefined) return undefined;
-            if (Array.isArray(cur)) {
-                cur = cur[parseInt(seg)];
-            } else {
-                cur = cur[seg];
-            }
+            if (Array.isArray(cur)) cur = cur[parseInt(seg)];
+            else cur = cur[seg];
         }
         return cur;
     }
 
-    /**
-     * 选中路径
-     */
     selectPath(path) {
         this.currentPath = path || [];
-        if (path.length === 2 && path[0] === 'content') {
-            this.selectedId = String(path[1]);
-        } else {
-            this.selectedId = null;
-        }
+        if (path.length === 2 && path[0] === 'content') this.selectedId = String(path[1]);
+        else this.selectedId = null;
         this._emit();
     }
 
     setByPath(path, value) {
-        if (!path || path.length === 0) {
-            this._emit();
-            return;
-        }
+        if (!path || path.length === 0) { this._emit(); return; }
         const parentPath = path.slice(0, -1);
         const lastSeg = path[path.length - 1];
         const parent = this.getByPath(parentPath);
         if (!parent) return;
-        if (Array.isArray(parent)) {
-            parent[parseInt(lastSeg)] = value;
-        } else {
-            parent[lastSeg] = value;
-        }
+        if (Array.isArray(parent)) parent[parseInt(lastSeg)] = value;
+        else parent[lastSeg] = value;
         this._emit();
     }
 
-    /**
-     * 在指定路径添加子项
-     * - object → 弹窗输入 key，默认 value ''
-     * - array  → 添加当前默认节点或空对象
-     */
     addAt(path, type) {
         const parent = this.getByPath(path);
         if (!parent) return;
-
         if (type === 'object') {
             const key = prompt('请输入新属性名（英文）:');
             if (!key) return;
             parent[key] = '';
             ensureExpanded(path);
-            // 选中新添加的节点，确保树正确更新
             this.currentPath = [...path, key];
             this._emit();
         } else if (type === 'array') {
-            if (path.length === 1 && path[0] === 'content') {
-                this.addNode();
-                return;
-            }
+            if (path.length === 1 && path[0] === 'content') { this.addNode(); return; }
             const ctx = resolveTemplateContext([...path, '0']);
             const tpl = createNodeFromTemplate(ctx);
             delete tpl.id;
             const newIndex = parent.length;
             parent.push(tpl);
             ensureExpanded(path);
-            // 选中新添加的节点，确保树正确更新
             this.currentPath = [...path, String(newIndex)];
             this._emit();
         }
     }
 
-    /**
-     * 删除路径对应的节点
-     */
     deleteAt(path) {
         if (!path || path.length === 0) return;
         const parentPath = path.slice(0, -1);
         const lastSeg = path[path.length - 1];
         const parent = this.getByPath(parentPath);
         if (!parent) return;
-
         if (Array.isArray(parent)) {
             const idx = parseInt(lastSeg);
-            if (idx >= 0 && idx < parent.length) {
-                parent.splice(idx, 1);
-            }
+            if (idx >= 0 && idx < parent.length) parent.splice(idx, 1);
         } else if (typeof parent === 'object') {
             delete parent[lastSeg];
         }

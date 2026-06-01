@@ -2,9 +2,16 @@
 // main.js — 入口
 // ==========================================
 
-import { store } from './storyStore.js';
-import { initUI } from './storyUI.js';
-import * as io from './storyIO.js';
+import { store } from './data/storyStore.js';
+import { initUI } from './ui/storyUI.js';
+import * as io from './data/storyIO.js';
+import { loadContextsConfig, loadSavedConfig, loadContentConfig } from './base/storyTypes.js';
+
+// 加载配置文件（不影响页面渲染，失败会用硬编码默认值）
+Promise.all([loadContextsConfig(), loadContentConfig()]).then(() => {
+    loadSavedConfig();
+    store._emit();
+});
 
 // 拖放区域：整个窗口都可以拖入 JSON
 io.setupDropZone(document.body, json => store.loadChapter(json));

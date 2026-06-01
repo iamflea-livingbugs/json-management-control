@@ -1,0 +1,58 @@
+{
+    "chapter": {
+        "meta": {},
+        "content": []
+    },
+    "node": {
+        "id": "",
+        "speaker": { "zh": "", "en": "" },
+        "text": { "zh": "", "en": "" },
+        "headimage": "",
+        "room": "",
+        "bgm": "",
+        "next": "",
+        "transition": "",
+        "fx": "",
+        "cg": "",
+        "voice": "",
+        "dialog": "",
+        "animation": "",
+        "loop": "",
+        "goNext": "",
+        "indenpent": "",
+        "signal": "",
+        "roomHotspot": "",
+        "options": []
+    },
+    "option": {
+        "text": { "zh": "", "en": "" },
+        "next": "",
+        "showif": {},
+        "actions": []
+    },
+    "templates": {
+        "meta": { "name": "" },
+        "content": {
+            "speaker": { "zh": "", "en": "" },
+            "headimage": "",
+            "text": { "zh": "", "en": "" },
+            "room": "",
+            "bgm": "",
+            "transition": "",
+            "fx": "",
+            "cg": "",
+            "voice": ""
+        },
+        "option": {
+            "text": { "zh": "", "en": "" },
+            "next": "",
+            "showif": {},
+            "actions": []
+        },
+        "action": {
+            "cmd": "",
+            "params": []
+        },
+        "default": {}
+    }
+}

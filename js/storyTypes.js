@@ -7,50 +7,172 @@ export function createI18nText(zh = '', en = '') {
     return { zh, en };
 }
 
-// ---------- StoryOption ----------
-export function createOption(text = createI18nText(), next = '') {
-    return {
-        text,
-        next,
-        showif: {},
-        actions: []
-    };
+// ========================
+// 配置系统：JSON 驱动
+// ========================
+
+// ---- config/template-content.json ----
+// 定义了：空白章节的结构、空白节点的结构、空白选项的结构、各上下文默认模板
+
+const HARDCODED_CONTENT = {
+    chapter: { meta: {}, content: [] },
+    node: {
+        id: '', speaker: { zh: '', en: '' }, text: { zh: '', en: '' },
+        headimage: '', room: '', bgm: '', next: '', transition: '', fx: '',
+        cg: '', voice: '', dialog: '', animation: '', loop: '',
+        goNext: '', indenpent: '', signal: '', roomHotspot: '', options: []
+    },
+    option: { text: { zh: '', en: '' }, next: '', showif: {}, actions: [] },
+    templates: {
+        meta: { name: '' },
+        content: { speaker: { zh: '', en: '' }, headimage: '', text: { zh: '', en: '' }, room: '', bgm: '', transition: '', fx: '', cg: '', voice: '' },
+        option: { text: { zh: '', en: '' }, next: '', showif: {}, actions: [] },
+        action: { cmd: '', params: [] },
+        default: {}
+    }
+};
+
+let _contentConfig = null;
+
+export async function loadContentConfig() {
+    try {
+        _contentConfig = await (await fetch('config/template-content.json')).json();
+    } catch { _contentConfig = null; }
 }
 
-// ---------- StoryNode ----------
-export function createNode(id = '') {
-    return {
-        id,
-        speaker: createI18nText(),
-        text: createI18nText(),
-        headimage: '',
-        room: '',
-        bgm: '',
-        next: '',
-        transition: '',
-        fx: '',
-        cg: '',
-        voice: '',
-        dialog: '',
-        animation: '',
-        loop: '',
-        goNext: '',
-        indenpent: '',
-        signal: '',
-        roomHotspot: '',
-        options: []
-    };
+function cc() { return _contentConfig || HARDCODED_CONTENT; }
+
+function deepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+export function createOption(text, next) {
+    const opt = deepCopy(cc().option);
+    if (text) opt.text = text;
+    if (next !== undefined) opt.next = next;
+    return opt;
 }
 
-// ---------- Chapter ----------
+export function createNodeFromDefaults(id) {
+    const node = deepCopy(cc().node);
+    if (id !== undefined) node.id = String(id);
+    return node;
+}
+
 export function createChapter(name = 'Untitled') {
-    return {
-        meta: { name },
-        content: []
-    };
+    const ch = deepCopy(cc().chapter);
+    const allTpls = loadTemplates();
+    ch.meta = { ...(allTpls.meta || {}) };
+    if (name !== undefined) ch.meta.name = name;
+    return ch;
 }
 
-// ---------- 已知字段列表（用于属性筛选和编辑UI）----------
+/** 从 config/template-content.json 读取的默认模板 */
+function getDefaultTemplates() {
+    return cc().templates;
+}
+
+// ---- config/template-contexts.json ----
+// 定义了：模板编辑器中有哪些上下文按钮、显示名称、路径匹配规则
+
+const HARDCODED_CONTEXTS = {
+    meta: { label: '元数据', description: '章节元数据', match: 'meta' },
+    content: { label: '对话', description: '对话节点', match: 'content' },
+    option: { label: '选项', description: '选项节点', match: 'content.*.options' },
+    action: { label: '动作', description: '动作命令', match: '*.actions' },
+    default: { label: '默认', description: '兜底模板', match: '*' },
+};
+
+let _contextsConfig = null;
+
+export async function loadContextsConfig() {
+    try {
+        _contextsConfig = await (await fetch('config/template-contexts.json')).json();
+    } catch { _contextsConfig = null; }
+}
+
+export function getContextsConfig() {
+    return _contextsConfig || HARDCODED_CONTEXTS;
+}
+
+export function getContextKeys() {
+    return Object.keys(getContextsConfig());
+}
+
+/** 根据 JSON 路径匹配上下文 key */
+export function resolveTemplateContext(path) {
+    const str = path.join('.');
+    for (const [key, cfg] of Object.entries(getContextsConfig())) {
+        if (key !== 'default' && new RegExp('^' + cfg.match.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$').test(str)) {
+            return key;
+        }
+    }
+    return 'default';
+}
+
+// ---- localStorage 配置（用户通过 UI 修改后保存到这里）----
+
+const CONFIG_KEY = 'storyeditor_config';
+
+export function loadSavedConfig() {
+    try {
+        const raw = localStorage.getItem(CONFIG_KEY);
+        if (raw) { _contextsConfig = JSON.parse(raw); return true; }
+    } catch {}
+    return false;
+}
+
+export function saveConfigToLocal(config) {
+    _contextsConfig = config;
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+}
+
+export function exportConfigJSON() {
+    const blob = new Blob([JSON.stringify(getContextsConfig(), null, 4)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'template-contexts.json';
+    a.click();
+}
+
+// ========================
+// 模板系统（localStorage）
+// ========================
+
+const TEMPLATE_KEY = 'storyeditor_templates';
+
+export function loadTemplates() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(TEMPLATE_KEY) || '{}');
+        return { ...getDefaultTemplates(), ...saved };
+    } catch { return { ...getDefaultTemplates() }; }
+}
+
+export function saveTemplates(tpls) {
+    const toSave = {};
+    const defaults = getDefaultTemplates();
+    for (const [k, v] of Object.entries(tpls)) {
+        if (JSON.stringify(defaults[k]) !== JSON.stringify(v)) toSave[k] = v;
+    }
+    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(toSave));
+}
+
+export function saveTemplate(ctx, tpl) {
+    const all = loadTemplates();
+    all[ctx] = tpl;
+    saveTemplates(all);
+}
+
+/** 用模板创建一个节点 */
+export function createNodeFromTemplate(ctx, id) {
+    const tpl = loadTemplates();
+    const node = { ...(tpl[ctx] || tpl.default || {}) };
+    if (id !== undefined) node.id = String(id);
+    return node;
+}
+
+// ========================
+// 字段定义
+// ========================
+
 export const NODE_FIELDS = [
     { key: 'id',           label: 'ID',           type: 'string' },
     { key: 'speaker',      label: '说话人',        type: 'i18n' },
@@ -72,17 +194,12 @@ export const NODE_FIELDS = [
     { key: 'roomHotspot',  label: '房间热点',      type: 'string' },
 ];
 
-// 可筛选的字段（下拉选项来源）
-export const FILTERABLE_FIELDS = ['speaker', 'headimage', 'fx', 'bgm', 'room', 'animation'];
-
-// ---------- 标签编辑 ----------
+// ---------- 字段标签 ----------
 const LABEL_STORAGE_KEY = 'storyeditor_labels';
 
 export function loadLabels() {
-    try {
-        const raw = localStorage.getItem(LABEL_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : {};
-    } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem(LABEL_STORAGE_KEY) || '{}'); }
+    catch { return {}; }
 }
 
 export function saveLabel(key, label) {
@@ -98,96 +215,7 @@ export function getFieldLabel(key) {
     return def ? def.label : key;
 }
 
-// ---------- 节点模板 ----------
-const TEMPLATE_KEY = 'storyeditor_templates';
-
-/** 各上下文默认模板 */
-export const DEFAULT_TEMPLATES = {
-    content: {
-        speaker: { zh: '', en: '' },
-        headimage: '',
-        text: { zh: '', en: '' },
-        room: '',
-        bgm: '',
-        transition: '',
-        fx: '',
-        cg: '',
-        voice: '',
-    },
-    option: {
-        text: { zh: '', en: '' },
-        next: '',
-        showif: {},
-        actions: [],
-    },
-    action: {
-        cmd: '',
-        params: [],
-    },
-    default: {},
-};
-
-/**
- * 根据路径解析模板上下文 key
- * content      → content
- * content.*.options  → option
- * content.*.options.*.actions → action
- * 其他         → default
- */
-export function resolveTemplateContext(path) {
-    const str = path.join('.');
-    if (str === 'content') return 'content';
-    if (/^content\.\d+\.options(\.\d+)?$/.test(str)) return 'option';
-    if (/^content\.\d+\.options\.\d+\.actions$/.test(str)) return 'action';
-    if (/actions$/.test(str)) return 'action';
-    if (/options(\.\d+)?$/.test(str)) return 'option';
-    return 'default';
-}
-
-/** 加载全部模板 */
-export function loadTemplates() {
-    try {
-        const raw = localStorage.getItem(TEMPLATE_KEY);
-        const saved = raw ? JSON.parse(raw) : {};
-        return { ...DEFAULT_TEMPLATES, ...saved };
-    } catch { return { ...DEFAULT_TEMPLATES }; }
-}
-
-/** 保存全部模板 */
-export function saveTemplates(tpls) {
-    // 只保存跟默认不同的
-    const toSave = {};
-    for (const [k, v] of Object.entries(tpls)) {
-        const def = JSON.stringify(DEFAULT_TEMPLATES[k] || {});
-        const cur = JSON.stringify(v);
-        if (def !== cur) toSave[k] = v;
-    }
-    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(toSave));
-}
-
-/** 获取某个上下文的模板 */
-export function loadTemplate(ctx) {
-    const all = loadTemplates();
-    return all[ctx] || all.default || {};
-}
-
-/** 保存某个上下文的模板 */
-export function saveTemplate(ctx, tpl) {
-    const all = loadTemplates();
-    all[ctx] = tpl;
-    saveTemplates(all);
-}
-
-/** 用模板创建节点 */
-export function createNodeFromTemplate(ctx, id) {
-    const tpl = loadTemplate(ctx);
-    const node = { ...tpl };
-    if (id !== undefined) node.id = String(id);
-    return node;
-}
-
-// 导出时从节点上清理的"空值键"
-const I18N_EMPTY = { zh: '', en: '' };
+// ---------- 清理空值 ----------
 export function isEmpty(val) {
     if (val === '' || val === undefined || val === null) return true;
     if (Array.isArray(val) && val.length === 0) return true;
