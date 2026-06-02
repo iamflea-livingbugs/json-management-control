@@ -83,7 +83,24 @@ export async function initUI(store, io) {
         } catch (e) {}
     }
 
-    editor.addEventListener('input', () => applyHighlight(editor.value));
+    // JSON 错误提示
+    const errDiv = document.createElement('div');
+    errDiv.className = 'json-error';
+    editor.parentElement.appendChild(errDiv);
+
+    function showJSONError(msg) {
+        errDiv.textContent = '⚠️ ' + msg;
+        errDiv.style.display = '';
+    }
+    function hideJSONError() {
+        errDiv.style.display = 'none';
+    }
+
+    editor.addEventListener('input', () => {
+        applyHighlight(editor.value);
+        try { JSON.parse(editor.value); hideJSONError(); }
+        catch (e) { showJSONError(e.message); }
+    });
     editor.addEventListener('scroll', () => {
         $('#json-highlight').scrollTop = editor.scrollTop;
         $('#json-highlight').scrollLeft = editor.scrollLeft;
@@ -94,16 +111,35 @@ export async function initUI(store, io) {
             const formatted = JSON.stringify(parsed, null, 4);
             editor.value = formatted;
             applyHighlight(formatted);
-        } catch (e) {}
+            hideJSONError();
+            const path = store.currentPath;
+            if (path && path.length > 0) store.setByPath([...path], parsed);
+        } catch (e) {
+            showJSONError(e.message);
+        }
     });
 
     $('#btn-format-json').addEventListener('click', () => {
+        const editor = $('#json-editor');
+        const hlCode = $('#json-highlight code');
+        if (!editor) return;
         try {
             const parsed = JSON.parse(editor.value);
             const formatted = JSON.stringify(parsed, null, 4);
             editor.value = formatted;
-            applyHighlight(formatted);
-        } catch (e) {}
+            if (hlCode) {
+                hlCode.textContent = formatted;
+                if (window.hljs) {
+                    try { hlCode.innerHTML = window.hljs.highlight(formatted, { language: 'json' }).value; }
+                    catch (e) {}
+                }
+            }
+            hideJSONError();
+            const path = store.currentPath;
+            if (path && path.length > 0) store.setByPath([...path], parsed);
+        } catch (e) {
+            showJSONError(e.message);
+        }
     });
 
     // ---- 分隔条拖拽 ----
@@ -118,6 +154,11 @@ export async function initUI(store, io) {
     // ---- 中间 JSON Tab ----
     const centerTa = $('#path-editor-center');
     if (centerTa) {
+        // 中间 Tab 错误提示
+        const centerErr = document.createElement('div');
+        centerErr.className = 'json-error';
+        centerTa.parentElement.appendChild(centerErr);
+
         centerTa.addEventListener('input', () => {
             const text = centerTa.value;
             const hlPre = $('#path-mirror-center code');
@@ -129,7 +170,11 @@ export async function initUI(store, io) {
                 const parsed = JSON.parse(text);
                 const path = store.currentPath;
                 if (path && path.length > 0) store.setByPath([...path], parsed);
-            } catch (e) {}
+                centerErr.style.display = 'none';
+            } catch (e) {
+                centerErr.textContent = '⚠️ ' + e.message;
+                centerErr.style.display = '';
+            }
         });
         centerTa.addEventListener('scroll', () => {
             const preEl = $('#path-mirror-center pre');

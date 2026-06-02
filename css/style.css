@@ -83,11 +83,12 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
+    padding: 1rem 2rem;
     background: var(--bg-panel);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
     gap: 8px;
+    
 }
 .toolbar-left, .toolbar-right {
     display: flex;
@@ -114,7 +115,7 @@ html, body {
 }
 .filter-bar label {
     color: var(--text-dim);
-    font-size: 0.875rem;
+    font-size: 1rem;
     white-space: nowrap;
 }
 
@@ -165,9 +166,9 @@ html, body {
 .panel-header {
     padding: 8px 12px;
     font-weight: 600;
-    font-size: 0.8125rem;
+    font-size: 1rem;
     background: var(--bg-panel);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--border);
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -493,6 +494,18 @@ html, body {
     white-space: pre-wrap;
     word-wrap: break-word;
     z-index: 1;
+}
+
+.json-error {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    color: #ff6b6b;
+    background: rgba(0,0,0,0.85);
+    z-index: 2;
+    border-top: 1px solid #ff6b6b33;
+    display: none;
 }
 
 /* ===== 通用组件 ===== */
