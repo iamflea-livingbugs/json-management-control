@@ -1,21 +1,27 @@
 // ==========================================
-// storyUI.js — 界面渲染
+// storyUI.js — 界面渲染（主 UI 层）
+// 职责：
+//   1. 初始化工具栏、面板、事件绑定
+//   2. 监听 store.onChange 驱动各面板渲染
+//   3. 渲染编辑区表单、选项区域、JSON 预览
+//   4. 提供配置编辑弹窗
 // ==========================================
 
-import { createChapter, getFieldLabel, saveLabel } from '../base/storyTypes.js';
+import { createChapter, createBlankChapter, getFieldLabel, saveLabel } from '../base/storyTypes.js';
 import { store } from '../data/storyStore.js';
 import { renderTree } from '../ui/storyTree.js';
 import { openTemplateEditor } from '../ui/storyTemplateUI.js';
+import { showCreateDialog } from './createDialog.js';
 import { getContextsConfig, saveConfigToLocal, exportConfigJSON } from '../base/storyTypes.js';
 
-// DOM 引用
+// 快捷 DOM 引用
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-/** 缓存布局 HTML */
+// 缓存 layout.html 内容（首次加载后复用）
 let _layoutHtml = null;
 
-/** 异步加载 layout.html */
+// 异步加载 layout.html 页面结构
 async function loadLayout() {
     if (_layoutHtml) return _layoutHtml;
     const res = await fetch('layout.html');
@@ -23,42 +29,66 @@ async function loadLayout() {
     return _layoutHtml;
 }
 
+// ========================
+// 初始化入口（应用启动时调用）
+// ========================
 export async function initUI(store, io) {
     const app = $('#app');
-    app.innerHTML = await loadLayout();
+    app.innerHTML = await loadLayout(); // 先加载布局 HTML
 
-    // ---- 工具栏 ----
+    // ----- 工具栏事件绑定 -----
+
+    // 导入 JSON
     io.setupFilePicker($('#btn-import'), json => store.loadChapter(json));
+
+    // 导出 JSON（清洗后）
     $('#btn-export').addEventListener('click', () => {
         const clean = store.toCleanJSON();
         io.exportJSON(clean);
     });
+
+    // 打开内容配置（template-content.json）
     $('#btn-open-content-config').addEventListener('click', () => {
         store.loadConfig('config/template-content.json').then(() => {
             $('#btn-save-config').style.display = '';
         }).catch(() => alert('加载配置文件失败'));
     });
+
+    // 打开上下文配置（template-contexts.json）
     $('#btn-open-contexts-config').addEventListener('click', () => {
         store.loadConfig('config/template-contexts.json').then(() => {
             $('#btn-save-config').style.display = '';
         }).catch(() => alert('加载配置文件失败'));
     });
+
+    // 保存配置文件
     $('#btn-save-config').addEventListener('click', () => {
         const name = store.saveConfig();
         if (name) alert('✅ 已保存到本地存储\n📥 已下载 ' + name + ' 文件\n\n请用下载的文件替换项目中的 config/' + name);
     });
+
+    // 新建章节（弹出空白/模板选择）
     $('#btn-add-node').addEventListener('click', () => {
-        if (confirm('将清空当前内容并创建新 JSON，确定？')) store.loadChapter(createChapter());
+        showCreateDialog({
+            title: '新建章节',
+            blankDesc: '仅返回 {}，不添加任何字段',
+            onBlank: () => store.newChapter(createBlankChapter()),
+            onTemplate: () => store.loadChapter(createChapter())
+        });
     });
+
+    // 打开模板编辑弹窗
     $('#btn-edit-template').addEventListener('click', () => openTemplateEditor());
+
+    // 打开上下文配置弹窗
     $('#btn-config').addEventListener('click', () => openConfigEditor());
 
-    // ---- 章节名 ----
+    // ----- 章节名输入 -----
     $('#chapter-name').addEventListener('input', (e) => {
         store.setChapterName(e.target.value);
     });
 
-    // ---- Tab 切换 ----
+    // ----- Tab 切换（表单模式 / JSON 模式）-----
     $$('.tab-label').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
@@ -69,13 +99,14 @@ export async function initUI(store, io) {
         });
     });
 
-    // ---- 初次渲染 ----
+    // ----- 注册 store 变更监听（驱动全量渲染）-----
     store.onChange(() => renderAll(store));
 
-    // 右侧 JSON
+    // ----- 右侧 JSON 预览面板 -----
     const hlCode = $('#json-highlight code');
     const editor = $('#json-editor');
 
+    // JSON 语法高亮
     function applyHighlight(text) {
         hlCode.textContent = text;
         try {
@@ -83,7 +114,7 @@ export async function initUI(store, io) {
         } catch (e) {}
     }
 
-    // JSON 错误提示
+    // JSON 语法错误提示（编辑器底部）
     const errDiv = document.createElement('div');
     errDiv.className = 'json-error';
     editor.parentElement.appendChild(errDiv);
@@ -91,21 +122,25 @@ export async function initUI(store, io) {
     function showJSONError(msg) {
         errDiv.textContent = '⚠️ ' + msg;
         errDiv.style.display = 'block';
-        // errDiv.style.position = 'fixed';
     }
     function hideJSONError() {
         errDiv.style.display = 'none';
     }
 
+    // 输入时实时高亮 + 校验
     editor.addEventListener('input', () => {
         applyHighlight(editor.value);
         try { JSON.parse(editor.value); hideJSONError(); }
         catch (e) { showJSONError(e.message); }
     });
+
+    // 同步滚动（高亮层与编辑器层）
     editor.addEventListener('scroll', () => {
         $('#json-highlight').scrollTop = editor.scrollTop;
         $('#json-highlight').scrollLeft = editor.scrollLeft;
     });
+
+    // 失焦时格式化并保存回数据
     editor.addEventListener('blur', () => {
         try {
             const parsed = JSON.parse(editor.value);
@@ -120,6 +155,7 @@ export async function initUI(store, io) {
         }
     });
 
+    // 格式化按钮
     $('#btn-format-json').addEventListener('click', () => {
         const editor = $('#json-editor');
         const hlCode = $('#json-highlight code');
@@ -143,19 +179,18 @@ export async function initUI(store, io) {
         }
     });
 
-    // ---- 分隔条拖拽 ----
+    // ----- 面板分隔条拖拽 -----
     initSplitters();
 
-    // ---- 树形搜索 ----
+    // ----- 树形搜索框 -----
     $('#tree-search').addEventListener('input', () => {
         _searchTerm = $('#tree-search').value.toLowerCase().trim();
         applyTreeSearch(_searchTerm);
     });
 
-    // ---- 中间 JSON Tab ----
+    // ----- 中间 Tab JSON 编辑器 -----
     const centerTa = $('#path-editor-center');
     if (centerTa) {
-        // 中间 Tab 错误提示
         const centerErr = document.createElement('div');
         centerErr.className = 'json-error';
         centerTa.parentElement.appendChild(centerErr);
@@ -186,11 +221,13 @@ export async function initUI(store, io) {
         });
     }
 
+    // 首次渲染
     renderAll(store);
 }
 
-// ========== 分隔条拖拽 ==========
-
+// ========================
+// 分隔条拖拽（调节面板宽度）
+// ========================
 function initSplitters() {
     $$('.splitter').forEach(splitter => {
         let dragging = false;
@@ -205,10 +242,10 @@ function initSplitters() {
             const targetId = splitter.dataset.target;
             if (targetId === 'left') {
                 targetPanel = $('#panel-left');
-                sign = 1;
+                sign = 1;  // 拖拽时向右推
             } else {
                 targetPanel = $('#panel-right');
-                sign = -1;
+                sign = -1; // 拖拽时向左推
             }
             if (targetPanel) startW = targetPanel.getBoundingClientRect().width;
             splitter.classList.add('dragging');
@@ -234,12 +271,17 @@ function initSplitters() {
     });
 }
 
-// ========== 全局渲染 ==========
+// ========================
+// 全局渲染调度
+// 选择性渲染：仅当对应数据变化时才刷新，避免不必要 DOM 操作
+// ========================
 
-let _searchTerm = '';
-let _editorVersion = '';
-let _jsonTabVersion = '';
+let _searchTerm = '';           // 当前搜索关键词
+let _editorVersion = '';        // 编辑器版本指纹（路径+字段数）
+let _jsonTabVersion = '';       // JSON Tab 版本指纹（JSON 字符串长度）
+let _prevChapter = null;        // 上一次渲染的章节引用（用于检测新建/切换章节）
 
+// 计算编辑器版本指纹
 function editorVersion(store) {
     const path = store.currentPath;
     if (!path || path.length === 0) return '__root__';
@@ -250,19 +292,31 @@ function editorVersion(store) {
     return path.join('|') + '|' + keyCount;
 }
 
+// 计算 JSON Tab 版本指纹
 function jsonTabVersion(store) {
     const path = store.currentPath || [];
     const val = store.getByPath(path);
     return JSON.stringify(val).length;
 }
 
+// 全量渲染（每个 store 变更时调用）
 function renderAll(store) {
+    // 1. 树面板（每次都重绘，确保节点数最新）
     renderTreePanel(store);
     applyTreeSearch(_searchTerm);
 
+    // 2. 配置保存按钮显隐
     const saveBtn = $('#btn-save-config');
     if (saveBtn) saveBtn.style.display = store._configUrl ? '' : 'none';
 
+    // 3. 检测章节是否被整体替换（新建、导入等），强制刷新编辑区
+    if (store.chapter !== _prevChapter) {
+        _prevChapter = store.chapter;
+        _editorVersion = '';
+        _jsonTabVersion = '';
+    }
+
+    // 4. 编辑区（仅在切换路径或字段变化时重绘）
     const ver = editorVersion(store);
     if (ver !== _editorVersion) {
         _editorVersion = ver;
@@ -270,22 +324,29 @@ function renderAll(store) {
         renderEditor(store);
     }
 
+    // 5. 中间 JSON Tab
     const jv = jsonTabVersion(store);
     if (jv !== _jsonTabVersion) {
         _jsonTabVersion = jv;
         updateJSONTabContent(store);
     }
 
+    // 6. 右侧 JSON 预览
     renderJSONPreview(store);
     navigateJSONToPath(store);
+
+    // 7. 章节名同步
     $('#chapter-name').value = store.getChapterName();
 }
 
-// ========== 树形面板 ==========
-
+// ========================
+// 树形面板搜索
+// 支持路径前缀搜索（如 "content.0."）和关键词匹配
+// ========================
 function applyTreeSearch(term) {
     const rawTerm = term.trim();
     if (!rawTerm) {
+        // 清除搜索状态：恢复所有行显示
         $$('.tree-row').forEach(r => { r.style.display = ''; r.classList.remove('search-dim'); });
         $$('.tree-children').forEach(c => { if (c._wasExpanded !== undefined) { c.style.display = c._wasExpanded; delete c._wasExpanded; } });
         return;
@@ -300,6 +361,7 @@ function applyTreeSearch(term) {
         keyPattern = rawTerm.slice(dotIdx + 1).toLowerCase();
     }
 
+    // 收集匹配的路径
     const matchSet = new Set();
     const rows = $$('.tree-row');
     rows.forEach(row => {
@@ -313,6 +375,7 @@ function applyTreeSearch(term) {
         if (hit) matchSet.add(pathStr);
     });
 
+    // 展开所有匹配项的祖先路径
     const ancestorSet = new Set();
     for (const matchedPath of matchSet) {
         const segs = matchedPath.split('.');
@@ -332,6 +395,7 @@ function applyTreeSearch(term) {
         }
     });
 
+    // 显示匹配项，隐藏非匹配项
     rows.forEach(row => {
         const pathArr = JSON.parse(row.dataset.path || '[]');
         const pathStr = pathArr.join('.').toLowerCase();
@@ -340,16 +404,22 @@ function applyTreeSearch(term) {
     });
 }
 
+// ========================
+// 树形面板渲染
+// ========================
 function renderTreePanel(store) {
     const container = $('#tree-container');
     if (!container) return;
     const data = store.chapter;
+
+    // 渲染树（展开/折叠/选中/添加/删除）
     renderTree(container, data, store.currentPath,
         (path) => store.selectPath(path),
         (path, type) => store.addAt(path, type),
         (path) => { if (confirm('确定删除该节点吗？')) store.deleteAt(path); }
     );
 
+    // 底部「新建对话节点」按钮
     let footer = container.querySelector('.tree-footer');
     if (!footer) {
         footer = document.createElement('div');
@@ -358,11 +428,22 @@ function renderTreePanel(store) {
     }
     const contentNodeCount = (store.chapter.content || []).length;
     footer.innerHTML = `<button class="btn btn-sm btn-success" id="tree-add-node">＋ 新建对话节点 (当前${contentNodeCount}个)</button>`;
-    footer.querySelector('#tree-add-node').addEventListener('click', () => store.addNode());
+    footer.querySelector('#tree-add-node').addEventListener('click', () => {
+        showCreateDialog({
+            title: '新建对话节点',
+            blankLabel: '空白节点',
+            blankDesc: '仅含 id 字段',
+            templateLabel: '模板创建',
+            templateDesc: '使用 content 模板的完整字段',
+            onBlank: () => store.addBlankNode(),
+            onTemplate: () => store.addNode()
+        });
+    });
 }
 
-// ========== 编辑区 ==========
-
+// ========================
+// 编辑区渲染（中间面板的表单模式）
+// ========================
 function renderEditor(store) {
     const path = store.currentPath || [];
     const val = store.getByPath(path);
@@ -373,12 +454,14 @@ function renderEditor(store) {
     if (val === null || val === undefined) {
         formHtml += '<div class="empty-hint">null</div>';
     } else if (typeof val !== 'object') {
+        // 基本类型：直接显示输入框
         formHtml += `<div class="field-row"><label>值</label><input class="input form-simple-value" data-pathkey="${esc(path.join('|'))}" value="${esc(String(val))}" /></div>`;
     } else {
         const entries = Array.isArray(val) ? val.map((item, i) => [String(i), item]) : Object.entries(val);
         const rows = entries.map(([key, v]) => renderFormField(key, v, path, store)).join('');
 
         if (Array.isArray(val)) {
+            // 数组类型：显示添加元素的控件
             const isContent = path.length === 1 && path[0] === 'content';
             const isOptions = path.join('.').includes('options');
             const isActions = path.join('.').includes('actions');
@@ -399,20 +482,25 @@ function renderEditor(store) {
                 <option value="array">空数组 []</option></select>
                 <button id="btn-add-array-item" class="btn btn-sm btn-success">＋ 添加</button></div>`;
         } else {
+            // 对象类型：显示字段列表
             formHtml += `<div class="editor-fields">${rows}</div>`;
             if (val !== null) formHtml += `<button id="btn-add-field" class="btn btn-sm btn-success" style="margin-top:4px">＋ 添加属性</button>`;
         }
 
+        // 如果当前路径是对话节点，额外渲染选项编辑区
         if (path.length === 2 && path[0] === 'content' && val.options) {
             formHtml += `<div class="editor-options">${renderOptions(val, store)}</div>`;
         }
     }
 
     $('#panel-form').innerHTML = formHtml;
+
+    // 绑定事件
     bindFormInputs(path, val, store);
     if (path.length === 2 && path[0] === 'content' && val && val.options) bindOptionButtons(val, store);
     bindLabelEdit();
 
+    // 添加属性按钮
     const addFieldBtn = $('#btn-add-field');
     if (addFieldBtn) {
         addFieldBtn.addEventListener('click', () => {
@@ -426,6 +514,7 @@ function renderEditor(store) {
         });
     }
 
+    // 数组添加元素按钮
     const addArrBtn = $('#btn-add-array-item');
     if (addArrBtn) {
         addArrBtn.addEventListener('click', () => {
@@ -444,6 +533,7 @@ function renderEditor(store) {
         });
     }
 
+    // 删除字段按钮
     $$('.btn-del-field').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -454,6 +544,9 @@ function renderEditor(store) {
     });
 }
 
+// ========================
+// 中间 Tab 的 JSON 同步
+// ========================
 function updateJSONTabContent(store) {
     const path = store.currentPath || [];
     const val = store.getByPath(path);
@@ -467,28 +560,41 @@ function updateJSONTabContent(store) {
     }
 }
 
+// ========================
+// 表单字段渲染
+// 根据值的类型（基本类型/双语/数组/对象）渲染不同的 UI
+// ========================
 function renderFormField(key, v, parentPath, store) {
     const labelText = getFieldLabel(key);
     const childPath = [...parentPath, key];
 
+    // null/undefined
     if (v === null || v === undefined) {
         return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><input class="input form-field" data-field="${key}" value="" placeholder="null" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
+    // 双语 { zh, en }
     if (typeof v === 'object' && !Array.isArray(v) && v.zh !== undefined && v.en !== undefined) {
         return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><div class="i18n-group"><input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" /><input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" /></div><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
+    // 数组（摘要 + 跳转按钮）
     if (Array.isArray(v)) {
         const pathKey = childPath.join('|');
         return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><span class="nested-preview">[${v.length}项]</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
+    // 对象（摘要 + 跳转按钮）
     if (typeof v === 'object' && v !== null) {
         const pathKey = childPath.join('|');
         return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><span class="nested-preview">{${Object.keys(v).length}个属性}</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
+    // 基本类型（直接输入）
     const strVal = v === null || v === undefined ? '' : String(v);
     return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><input class="input form-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
 }
 
+// ========================
+// 选项编辑区渲染
+// 每个选项含：双语文本、跳转ID、动作列表
+// ========================
 function renderOptions(node, store) {
     const rows = node.options.map((opt, i) => {
         const actionRows = (opt.actions || []).map((act, j) => `
@@ -518,8 +624,11 @@ function renderOptions(node, store) {
     return `<div class="section-title">选项 (${node.options.length})</div>${rows}<button id="btn-add-option" class="btn btn-sm btn-success" data-node="${node.id}">＋ 选项</button>`;
 }
 
+// ========================
+// 表单输入事件绑定
+// ========================
 function bindFormInputs(path, val, store) {
-    // 简单值
+    // 简单值（基本类型顶层字段）
     $('.form-simple-value')?.addEventListener('input', (e) => {
         const pathStr = e.target.dataset.pathkey;
         if (!pathStr) return;
@@ -527,7 +636,7 @@ function bindFormInputs(path, val, store) {
         store.setByPath(p, e.target.value);
     });
 
-    // 普通字段
+    // 普通字段输入
     $$('.form-field').forEach(inp => {
         inp.addEventListener('input', () => {
             const obj = store.getByPath(path);
@@ -536,30 +645,24 @@ function bindFormInputs(path, val, store) {
         });
     });
 
-    // i18n
+    // i18n 双语字段输入
     $$('.form-i18n-zh').forEach(inp => {
         inp.addEventListener('input', () => {
             const obj = store.getByPath(path);
-            if (obj && typeof obj === 'object') {
-                const field = obj[inp.dataset.field];
-                if (typeof field === 'object') field.zh = inp.value;
-                else obj[inp.dataset.field] = { zh: inp.value, en: '' };
-            }
-            store._emit();
-        });
-    });
-    $$('.form-i18n-en').forEach(inp => {
-        inp.addEventListener('input', () => {
-            const obj = store.getByPath(path);
-            if (obj && typeof obj === 'object') {
-                const field = obj[inp.dataset.field];
-                if (typeof field === 'object') field.en = inp.value;
-                else obj[inp.dataset.field] = { zh: '', en: inp.value };
-            }
+            if (obj && typeof obj === 'object' && obj[inp.dataset.field]) obj[inp.dataset.field].zh = inp.value;
             store._emit();
         });
     });
 
+    $$('.form-i18n-en').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const obj = store.getByPath(path);
+            if (obj && typeof obj === 'object' && obj[inp.dataset.field]) obj[inp.dataset.field].en = inp.value;
+            store._emit();
+        });
+    });
+
+    // 跳转按钮：点击跳转到对应的嵌套路径
     $$('.btn-jump').forEach(btn => {
         btn.addEventListener('click', () => {
             const p = btn.dataset.pathkey.split('|').map(s => isNaN(s) ? s : Number(s));
@@ -568,6 +671,9 @@ function bindFormInputs(path, val, store) {
     });
 }
 
+// ========================
+// 选项操作按钮事件绑定
+// ========================
 function bindOptionButtons(node, store) {
     $('#btn-add-option')?.addEventListener('click', (e) => store.addOption(e.target.dataset.node));
 
@@ -598,6 +704,9 @@ function bindOptionButtons(node, store) {
         store.deleteAction(btn.dataset.node, parseInt(btn.dataset.opt), parseInt(btn.dataset.action))));
 }
 
+// ========================
+// 字段标签双击改名
+// ========================
 function bindLabelEdit() {
     $$('.editable-label').forEach(label => {
         const handler = (e) => {
@@ -632,8 +741,9 @@ function bindLabelEdit() {
     });
 }
 
-// ========== 右侧 JSON 预览 ==========
-
+// ========================
+// 右侧 JSON 预览渲染
+// ========================
 function renderJSONPreview(store) {
     const val = store.getByPath(store.currentPath || []);
     const jsonStr = JSON.stringify(val, null, 4);
@@ -648,6 +758,7 @@ function renderJSONPreview(store) {
     }
 }
 
+// 根据路径自动滚动到 JSON 预览的对应位置
 function navigateJSONToPath(store) {
     const path = store.currentPath || [];
     const editor = $('#json-editor');
@@ -667,8 +778,10 @@ function navigateJSONToPath(store) {
     editor.scrollTop = Math.max(0, (lines - 3) * lineHeight);
 }
 
-// ========== 配置编辑弹窗 ==========
-
+// ========================
+// 配置编辑弹窗
+// 允许用户编辑 template-contexts.json 的配置
+// ========================
 function openConfigEditor() {
     const existing = document.getElementById('modal-config-editor');
     if (existing) { existing.classList.add('open'); return; }
@@ -710,6 +823,7 @@ function openConfigEditor() {
         editor.addEventListener('scroll', () => { hlCode.scrollTop = editor.scrollTop; hlCode.scrollLeft = editor.scrollLeft; });
     }
 
+    // 保存按钮
     document.getElementById('btn-config-save').addEventListener('click', () => {
         try {
             saveConfigToLocal(JSON.parse(editor.value));
@@ -718,11 +832,13 @@ function openConfigEditor() {
         } catch (e) { alert('JSON 格式有误：' + e.message); }
     });
 
+    // 导出按钮
     document.getElementById('btn-config-export').addEventListener('click', () => {
         try { JSON.parse(editor.value); exportConfigJSON(); }
         catch (e) { alert('JSON 格式有误'); }
     });
 
+    // 关闭
     const close = () => {
         modal.classList.remove('open');
         setTimeout(() => { if (modal.parentNode) modal.parentNode.removeChild(modal); }, 200);
@@ -732,13 +848,17 @@ function openConfigEditor() {
     modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
 }
 
-// ========== 工具函数 ==========
+// ========================
+// 工具函数
+// ========================
 
+// HTML 转义
 function esc(str) {
     if (!str) return '';
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// 防抖
 function debounce(fn, delay) {
     let timer;
     return function (...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };

@@ -1,22 +1,29 @@
 // ==========================================
-// main.js — 入口（只引用 barrel.js）
+// main.js — 应用入口
+// 只引用 barrel.js，由 barrel 统一导出所有模块
 // ==========================================
 
 import { store, io, initUI, loadContextsConfig, loadSavedConfig, loadContentConfig } from './barrel.js';
 
-// 加载配置文件（不影响页面渲染，失败会用硬编码默认值）
+// ---------- 启动阶段 ----------
+
+// step 1: 加载 JSON 配置文件（template-content.json 和 template-contexts.json）
+// 这两个文件定义了空白结构和模板字段，加载失败会回退到 storyTypes.js 里的 HARDCODED_* 硬编码
 Promise.all([loadContextsConfig(), loadContentConfig()]).then(() => {
+    // step 2: 从 localStorage 读取用户保存过的上下文配置
     loadSavedConfig();
+    // 触发首次渲染，让界面显示默认空章节
     store._emit();
 });
 
-// 拖放区域：整个窗口都可以拖入 JSON
+// step 3: 拖放功能——拖入 .json 文件到窗口任意位置即可加载
 io.setupDropZone(document.body, json => store.loadChapter(json));
 
-// 初始化界面
+// step 4: 初始化界面（工具栏、树面板、编辑器、预览面板等）
 initUI(store, io);
 
-// 加载示例（开发调试用，从 URL 参数读取）
+// step 5: 开发调试 —— 通过 URL 参数 ?load=xxx.json 加载示例文件
+// 例如：index.html?load=sample.json
 const params = new URLSearchParams(window.location.search);
 const sampleUrl = params.get('load');
 if (sampleUrl) {

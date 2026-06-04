@@ -707,6 +707,49 @@ select {
     border-top: 1px solid var(--border);
     flex-shrink: 0;
 }
+
+/* ===== 新建选择弹窗 ===== */
+.create-choices {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    padding: 8px 0;
+}
+.create-choice-card {
+    flex: 1;
+    max-width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    user-select: none;
+}
+.create-choice-card:hover {
+    border-color: var(--accent);
+    background: rgba(99, 175, 239, 0.08);
+    transform: translateY(-2px);
+}
+.create-choice-card:active {
+    transform: translateY(0);
+}
+.create-choice-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+.create-choice-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+.create-choice-desc {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+}
 .tpl-ctx-bar {
     display: flex;
     align-items: center;
