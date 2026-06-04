@@ -16,19 +16,44 @@ python -m http.server 8080
 
 ## 项目结构
 
-| 文件/目录 | 用途 |
-|-----------|------|
-| `index.html` | HTML 入口 |
-| `css/style.css` | 样式文件（含字体配置） |
-| `js/main.js` | 入口脚本，初始化 store 和 UI |
-| `js/storyStore.js` | 数据管理：加载/保存/路径操作 |
-| `js/storyUI.js` | 界面渲染：树形导航、表单编辑、JSON 编辑器 |
-| `js/storyTree.js` | 左侧树形结构渲染 |
-| `js/storyTypes.js` | 数据模型、模板系统（content/option/action/meta） |
-| `fonts/` | 字体文件（未提交到 git） |
-| `lib/` | highlight.js（语法高亮） |
-| `LICENSE` | Mulan PSL v2 许可证 |
-| `README.md` | 项目说明文档 |
+```
+StoryEditor/
+├── index.html            ← HTML 入口（加载 js/main.js）
+├── layout.html           ← 页面布局（HTML 独立文件，与 JS 分离）
+├── css/style.css         ← 全部样式（暗色主题，flex 布局）
+├── js/
+│   ├── main.js           ← 入口（只引用 barrel.js）
+│   ├── barrel.js          ← 统一导出中枢（barrel 导出模式）
+│   ├── base/
+│   │   └── storyTypes.js ← 底层：数据模型、JSON 配置加载、模板系统
+│   ├── data/
+│   │   ├── storyStore.js ← 数据 CRUD、路径操作、导出清洗
+│   │   ├── storyIO.js    ← 文件导入/导出、拖放、文件选择
+│   │   └── dragDrop.js   ← 列表拖拽排序
+│   └── ui/
+│       ├── storyUI.js    ← 界面渲染：工具栏、编辑器、配置弹窗
+│       ├── storyTree.js  ← 左侧树形结构渲染
+│       └── storyTemplateUI.js ← 模板编辑弹窗
+├── config/               ← JSON 配置文件（可被编辑器自身编辑）
+│   ├── template-content.json   ← 空白章节/节点/选项结构 + 各上下文默认模板
+│   └── template-contexts.json  ← 模板编辑器上下文按钮、显示名称、匹配规则
+├── fonts/                ← 字体文件（仓耳与墨 + FiraCode）
+├── lib/
+│   └── highlight.min.js  ← JSON 语法高亮
+├── LICENSE               ← Mulan PSL v2
+├── README.md
+└── PROJECT_HANDOVER.md
+```
+
+### 命名规范（一看就知道依赖关系）
+
+| 文件/目录 | 含义 |
+|:---------:|------|
+| `main.js` | 入口，浏览器直接加载 |
+| `barrel.js` | 中枢（barrel 导出），统一引用所有模块 |
+| `base/` | 底层基础，谁都不依赖 |
+| `data/` | 数据层，依赖 base/ |
+| `ui/` | 界面层，依赖 base/ + data/ |
 
 ---
 
@@ -38,15 +63,24 @@ python -m http.server 8080
 章节 JSON 格式：
 ```json
 {
-  "meta": { "name": "章节名" },
+  "meta": { "name": "章节名", "customField": "" },
   "content": [
     {
-      "type": "dialog",
-      "speaker": "角色名",
-      "text": { "zh": "中文", "en": "English" },
-      "actions": [],
+      "id": "0",
+      "speaker": { "zh": "角色名", "en": "" },
+      "text": { "zh": "对话文本", "en": "English" },
+      "headimage": "",
+      "room": "",
+      "bgm": "",
+      "next": "",
+      "voice": "",
       "options": [
-        { "text": "选项1", "target": "下一节点" }
+        {
+          "text": { "zh": "选项", "en": "" },
+          "next": "1",
+          "showif": {},
+          "actions": []
+        }
       ]
     }
   ]
@@ -54,45 +88,50 @@ python -m http.server 8080
 ```
 
 ### 2. 模板系统
-在 `storyTypes.js` 中定义四类模板：
-- `content` — 对话节点模板
-- `option` — 选项模板
-- `action` — 动作模板
-- `meta` — 章节元数据模板（可自定义字段）
 
-模板可通过「📋 编辑模板」按钮编辑，新建章节时自动应用。
+模板编辑器（📋 编辑模板）中可修改四个上下文模板：
+
+| 上下文 | 用途 | 匹配路径 |
+|:------:|:----:|:--------:|
+| meta | 章节元数据 | `meta` |
+| content | 对话节点 | `content` |
+| option | 选项 | `content.*.options` |
+| action | 动作命令 | `*.actions` |
+| default | 兜底 | `*` |
+
+模板上下文的名称、匹配规则由 `config/template-contexts.json` 定义，可自由增删。
+
+默认模板字段由 `config/template-content.json` 的 `templates` 部分定义。
 
 ### 3. 三栏布局
-- **左栏**：树形导航 + 搜索功能
-- **中栏**：选中节点的路径感知的 JSON 镜像编辑
-- **右栏**：完整 JSON 编辑器 + 高亮
+- **左栏**：树形导航 + 路径搜索
+- **中栏**：选中节点的表单编辑 / JSON 镜像编辑（Tab 切换）
+- **右栏**：完整 JSON 高亮预览 + 实时错误校验
 
-### 4. 搜索功能
-- 左上角搜索框
-- 输入 key 名称全局搜索
-- 可用 `content.key` 限定搜索范围
-- 搜索按钮可快速定位当前属性的 key
+### 4. 配置系统（JSON 驱动）
+
+符合"操作 JSON 的工具，用 JSON 配置自身"的设计理念：
+
+| 配置文件 | 怎么修改 |
+|:--------:|:--------:|
+| `config/template-content.json` | 工具栏「📄 内容配置」或直接编辑文件 |
+| `config/template-contexts.json` | 工具栏「📄 上下文配置」或右上角「⚙️ 配置」|
+
+修改后点「💾 保存配置」→ 存 localStorage + 下载文件 → 替换原文件即可固化。
 
 ---
 
 ## 字体配置（已添加）
 
-在 `css/style.css` 中配置：
-
 ```css
-/* 仓耳与墨W04 - 普通文字 */
 @font-face {
     font-family: '仓耳与墨W04';
     src: url('../fonts/仓耳与墨W04.ttf') format('truetype');
 }
-
-/* FiraCode - 代码/JSON */
 @font-face {
     font-family: 'FiraCode';
     src: url('../fonts/FiraCode-Regular.woff2') format('woff2');
-    font-weight: 400;
 }
-
 :root {
     --font-family: '仓耳与墨W04', 'Segoe UI', 'Microsoft YaHei', sans-serif;
     --font-mono: 'FiraCode', 'Consolas', 'Courier New', monospace;
@@ -100,30 +139,29 @@ python -m http.server 8080
 }
 ```
 
-字体文件位于 `fonts/` 目录：
-- `仓耳与墨W04.ttf`
-- `FiraCode-Regular.woff2`
-- `FiraCode-Medium.woff2`
-- `FiraCode-Bold.woff2`
-
-⚠️ `fonts/` 目录未 git add，需要手动添加
-
 ---
 
 ## 重要改动记录
 
-### 已完成
-1. ✅ 修复 root 节点点击无显示（`storyUI.js` 539-541行）
-2. ✅ 添加 meta 模板可编辑功能
-3. ✅ 添加字体配置（FiraCode + 仓耳与墨）
-4. ✅ 基础字号调整为 16px
-5. ✅ 控件继承字体（button/input/select/textarea）
-6. ✅ 代码编辑器统一使用 FiraCode
+### v0.01 — 文件结构整改 + 基本 debug
+- [x] 目录结构重构：扁平 `js/` → 三层 `base/` / `data/` / `ui/`
+- [x] barrel 导出模式：新增 `barrel.js` 统一导出
+- [x] HTML 分离：布局从 JS 模板字符串移出到 `layout.html`
+- [x] 配置系统：模板上下文从硬编码改为 `config/` 下的 JSON 配置
+- [x] 配置文件：新增 `template-content.json`、`template-contexts.json`
+- [x] 工具栏：新增「📄 内容配置」「📄 上下文配置」「💾 保存配置」按钮
+- [x] JSON 错误提示：编辑器底部实时显示 JSON 解析错误
+- [x] 模板添加字段：支持选择类型（字符串/数字/数组/对象）
+- [x] 格式化 bug 修复：格式化后保存回 store，不丢失
+- [x] 入口命名规范：`main.js` → `barrel.js`，删除 `app.js`、`index.js`
+- [x] 项目文档更新：README.md、PROJECT_HANDOVER.md
 
-### 注意事项
-1. ⚠️ `fonts/` 目录未提交到 git（字体文件较大）
-2. ⚠️ CSS 字体大小目前仍是硬编码 px 值，可考虑改用 em 单位
-3. ⚠️ `storyTypes.js` 和 `storyUI.js` 有未提交的改动
+### 此前已完成的
+- [x] root 节点点击无显示修复
+- [x] meta 模板可编辑
+- [x] 字体配置（FiraCode + 仓耳与墨）
+- [x] 基础字号 16px
+- [x] 控件继承字体
 
 ---
 
@@ -131,22 +169,41 @@ python -m http.server 8080
 ```bash
 git status
 # Untracked: fonts/
-# Modified: css/style.css, js/storyTypes.js, js/storyUI.js, README.md
+# Modified: 无（所有改动已提交）
 ```
 
 ---
 
 ## 常用操作
-- **导入 JSON**：`📂 导入` 按钮
-- **导出 JSON**：`💾 导出` 按钮
-- **新建章节**：点空白页或 `➕ 新建 JSON`
-- **编辑模板**：点 `📋 编辑模板`，切换模板上下文下拉框
-- **清空搜索**：搜索框留空或点清除按钮
+
+| 操作 | 方式 |
+|:----:|:----:|
+| 导入 JSON | 工具栏「📥 导入 JSON」或拖拽文件到窗口 |
+| 导出 JSON | 工具栏「📤 导出 JSON」|
+| 新建空白 JSON | 工具栏「＋ 新建 JSON」|
+| 编辑模板 | 工具栏「📋 编辑模板」|
+| 编辑配置 | 工具栏「📄 内容配置/上下文配置」或右上角「⚙️ 配置」|
+| 保存配置 | 编辑配置后点「💾 保存配置」|
+| 编辑节点 | 左侧树形导航选中节点，中间表单编辑 |
+| 编辑标签名 | 双击字段标签，输入后回车 |
+| 格式化 JSON | 右侧面板「格式化」按钮 |
+
+---
+
+## 依赖层级
+
+```
+base/    ← 纯函数，0 依赖
+data/    ← 依赖 base/ + ui/
+ui/      ← 依赖 base/ + data/
+barrel.js ← 统一导出 base/ + data/ + ui/
+main.js  ← 只引用 barrel.js
+```
 
 ---
 
 ## 待优化项
-1. CSS 字体大小统一改用 em/rem 单位
-2. 提交 fonts/ 目录到 git（或用 .gitignore）
-3. 添加更多模板类型
-4. 添加撤销/重做功能
+1. 提交 fonts/ 目录到 git（或用 .gitignore）
+2. 添加撤销/重做功能
+3. 添加拖拽排序支持
+4. 添加快捷键支持（如 Ctrl+S 保存）

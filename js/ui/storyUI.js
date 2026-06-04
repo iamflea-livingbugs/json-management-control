@@ -90,7 +90,8 @@ export async function initUI(store, io) {
 
     function showJSONError(msg) {
         errDiv.textContent = '⚠️ ' + msg;
-        errDiv.style.display = '';
+        errDiv.style.display = 'block';
+        // errDiv.style.position = 'fixed';
     }
     function hideJSONError() {
         errDiv.style.display = 'none';
