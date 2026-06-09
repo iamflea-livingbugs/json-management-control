@@ -7,7 +7,7 @@
 //   4. 提供配置编辑弹窗
 // ==========================================
 
-import { createChapter, createBlankChapter, saveLabel, loadLabels, getFieldLabel } from '../base/storyTypes.js';
+import { createChapter, createBlankChapter, getFieldLabel } from '../base/storyTypes.js';
 import { store } from '../data/storyStore.js';
 import { renderTree } from '../ui/storyTree.js';
 import { openTemplateEditor } from '../ui/storyTemplateUI.js';
@@ -206,6 +206,8 @@ export async function initUI(store, io) {
             hideJSONError();
             const path = store.currentPath;
             if (path && path.length > 0) store.setByPath([...path], parsed);
+            else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) store.loadChapter(parsed);
+            else { showJSONError('根节点必须是对象 {}'); return; }
         } catch (e) {
             showJSONError(e.message);
         }
@@ -230,6 +232,8 @@ export async function initUI(store, io) {
             hideJSONError();
             const path = store.currentPath;
             if (path && path.length > 0) store.setByPath([...path], parsed);
+            else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) store.loadChapter(parsed);
+            else { showJSONError('根节点必须是对象 {}'); return; }
         } catch (e) {
             showJSONError(e.message);
         }
@@ -603,13 +607,20 @@ function renderEditor(store) {
         });
     }
 
-    // 删除字段按钮
+    // 删除字段按钮（支持嵌套路径）
     $$('.btn-del-field').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const key = btn.dataset.delKey;
-            const obj = store.getByPath(path);
-            if (obj && typeof obj === 'object' && key in obj) { delete obj[key]; store.setByPath(path, obj); }
+            // 优先从最近的 field-row 读取 parentpath，否则用当前 path
+            const fieldRow = btn.closest('.field-row');
+            const parentPathStr = fieldRow?.dataset?.parentpath;
+            let targetPath = path;
+            if (parentPathStr !== undefined && parentPathStr !== null) {
+                targetPath = parentPathStr ? parentPathStr.split('|').filter(Boolean) : [];
+            }
+            const obj = store.getByPath(targetPath);
+            if (obj && typeof obj === 'object' && key in obj) { delete obj[key]; store.setByPath(targetPath, obj); }
         });
     });
 }
@@ -641,28 +652,49 @@ function renderFormField(key, v, parentPath, store) {
         ? `<label class="editable-label field-label" data-key="${key}" title="双击编辑标签 · 显示名: ${esc(customLabel)}">${esc(labelText)}<span class="field-label-alias">${esc(customLabel)}</span></label>`
         : `<label class="editable-label field-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>`;
     const childPath = [...parentPath, key];
+    const parentPathStr = esc(parentPath.join('|'));
+    const fieldAttr = `data-field="${key}" data-parentpath="${parentPathStr}"`;
 
     // null/undefined
     if (v === null || v === undefined) {
-        return `<div class="field-row" data-field="${key}">${labelHtml}<input class="input form-field" data-field="${key}" value="" placeholder="null" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row field-row-null" ${fieldAttr}>${labelHtml}<input class="input form-field" data-field="${key}" value="" placeholder="null" /><span class="null-badge">null</span><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
-    // 双语 { zh, en }
+    // 双语 { zh, en }（可能还有其他额外属性）
     if (typeof v === 'object' && !Array.isArray(v) && v.zh !== undefined && v.en !== undefined) {
-        return `<div class="field-row" data-field="${key}">${labelHtml}<div class="i18n-group"><input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" /><input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" /></div><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        let extraHtml = '';
+        const extraKeys = Object.keys(v).filter(k => k !== 'zh' && k !== 'en');
+        if (extraKeys.length > 0) {
+            extraHtml = `<div class="i18n-extra">${extraKeys.map(ek => {
+                const ev = v[ek];
+                if (ev === null || ev === undefined) {
+                    return `<div class="field-row field-row-null" data-field="${ek}" data-parentpath="${esc(childPath.join('|'))}">
+                        <label class="field-label">${esc(ek)}</label>
+                        <span class="null-badge">null</span>
+                        <button class="btn-icon btn-del-field" data-del-key="${ek}" title="删除属性">✕</button>
+                    </div>`;
+                }
+                return `<div class="field-row" data-field="${ek}" data-parentpath="${esc(childPath.join('|'))}">
+                    <label class="field-label">${esc(ek)}</label>
+                    <input class="input form-field" data-field="${ek}" value="${esc(String(ev))}" />
+                    <button class="btn-icon btn-del-field" data-del-key="${ek}" title="删除属性">✕</button>
+                </div>`;
+            }).join('')}</div>`;
+        }
+        return `<div class="field-row" ${fieldAttr}>${labelHtml}<div class="i18n-group"><input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" /><input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" /></div><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>${extraHtml}`;
     }
     // 数组（摘要 + 跳转按钮）
     if (Array.isArray(v)) {
         const pathKey = childPath.join('|');
-        return `<div class="field-row" data-field="${key}">${labelHtml}<span class="nested-preview">[${v.length}项]</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row" ${fieldAttr}>${labelHtml}<span class="nested-preview">[${v.length}项]</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
     // 对象（摘要 + 跳转按钮）
     if (typeof v === 'object' && v !== null) {
         const pathKey = childPath.join('|');
-        return `<div class="field-row" data-field="${key}">${labelHtml}<span class="nested-preview">{${Object.keys(v).length}个属性}</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row" ${fieldAttr}>${labelHtml}<span class="nested-preview">{${Object.keys(v).length}个属性}</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
     // 基本类型（直接输入）
     const strVal = v === null || v === undefined ? '' : String(v);
-    return `<div class="field-row" data-field="${key}">${labelHtml}<input class="input form-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+    return `<div class="field-row" ${fieldAttr}>${labelHtml}<input class="input form-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
 }
 
 // ========================
@@ -785,8 +817,8 @@ function bindLabelEdit() {
     $$('.editable-label').forEach(label => {
         const handler = (e) => {
             e.stopPropagation();
-            const key = label.dataset.key;
-            const current = label.textContent;
+            const oldKey = label.dataset.key;
+            const current = label.childNodes[0]?.textContent?.trim() || label.textContent;
             const input = document.createElement('input');
             input.className = 'input-sm label-editor';
             input.value = current;
@@ -796,12 +828,27 @@ function bindLabelEdit() {
             input.select();
 
             function finish() {
-                const newLabel = input.value.trim();
-                if (newLabel && newLabel !== current) { saveLabel(key, newLabel); renderEditor(store); }
-                else {
+                const newKey = input.value.trim();
+                if (newKey && newKey !== current) {
+                    const fieldRow = input.closest('.field-row');
+                    const parentPathStr = fieldRow?.dataset?.parentpath;
+                    if (parentPathStr !== undefined && parentPathStr !== null) {
+                        const parentPath = parentPathStr ? parentPathStr.split('|').filter(Boolean) : [];
+                        const parent = store.getByPath(parentPath);
+                        if (parent && typeof parent === 'object' && oldKey in parent) {
+                            // 先更新路径，再改名，最后触发重绘
+                            if (store.currentPath.includes(oldKey)) {
+                                store.currentPath = store.currentPath.map(s => s === oldKey ? newKey : s);
+                            }
+                            parent[newKey] = parent[oldKey];
+                            delete parent[oldKey];
+                            store.setByPath(parentPath, parent);
+                        }
+                    }
+                } else {
                     const lbl = document.createElement('label');
-                    lbl.className = 'editable-label';
-                    lbl.dataset.key = key;
+                    lbl.className = 'editable-label field-label';
+                    lbl.dataset.key = oldKey;
                     lbl.textContent = current;
                     lbl.title = '双击编辑标签';
                     lbl.addEventListener('dblclick', handler);
@@ -809,7 +856,10 @@ function bindLabelEdit() {
                 }
             }
             input.addEventListener('blur', finish);
-            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') finish(); if (e.key === 'Escape') { input.value = current; finish(); } });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+                if (e.key === 'Escape') { input.value = current; input.blur(); }
+            });
         };
         label.addEventListener('dblclick', handler);
     });
