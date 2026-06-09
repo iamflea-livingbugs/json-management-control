@@ -6,6 +6,7 @@
 
 import { loadTemplates, saveTemplate, getContextKeys, getContextsConfig, getFieldLabel, saveLabel } from '../base/storyTypes.js';
 import { store } from '../data/storyStore.js';
+import { makeModalDraggable } from './modalDialog.js';
 
 let _currentCtx = 'content'; // 当前正在编辑的上下文
 
@@ -38,6 +39,7 @@ export function openTemplateEditor() {
         </div>`;
     document.body.appendChild(modal);
     requestAnimationFrame(() => modal.classList.add('open'));
+    makeModalDraggable(modal);
 
     // 关闭事件
     const close = () => closeTemplateEditor();

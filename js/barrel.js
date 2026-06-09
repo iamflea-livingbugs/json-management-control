@@ -11,6 +11,8 @@ export { loadContextsConfig, loadSavedConfig, loadContentConfig } from './base/s
 export { store } from './data/storyStore.js';
 export * as io from './data/storyIO.js';
 
-// UI 层：主界面渲染 + 新建选择弹窗
+// UI 层：主界面渲染 + 新建选择弹窗 + 模态框
 export { initUI } from './ui/storyUI.js';
 export { showCreateDialog } from './ui/createDialog.js';
+export { openLabelManager } from './ui/labelManager.js';
+export { showAlert, showConfirm, showPrompt, showObjectAddDialog } from './ui/modalDialog.js';

@@ -7,6 +7,8 @@
 
 let _activeModal = null; // 当前打开的弹窗实例（防止多个叠加）
 
+import { makeModalDraggable } from './modalDialog.js';
+
 /**
  * 打开新建选择弹窗
  * @param {Object} options
@@ -69,6 +71,7 @@ export function showCreateDialog(options) {
     _activeModal = modal;
     // 下一帧添加 open 类以触发 CSS 过渡动画
     requestAnimationFrame(() => modal.classList.add('open'));
+    makeModalDraggable(modal);
 
     // ----- 关闭逻辑 -----
 

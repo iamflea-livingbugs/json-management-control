@@ -220,12 +220,12 @@ html, body {
 }
 .panel-center {
     flex: 1;
-    min-width: 300px;
+    min-width: 200px;
     overflow: hidden;
 }
 .panel-right {
-    width: 340px;
-    min-width: 180px;
+    flex: 1;
+    min-width: 200px;
     overflow: hidden;
 }
 
@@ -468,6 +468,20 @@ html, body {
     color: var(--text-dim);
     text-align: right;
     flex-shrink: 0;
+}
+/* 字段标签：显示原始键名 + 可选的别名 */
+.field-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.3;
+    cursor: text;
+}
+.field-label-alias {
+    font-size: 0.75rem;
+    color: var(--accent);
+    opacity: 0.6;
+    font-weight: normal;
 }
 .i18n-group {
     display: flex;
@@ -716,6 +730,9 @@ select {
     transform: translateY(20px);
     transition: transform 0.2s;
 }
+.modal-box.dragging {
+    transition: none;
+}
 .modal-overlay.open .modal-box {
     transform: translateY(0);
 }
@@ -726,6 +743,11 @@ select {
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    cursor: grab;
+    user-select: none;
+}
+.modal-header.dragging {
+    cursor: grabbing;
 }
 .modal-header h2 {
     color: var(--text);
@@ -896,6 +918,42 @@ select {
     white-space: pre-wrap;
     word-wrap: break-word;
     z-index: 1;
+}
+
+/* ===== 标签管理 ===== */
+.label-manager-hint {
+    font-size: 0.875rem;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+.label-manager-table {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.label-manager-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+}
+.label-mgr-key {
+    width: 100px;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+.label-mgr-default {
+    width: 80px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+.label-mgr-input {
+    flex: 1;
 }
 
 /* ===== 滚动条 ===== */

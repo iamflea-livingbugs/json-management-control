@@ -2,6 +2,8 @@
 // storyIO.js — JSON 文件导入 / 导出
 // ==========================================
 
+import { showAlert } from '../ui/modalDialog.js';
+
 // 导入：从 File 对象读取并解析 JSON 对话剧本
 // 返回 Promise<json>；格式校验不通过则 reject
 export function importJSON(file) {
@@ -53,8 +55,8 @@ export function setupDropZone(el, onLoad) {
         el.classList.remove('drop-active');
         if (!e.dataTransfer.files.length) return;
         const file = e.dataTransfer.files[0];
-        if (file && file.name.endsWith('.json')) importJSON(file).then(onLoad).catch(err => alert(err.message));
-        else alert('请拖入 .json 文件');
+        if (file && file.name.endsWith('.json')) importJSON(file).then(onLoad).catch(err => showAlert(err.message));
+        else showAlert('请拖入 .json 文件');
     });
 }
 
@@ -68,7 +70,7 @@ export function setupFilePicker(btnEl, onLoad) {
     btnEl.addEventListener('click', () => input.click());
     input.addEventListener('change', () => {
         const file = input.files[0];
-        if (file) importJSON(file).then(onLoad).catch(err => alert(err.message));
+        if (file) importJSON(file).then(onLoad).catch(err => showAlert(err.message));
         input.value = '';
     });
 }

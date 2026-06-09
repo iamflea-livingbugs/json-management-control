@@ -10,6 +10,7 @@
 
 import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from '../base/storyTypes.js';
 import { ensureExpanded } from '../ui/storyTree.js';
+import { showObjectAddDialog } from '../ui/modalDialog.js';
 
 class StoryStore {
     constructor() {
@@ -22,6 +23,7 @@ class StoryStore {
         // ---------- 内部状态 ----------
         this._listeners = [];             // 渲染监听器队列
         this._configUrl = null;           // 通过 loadConfig 打开的配置文件 URL
+        this._dataVersion = 0;            // 数据版本号，每次 _emit 递增，用于 UI 检测变更
     }
 
     // ----- 发布/订阅 -----
@@ -36,6 +38,7 @@ class StoryStore {
 
     // 触发所有监听器（通知 UI 重新渲染）
     _emit() {
+        this._dataVersion++;
         this._listeners.forEach(fn => fn(this));
     }
 
@@ -425,16 +428,17 @@ class StoryStore {
     }
 
     // 在指定路径下添加新元素
-    addAt(path, type) {
+    async addAt(path, type) {
         const parent = this.getByPath(path);
         if (!parent) return;
         if (type === 'object') {
-            // 在对象中添加新属性
-            const key = prompt('请输入新属性名（英文）:');
-            if (!key) return;
-            parent[key] = '';
+            // 在对象中添加新属性（名称 + 类型可由用户选择）
+            const result = await showObjectAddDialog();
+            if (!result || !result.key) return;
+            const val = result.type === 'number' ? 0 : result.type === 'array' ? [] : result.type === 'object' ? {} : '';
+            parent[result.key] = val;
             ensureExpanded(path);
-            this.currentPath = [...path, key];
+            this.currentPath = [...path, result.key];
             this._emit();
         } else if (type === 'array') {
             // 在数组中添加新元素

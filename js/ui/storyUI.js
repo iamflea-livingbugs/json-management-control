@@ -7,12 +7,14 @@
 //   4. 提供配置编辑弹窗
 // ==========================================
 
-import { createChapter, createBlankChapter, getFieldLabel, saveLabel } from '../base/storyTypes.js';
+import { createChapter, createBlankChapter, saveLabel, loadLabels, getFieldLabel } from '../base/storyTypes.js';
 import { store } from '../data/storyStore.js';
 import { renderTree } from '../ui/storyTree.js';
 import { openTemplateEditor } from '../ui/storyTemplateUI.js';
+import { openLabelManager } from './labelManager.js';
 import { showCreateDialog } from './createDialog.js';
 import { getContextsConfig, saveConfigToLocal, exportConfigJSON } from '../base/storyTypes.js';
+import { showAlert, showConfirm, makeModalDraggable } from './modalDialog.js';
 
 // 快捷 DOM 引用
 const $ = (sel) => document.querySelector(sel);
@@ -51,20 +53,20 @@ export async function initUI(store, io) {
     $('#btn-open-content-config').addEventListener('click', () => {
         store.loadConfig('config/template-content.json').then(() => {
             $('#btn-save-config').style.display = '';
-        }).catch(() => alert('加载配置文件失败'));
+        }).catch(() => showAlert('加载配置文件失败'));
     });
 
     // 打开上下文配置（template-contexts.json）
     $('#btn-open-contexts-config').addEventListener('click', () => {
         store.loadConfig('config/template-contexts.json').then(() => {
             $('#btn-save-config').style.display = '';
-        }).catch(() => alert('加载配置文件失败'));
+        }).catch(() => showAlert('加载配置文件失败'));
     });
 
     // 保存配置文件
     $('#btn-save-config').addEventListener('click', () => {
         const name = store.saveConfig();
-        if (name) alert('✅ 已保存到本地存储\n📥 已下载 ' + name + ' 文件\n\n请用下载的文件替换项目中的 config/' + name);
+        if (name) showAlert('✅ 已保存到本地存储\n📥 已下载 ' + name + ' 文件\n\n请用下载的文件替换项目中的 config/' + name);
     });
 
     // 新建章节（弹出空白/模板选择）
@@ -82,6 +84,9 @@ export async function initUI(store, io) {
 
     // 打开上下文配置弹窗
     $('#btn-config').addEventListener('click', () => openConfigEditor());
+
+    // 打开标签管理弹窗
+    $('#btn-label-manager').addEventListener('click', () => openLabelManager());
 
     // ----- 章节名输入 -----
     $('#chapter-name').addEventListener('input', (e) => {
@@ -331,6 +336,7 @@ let _searchTerm = '';           // 当前搜索关键词
 let _editorVersion = '';        // 编辑器版本指纹（路径+字段数）
 let _jsonTabVersion = '';       // JSON Tab 版本指纹（JSON 字符串长度）
 let _prevChapter = null;        // 上一次渲染的章节引用（用于检测新建/切换章节）
+let _prevDataVersion = -1;      // 上一次渲染的数据版本号，检测增删改操作
 
 // 计算编辑器版本指纹
 function editorVersion(store) {
@@ -360,9 +366,10 @@ function renderAll(store) {
     const saveBtn = $('#btn-save-config');
     if (saveBtn) saveBtn.style.display = store._configUrl ? '' : 'none';
 
-    // 3. 检测章节是否被整体替换（新建、导入等），强制刷新编辑区
-    if (store.chapter !== _prevChapter) {
+    // 3. 检测章节是否被整体替换或数据是否被修改，强制刷新编辑区
+    if (store.chapter !== _prevChapter || store._dataVersion !== _prevDataVersion) {
         _prevChapter = store.chapter;
+        _prevDataVersion = store._dataVersion;
         _editorVersion = '';
         _jsonTabVersion = '';
     }
@@ -467,7 +474,7 @@ function renderTreePanel(store) {
     renderTree(container, data, store.currentPath,
         (path) => store.selectPath(path),
         (path, type) => store.addAt(path, type),
-        (path) => { if (confirm('确定删除该节点吗？')) store.deleteAt(path); }
+        (path) => { showConfirm('确定删除该节点吗？').then(ok => { if (ok) store.deleteAt(path); }); }
     );
 
     // 底部「新建对话节点」按钮
@@ -535,7 +542,12 @@ function renderEditor(store) {
         } else {
             // 对象类型：显示字段列表
             formHtml += `<div class="editor-fields">${rows}</div>`;
-            if (val !== null) formHtml += `<button id="btn-add-field" class="btn btn-sm btn-success" style="margin-top:4px">＋ 添加属性</button>`;
+            if (val !== null) formHtml += `<div class="array-add-bar"><select id="obj-add-type" class="input-sm" style="width:auto">
+                <option value="string">字符串 ""</option>
+                <option value="number">数字 0</option>
+                <option value="array">空数组 []</option>
+                <option value="object">空对象 {}</option></select>
+                <button id="btn-add-field" class="btn btn-sm btn-success">＋ 添加属性</button></div>`;
         }
 
         // 如果当前路径是对话节点，额外渲染选项编辑区
@@ -551,7 +563,7 @@ function renderEditor(store) {
     if (path.length === 2 && path[0] === 'content' && val && val.options) bindOptionButtons(val, store);
     bindLabelEdit();
 
-    // 添加属性按钮
+    // 添加属性按钮（含类型选择）
     const addFieldBtn = $('#btn-add-field');
     if (addFieldBtn) {
         addFieldBtn.addEventListener('click', () => {
@@ -560,7 +572,14 @@ function renderEditor(store) {
             let newKey = 'new_key';
             let i = 1;
             while (newKey in obj) newKey = 'new_key_' + i++;
-            obj[newKey] = '';
+            const typeSelect = $('#obj-add-type');
+            const selected = typeSelect ? typeSelect.value : 'string';
+            switch (selected) {
+                case 'number': obj[newKey] = 0; break;
+                case 'array': obj[newKey] = []; break;
+                case 'object': obj[newKey] = {}; break;
+                default: obj[newKey] = '';
+            }
             store.setByPath(path, obj);
         });
     }
@@ -616,30 +635,34 @@ function updateJSONTabContent(store) {
 // 根据值的类型（基本类型/双语/数组/对象）渲染不同的 UI
 // ========================
 function renderFormField(key, v, parentPath, store) {
-    const labelText = getFieldLabel(key);
+    const labelText = key;
+    const customLabel = getFieldLabel(key);
+    const labelHtml = customLabel !== key
+        ? `<label class="editable-label field-label" data-key="${key}" title="双击编辑标签 · 显示名: ${esc(customLabel)}">${esc(labelText)}<span class="field-label-alias">${esc(customLabel)}</span></label>`
+        : `<label class="editable-label field-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label>`;
     const childPath = [...parentPath, key];
 
     // null/undefined
     if (v === null || v === undefined) {
-        return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><input class="input form-field" data-field="${key}" value="" placeholder="null" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row" data-field="${key}">${labelHtml}<input class="input form-field" data-field="${key}" value="" placeholder="null" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
     // 双语 { zh, en }
     if (typeof v === 'object' && !Array.isArray(v) && v.zh !== undefined && v.en !== undefined) {
-        return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><div class="i18n-group"><input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" /><input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" /></div><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row" data-field="${key}">${labelHtml}<div class="i18n-group"><input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" /><input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" /></div><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
     // 数组（摘要 + 跳转按钮）
     if (Array.isArray(v)) {
         const pathKey = childPath.join('|');
-        return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><span class="nested-preview">[${v.length}项]</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row" data-field="${key}">${labelHtml}<span class="nested-preview">[${v.length}项]</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
     // 对象（摘要 + 跳转按钮）
     if (typeof v === 'object' && v !== null) {
         const pathKey = childPath.join('|');
-        return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><span class="nested-preview">{${Object.keys(v).length}个属性}</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row" data-field="${key}">${labelHtml}<span class="nested-preview">{${Object.keys(v).length}个属性}</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
     // 基本类型（直接输入）
     const strVal = v === null || v === undefined ? '' : String(v);
-    return `<div class="field-row" data-field="${key}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><input class="input form-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+    return `<div class="field-row" data-field="${key}">${labelHtml}<input class="input form-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
 }
 
 // ========================
@@ -860,6 +883,7 @@ function openConfigEditor() {
 
     document.body.appendChild(modal);
     requestAnimationFrame(() => modal.classList.add('open'));
+    makeModalDraggable(modal);
 
     const hlCode = document.getElementById('config-json-code');
     const editor = document.getElementById('config-json-editor');
@@ -880,13 +904,13 @@ function openConfigEditor() {
             saveConfigToLocal(JSON.parse(editor.value));
             document.getElementById('modal-config-editor').classList.remove('open');
             store._emit();
-        } catch (e) { alert('JSON 格式有误：' + e.message); }
+        } catch (e) { showAlert('JSON 格式有误：' + e.message); }
     });
 
     // 导出按钮
     document.getElementById('btn-config-export').addEventListener('click', () => {
         try { JSON.parse(editor.value); exportConfigJSON(); }
-        catch (e) { alert('JSON 格式有误'); }
+        catch (e) { showAlert('JSON 格式有误'); }
     });
 
     // 关闭
