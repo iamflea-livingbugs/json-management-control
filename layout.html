@@ -19,14 +19,41 @@
 </div>
 
 <div class="main-area">
-    <div class="panel panel-left" id="panel-left">
-        <div class="panel-header">层级导航</div>
-        <div class="tree-search-box">
-            <input id="tree-search" class="input-sm tree-search-input" placeholder="🔍 搜索节点..." />
-        </div>
-        <div id="tree-container" class="tree-container"></div>
+    <!-- 左侧活动栏 -->
+    <div class="activity-bar" id="activity-bar">
+        <div class="activity-btn active" data-view="outline" title="大纲">📂</div>
+        <div class="activity-btn" data-view="stats" title="统计">📊</div>
+        <div class="activity-btn" data-view="settings" title="设置">⚙️</div>
     </div>
-    <div class="splitter" data-target="left"></div>
+
+    <!-- 侧面板（根据活动栏切换内容） -->
+    <div class="panel panel-side" id="panel-side">
+        <div class="panel-header" id="side-panel-header">
+            <span id="side-panel-title">大纲</span>
+            <button class="btn-icon" id="btn-close-side" title="关闭侧面板">◀</button>
+        </div>
+        <!-- 大纲视图 -->
+        <div class="side-view" id="view-outline">
+            <div class="tree-search-box">
+                <input id="tree-search" class="input-sm tree-search-input" placeholder="🔍 搜索节点..." />
+            </div>
+            <div id="tree-container" class="tree-container"></div>
+        </div>
+        <!-- 统计视图 -->
+        <div class="side-view hidden" id="view-stats">
+            <div class="side-view-content">
+                <div class="side-view-placeholder">📊 统计面板（待实现）</div>
+            </div>
+        </div>
+        <!-- 设置视图 -->
+        <div class="side-view hidden" id="view-settings">
+            <div class="side-view-content">
+                <div class="side-view-placeholder">⚙️ 设置面板（待实现）</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="splitter" data-target="side"></div>
     <div class="panel panel-center" id="panel-center">
         <div class="panel-header">
             <span class="tab-label active" data-tab="form" id="tab-form">表单</span>

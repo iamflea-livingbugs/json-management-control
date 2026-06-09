@@ -99,6 +99,57 @@ export async function initUI(store, io) {
         });
     });
 
+    // ----- 活动栏：侧面板视图切换 -----
+    const VIEW_LABELS = {
+        outline: '大纲',
+        stats: '统计',
+        settings: '设置'
+    };
+    let _sidePanelOpen = true;
+
+    $$('.activity-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const view = btn.dataset.view;
+            const sidePanel = $('#panel-side');
+            const isActive = btn.classList.contains('active');
+
+            if (isActive && _sidePanelOpen) {
+                // 收起侧面板
+                sidePanel.classList.add('collapsed');
+                _sidePanelOpen = false;
+                btn.classList.remove('active');
+                return;
+            }
+
+            // 切换视图
+            $$('.activity-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            $$('.side-view').forEach(v => v.classList.add('hidden'));
+            const targetView = $('#view-' + view);
+            if (targetView) targetView.classList.remove('hidden');
+            $('#side-panel-title').textContent = VIEW_LABELS[view] || view;
+
+            // 展开侧面板
+            sidePanel.classList.remove('collapsed');
+            _sidePanelOpen = true;
+        });
+    });
+
+    // 关闭侧面板按钮
+    $('#btn-close-side').addEventListener('click', () => {
+        $('#panel-side').classList.add('collapsed');
+        _sidePanelOpen = false;
+        $$('.activity-btn').forEach(b => b.classList.remove('active'));
+    });
+
+    // 双击活动栏空白区域展开大纲
+    $('#activity-bar').addEventListener('dblclick', (e) => {
+        if (e.target === $('#activity-bar')) {
+            const outlineBtn = document.querySelector('.activity-btn[data-view="outline"]');
+            if (outlineBtn) outlineBtn.click();
+        }
+    });
+
     // ----- 注册 store 变更监听（驱动全量渲染）-----
     store.onChange(() => renderAll(store));
 
@@ -240,12 +291,12 @@ function initSplitters() {
             dragging = true;
             startX = e.clientX;
             const targetId = splitter.dataset.target;
-            if (targetId === 'left') {
-                targetPanel = $('#panel-left');
-                sign = 1;  // 拖拽时向右推
+            if (targetId === 'side') {
+                targetPanel = $('#panel-side');
+                sign = 1;
             } else {
                 targetPanel = $('#panel-right');
-                sign = -1; // 拖拽时向左推
+                sign = -1;
             }
             if (targetPanel) startW = targetPanel.getBoundingClientRect().width;
             splitter.classList.add('dragging');
