@@ -926,6 +926,118 @@ select {
     flex: 1;
 }
 
+/* ===== 章节对话列表 ===== */
+.chapter-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.chapter-count {
+    color: var(--text-dim);
+    font-size: 0.875rem;
+    margin-right: auto;
+}
+.chapter-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+}
+.chapter-row {
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s;
+}
+.chapter-row:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: var(--border);
+}
+.chapter-row-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.chapter-speaker-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.chapter-cols {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+    align-items: center;
+}
+.chapter-cols-speaker,
+.chapter-col-speaker {
+    flex-shrink: 0;
+}
+.chapter-speaker-input {
+    width: 90px;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+    font-size: 0.875rem;
+}
+.chapter-speaker-input:focus {
+    border-color: var(--accent);
+    background: var(--bg-input);
+}
+.chapter-col {
+    flex: 1;
+    min-width: 0;
+}
+.chapter-cell-input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+    font-size: 0.875rem;
+    box-sizing: border-box;
+}
+.chapter-cell-input:focus {
+    border-color: var(--accent);
+    background: var(--bg-input);
+}
+.chapter-cell-input.chapter-cell-null {
+    color: var(--text-dim);
+    font-style: italic;
+}
+.chapter-cell-display {
+    display: block;
+    padding: 4px 6px;
+    font-size: 0.875rem;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.chapter-open-btn {
+    flex-shrink: 0;
+}
+
 /* ===== 滚动条 ===== */
 ::-webkit-scrollbar {
     width: 6px;

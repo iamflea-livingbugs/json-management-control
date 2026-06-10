@@ -247,6 +247,20 @@ export function createNodeFromTemplate(ctx, id) {
 // 字段定义与标签管理
 // ========================
 
+// 支持的语言列表（用于章节视图展开 i18n 字段）
+// 可通过 loadContentConfig() 加载的配置覆盖
+export function getLanguages() {
+    try {
+        const saved = localStorage.getItem('storyeditor_languages');
+        if (saved) return JSON.parse(saved);
+    } catch {}
+    return ['zh', 'en'];
+}
+
+export function saveLanguages(langs) {
+    localStorage.setItem('storyeditor_languages', JSON.stringify(langs));
+}
+
 // 从 localStorage 读取用户自定义的字段标签别名
 export function loadLabels() {
     try { return JSON.parse(localStorage.getItem(LABEL_STORAGE_KEY) || '{}'); }

@@ -15,4 +15,5 @@ export * as io from './data/storyIO.js';
 export { initUI } from './ui/storyUI.js';
 export { showCreateDialog } from './ui/createDialog.js';
 export { openLabelManager } from './ui/labelManager.js';
+export { renderChapterView } from './ui/storyChapterView.js';
 export { showAlert, showConfirm, showPrompt, showObjectAddDialog } from './ui/modalDialog.js';

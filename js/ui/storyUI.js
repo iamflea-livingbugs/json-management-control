@@ -15,6 +15,7 @@ import { openLabelManager } from './labelManager.js';
 import { showCreateDialog } from './createDialog.js';
 import { getContextsConfig, saveConfigToLocal, exportConfigJSON } from '../base/storyTypes.js';
 import { showAlert, showConfirm, makeModalDraggable } from './modalDialog.js';
+import { renderChapterView } from './storyChapterView.js';
 
 // 快捷 DOM 引用
 const $ = (sel) => document.querySelector(sel);
@@ -93,14 +94,17 @@ export async function initUI(store, io) {
         store.setChapterName(e.target.value);
     });
 
-    // ----- Tab 切换（表单模式 / JSON 模式）-----
+    // ----- Tab 切换（表单 / 章节 / JSON）-----
     $$('.tab-label').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
             $$('.tab-label').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             $('#panel-form').classList.toggle('hidden', target !== 'form');
+            $('#panel-chapter').classList.toggle('hidden', target !== 'chapter');
             $('#panel-json').classList.toggle('hidden', target !== 'json');
+            // 切换到章节视图时渲染
+            if (target === 'chapter') renderChapterView(store);
         });
     });
 
@@ -156,7 +160,11 @@ export async function initUI(store, io) {
     });
 
     // ----- 注册 store 变更监听（驱动全量渲染）-----
-    store.onChange(() => renderAll(store));
+    store.onChange(() => {
+        renderAll(store);
+        // 如果章节 tab 当前激活，也刷新
+        if ($('#tab-chapter')?.classList.contains('active')) renderChapterView(store);
+    });
 
     // ----- 右侧 JSON 预览面板 -----
     const hlCode = $('#json-highlight code');
