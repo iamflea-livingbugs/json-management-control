@@ -3,9 +3,9 @@
 // 所有增删改操作仅修改内存草稿，点"保存"才写入 localStorage
 // ==========================================
 
-import { loadTemplates, getContextKeys, getContextsConfig, getFieldLabel, saveLabel, saveTemplates } from '../base/storyTypes.js';
-import { store } from '../data/storyStore.js';
-import { showConfirm, makeModalDraggable } from './modalDialog.js';
+import { loadTemplates, getContextKeys, getContextsConfig, getFieldLabel, saveLabel, saveTemplates } from '../logic/svc-storyTypes.js';
+import { store } from '../logic/svc-storyStore.js';
+import { showConfirm, makeModalDraggable } from './view-modalDialog.js';
 
 let _currentCtx = 'content';   // 当前正在编辑的上下文
 let _draft = null;             // 内存草稿：{ [ctx]: templateObj }
