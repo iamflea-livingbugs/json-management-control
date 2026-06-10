@@ -247,28 +247,6 @@ export function createNodeFromTemplate(ctx, id) {
 // 字段定义与标签管理
 // ========================
 
-// 所有内置字段的定义列表（key = 字段名，label = 显示名，type = 值的类型）
-export const NODE_FIELDS = [
-    { key: 'id', label: 'ID', type: 'string' },
-    { key: 'speaker', label: '说话人', type: 'i18n' },
-    { key: 'headimage', label: '头像', type: 'string' },
-    { key: 'text', label: '文本', type: 'i18n' },
-    { key: 'room', label: '场景/背景', type: 'string' },
-    { key: 'bgm', label: 'BGM', type: 'string' },
-    { key: 'transition', label: '过渡类型', type: 'string' },
-    { key: 'fx', label: '特效', type: 'string' },
-    { key: 'cg', label: 'CG', type: 'string' },
-    { key: 'voice', label: '语音', type: 'string' },
-    { key: 'dialog', label: '打字机文本', type: 'string' },
-    { key: 'animation', label: '动画', type: 'string' },
-    { key: 'loop', label: '循环动画', type: 'string' },
-    { key: 'next', label: '跳转ID', type: 'string' },
-    { key: 'goNext', label: 'goNext模式', type: 'string' },
-    { key: 'indenpent', label: '独立模式', type: 'string' },
-    { key: 'signal', label: '信号', type: 'string' },
-    { key: 'roomHotspot', label: '房间热点', type: 'string' },
-];
-
 // 从 localStorage 读取用户自定义的字段标签别名
 export function loadLabels() {
     try { return JSON.parse(localStorage.getItem(LABEL_STORAGE_KEY) || '{}'); }
@@ -282,12 +260,10 @@ export function saveLabel(key, label) {
     localStorage.setItem(LABEL_STORAGE_KEY, JSON.stringify(all));
 }
 
-// 获取字段的显示名：优先返回用户自定义的名称，其次返回内置默认名，最后返回 key 本身
+// 获取字段的显示名：优先返回用户自定义的名称，否则返回 key 本身
 export function getFieldLabel(key) {
     const custom = loadLabels();
-    if (custom[key]) return custom[key];
-    const def = NODE_FIELDS.find(f => f.key === key);
-    return def ? def.label : key;
+    return custom[key] || key;
 }
 
 // 判断值是否为空（空字符串、空数组、空对象、null/undefined 均视为空）

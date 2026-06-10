@@ -196,6 +196,19 @@ export async function initUI(store, io) {
         $('#json-highlight').scrollLeft = editor.scrollLeft;
     });
 
+    // Tab 键插入 4 个空格（代替失焦）
+    editor.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+            editor.selectionStart = editor.selectionEnd = start + 4;
+            // 触发 input 事件更新高亮
+            editor.dispatchEvent(new Event('input'));
+        }
+    });
+
     // 失焦时格式化并保存回数据
     editor.addEventListener('blur', () => {
         try {
@@ -277,6 +290,17 @@ export async function initUI(store, io) {
             if (preEl) {
                 preEl.scrollTop = centerTa.scrollTop;
                 preEl.scrollLeft = centerTa.scrollLeft;
+            }
+        });
+        // Tab 键插入 4 个空格
+        centerTa.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = centerTa.selectionStart;
+                const end = centerTa.selectionEnd;
+                centerTa.value = centerTa.value.substring(0, start) + '    ' + centerTa.value.substring(end);
+                centerTa.selectionStart = centerTa.selectionEnd = start + 4;
+                centerTa.dispatchEvent(new Event('input'));
             }
         });
     }
@@ -657,7 +681,7 @@ function renderFormField(key, v, parentPath, store) {
 
     // null/undefined
     if (v === null || v === undefined) {
-        return `<div class="field-row field-row-null" ${fieldAttr}>${labelHtml}<input class="input form-field" data-field="${key}" value="" placeholder="null" /><span class="null-badge">null</span><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row field-row-null" ${fieldAttr}>${labelHtml}<span class="type-badge type-nil">nil</span><input class="input form-field" data-field="${key}" value="" placeholder="null" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
     // 双语 { zh, en }（可能还有其他额外属性）
     if (typeof v === 'object' && !Array.isArray(v) && v.zh !== undefined && v.en !== undefined) {
@@ -669,32 +693,35 @@ function renderFormField(key, v, parentPath, store) {
                 if (ev === null || ev === undefined) {
                     return `<div class="field-row field-row-null" data-field="${ek}" data-parentpath="${esc(childPath.join('|'))}">
                         <label class="field-label">${esc(ek)}</label>
-                        <span class="null-badge">null</span>
+                        <span class="type-badge type-nil">nil</span>
                         <button class="btn-icon btn-del-field" data-del-key="${ek}" title="删除属性">✕</button>
                     </div>`;
                 }
                 return `<div class="field-row" data-field="${ek}" data-parentpath="${esc(childPath.join('|'))}">
                     <label class="field-label">${esc(ek)}</label>
+                    <span class="type-badge type-${typeof ev === 'number' ? 'num' : Array.isArray(ev) ? 'arr' : typeof ev === 'object' && ev !== null ? 'obj' : 'str'}">${typeof ev === 'number' ? 'num' : Array.isArray(ev) ? 'arr' : typeof ev === 'object' && ev !== null ? 'obj' : 'str'}</span>
                     <input class="input form-field" data-field="${ek}" value="${esc(String(ev))}" />
                     <button class="btn-icon btn-del-field" data-del-key="${ek}" title="删除属性">✕</button>
                 </div>`;
             }).join('')}</div>`;
         }
-        return `<div class="field-row" ${fieldAttr}>${labelHtml}<div class="i18n-group"><input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" /><input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" /></div><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>${extraHtml}`;
+        return `<div class="field-row field-row-i18n" ${fieldAttr}>${labelHtml}<span class="type-badge type-i18n">i18n</span><div class="i18n-group"><input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" /><input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" /></div><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>${extraHtml}`;
     }
     // 数组（摘要 + 跳转按钮）
     if (Array.isArray(v)) {
         const pathKey = childPath.join('|');
-        return `<div class="field-row" ${fieldAttr}>${labelHtml}<span class="nested-preview">[${v.length}项]</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row field-row-arr" ${fieldAttr}>${labelHtml}<span class="type-badge type-arr">arr[${v.length}]</span><span class="nested-preview">${esc(JSON.stringify(v.slice(0,3)))}${v.length > 3 ? '...' : ''}</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
     // 对象（摘要 + 跳转按钮）
     if (typeof v === 'object' && v !== null) {
         const pathKey = childPath.join('|');
-        return `<div class="field-row" ${fieldAttr}>${labelHtml}<span class="nested-preview">{${Object.keys(v).length}个属性}</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+        return `<div class="field-row field-row-obj" ${fieldAttr}>${labelHtml}<span class="type-badge type-obj">obj{${Object.keys(v).length}}</span><span class="nested-preview">${esc(JSON.stringify(v).slice(0,40))}</span><button class="btn-jump" data-pathkey="${pathKey}">跳转</button><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
-    // 基本类型（直接输入）
+    // 基本类型
+    const typeLabel = typeof v === 'number' ? 'num' : 'str';
     const strVal = v === null || v === undefined ? '' : String(v);
-    return `<div class="field-row" ${fieldAttr}>${labelHtml}<input class="input form-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
+    const rowCls = typeof v === 'number' ? 'field-row-num' : '';
+    return `<div class="field-row ${rowCls}" ${fieldAttr}>${labelHtml}<span class="type-badge type-${typeLabel}">${typeLabel}</span><input class="input form-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
 }
 
 // ========================
@@ -934,6 +961,14 @@ function openConfigEditor() {
     document.body.appendChild(modal);
     requestAnimationFrame(() => modal.classList.add('open'));
     makeModalDraggable(modal);
+    // Enter 键触发保存
+    modal.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && document.activeElement?.tagName === 'INPUT') {
+            e.preventDefault();
+            const saveBtn = document.getElementById('btn-config-save');
+            if (saveBtn) saveBtn.click();
+        }
+    });
 
     const hlCode = document.getElementById('config-json-code');
     const editor = document.getElementById('config-json-editor');
@@ -946,6 +981,16 @@ function openConfigEditor() {
             if (window.hljs) { try { hlCode.innerHTML = window.hljs.highlight(editor.value, { language: 'json' }).value; } catch (e) {} }
         });
         editor.addEventListener('scroll', () => { hlCode.scrollTop = editor.scrollTop; hlCode.scrollLeft = editor.scrollLeft; });
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + 4;
+                editor.dispatchEvent(new Event('input'));
+            }
+        });
     }
 
     // 保存按钮

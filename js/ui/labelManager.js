@@ -3,8 +3,9 @@
 // 查看和编辑所有字段的自定义显示名（标签翻译）
 // ==========================================
 
-import { NODE_FIELDS, loadLabels, saveLabel } from '../base/storyTypes.js';
-import { showConfirm, makeModalDraggable } from './modalDialog.js';
+import { loadLabels, saveLabel } from '../base/storyTypes.js';
+import { store } from '../data/storyStore.js';
+import { showConfirm, showPrompt, makeModalDraggable } from './modalDialog.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -28,6 +29,7 @@ export function openLabelManager() {
                 <div id="label-manager-list"></div>
             </div>
             <div class="modal-footer">
+                <button class="btn btn-sm btn-success" id="btn-label-add">＋ 添加自定义标签</button>
                 <button class="btn btn-sm" id="btn-label-reset">重置全部</button>
                 <button class="btn btn-sm btn-primary" id="btn-label-close-bottom">关闭</button>
             </div>
@@ -48,11 +50,23 @@ export function openLabelManager() {
     $('#btn-label-close-bottom').addEventListener('click', close);
     modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
 
+    // 添加自定义标签
+    $('#btn-label-add').addEventListener('click', async () => {
+        const key = await showPrompt('请输入新字段的键名（英文）:', 'new_field');
+        if (!key) return;
+        const label = await showPrompt(`请输入 "${key}" 的显示名称:`);
+        if (!label) return;
+        saveLabel(key, label);
+        store._emit();
+        renderLabelList();
+    });
+
     // 重置全部
     $('#btn-label-reset').addEventListener('click', async () => {
         const ok = await showConfirm('确定重置所有字段标签为默认值吗？');
         if (ok) {
             localStorage.removeItem('storyeditor_labels');
+            store._emit();
             renderLabelList();
         }
     });
@@ -62,38 +76,51 @@ function renderLabelList() {
     const container = $('#label-manager-list');
     if (!container) return;
     const custom = loadLabels();
+    const keys = Object.keys(custom);
 
-    // 收集所有需要展示的字段：内置字段 + 用户自定义字段
-    const allKeys = new Set();
-    NODE_FIELDS.forEach(f => allKeys.add(f.key));
-    Object.keys(custom).forEach(k => allKeys.add(k));
+    if (keys.length === 0) {
+        container.innerHTML = '<div class="empty-hint" style="padding:24px 0">暂无自定义标签，点击下方 "＋ 添加自定义标签" 创建。</div>';
+        return;
+    }
 
     let html = '<div class="label-manager-table">';
-    allKeys.forEach(key => {
-        const def = NODE_FIELDS.find(f => f.key === key);
-        const defaultLabel = def ? def.label : '';
-        const customLabel = custom[key] || '';
+    keys.forEach(key => {
+        const label = custom[key] || '';
         html += `<div class="label-manager-row">
             <div class="label-mgr-key">${esc(key)}</div>
-            <div class="label-mgr-default">${esc(defaultLabel)}</div>
-            <input class="input input-sm label-mgr-input" data-key="${esc(key)}" value="${esc(customLabel)}" placeholder="自定义名称（留空=默认）" />
+            <input class="input input-sm label-mgr-input" data-key="${esc(key)}" value="${esc(label)}" placeholder="显示名称" />
+            <button class="btn-icon btn-label-del" data-key="${esc(key)}" title="删除此标签">✕</button>
         </div>`;
     });
     html += '</div>';
     container.innerHTML = html;
 
-    // 绑定输入事件，实时保存
+    // 绑定输入事件
     $$('.label-mgr-input').forEach(inp => {
         inp.addEventListener('input', () => {
             const key = inp.dataset.key;
             const val = inp.value.trim();
             if (val) saveLabel(key, val);
             else {
-                // 清除自定义标签
                 const all = loadLabels();
                 delete all[key];
                 localStorage.setItem('storyeditor_labels', JSON.stringify(all));
             }
+            store._emit();
+        });
+    });
+
+    // 删除自定义标签
+    $$('.btn-label-del').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const key = btn.dataset.key;
+            const ok = await showConfirm(`确定删除字段 "${key}" 的标签吗？`);
+            if (!ok) return;
+            const all = loadLabels();
+            delete all[key];
+            localStorage.setItem('storyeditor_labels', JSON.stringify(all));
+            store._emit();
+            renderLabelList();
         });
     });
 }

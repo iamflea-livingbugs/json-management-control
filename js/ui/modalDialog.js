@@ -62,10 +62,7 @@ export function showPrompt(msg, defaultValue = '') {
             ]
         });
         document.body.appendChild(modal);
-        requestAnimationFrame(() => {
-            const inp = document.getElementById('modal-prompt-input');
-            if (inp) { inp.focus(); inp.select(); }
-        });
+        tryFocus('#modal-prompt-input');
     });
 }
 
@@ -97,14 +94,31 @@ export function showObjectAddDialog(msg = '请输入新属性名') {
             ]
         });
         document.body.appendChild(modal);
-        requestAnimationFrame(() => {
-            const inp = document.getElementById('modal-obj-key');
-            if (inp) { inp.focus(); inp.select(); }
-        });
+        tryFocus('#modal-obj-key');
     });
 }
 
 // ===== 内部实现 =====
+
+/**
+ * 尝试聚焦元素，自动重试直到元素出现在 DOM 中
+ */
+function tryFocus(selector) {
+    const attempt = () => {
+        const el = document.querySelector(selector);
+        if (el) { el.focus(); if (el.select) el.select(); return true; }
+        return false;
+    };
+    // 立即尝试
+    if (!attempt()) {
+        // 重试 5 次（每次 50ms）
+        let tries = 0;
+        const id = setInterval(() => {
+            tries++;
+            if (attempt() || tries >= 5) clearInterval(id);
+        }, 50);
+    }
+}
 
 function buildModal({ title, body, buttons }) {
     const el = document.createElement('div');
@@ -139,6 +153,19 @@ function buildModal({ title, body, buttons }) {
     el.querySelector('#modal-dialog-close').addEventListener('click', close);
     el.addEventListener('click', (e) => { if (e.target === el) close(); });
     document.addEventListener('keydown', escHandler);
+
+    // Enter 键触发主要按钮（确定/保存）
+    el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            // 只处理 input/select 内回车，不处理 textarea
+            const tag = document.activeElement?.tagName;
+            if (tag === 'INPUT' || tag === 'SELECT') {
+                e.preventDefault();
+                const primary = footer.querySelector('.btn-primary');
+                if (primary) primary.click();
+            }
+        }
+    });
 
     // 启用拖拽
     makeModalDraggable(el);
