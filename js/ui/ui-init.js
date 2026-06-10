@@ -3,16 +3,17 @@
 // 工具栏、Tab切换、活动栏、渲染调度、右侧 JSON 预览
 // ==========================================
 
-import { createChapter, createBlankChapter } from '../logic/svc-storyTypes.js';
-import { renderTree } from './view-storyTree.js';
-import { openTemplateEditor } from './view-storyTemplateUI.js';
-import { openLabelManager } from './view-labelManager.js';
-import { showCreateDialog } from './view-createDialog.js';
-import { showAlert, showConfirm } from './view-modalDialog.js';
-import { renderChapterView } from './view-chapterView.js';
-import { renderEditor, updateJSONTabContent } from './view-editorForm.js';
-import { openConfigEditor } from './view-configDialog.js';
-import { store } from '../logic/svc-storyStore.js';
+import { createChapter, createBlankChapter } from '../logic/logic-storyTypes.js';
+import { renderTree } from './ui-storyTree.js';
+import { openTemplateEditor } from './ui-storyTemplateUI.js';
+import { openLabelManager } from './ui-labelManager.js';
+import { showCreateDialog } from './ui-createDialog.js';
+import { showAlert, showConfirm } from './ui-modalDialog.js';
+import { renderChapterView } from './ui-chapterView.js';
+import { renderEditor, updateJSONTabContent } from './ui-editorForm.js';
+import { openConfigEditor } from './ui-configDialog.js';
+import { store } from '../logic/logic-storyStore.js';
+import { initSettings, renderSettingsPanel } from './ui-settingsPanel.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -191,6 +192,9 @@ export async function initUI(store, io) {
     const app = $('#app');
     app.innerHTML = await loadLayout();
 
+    // 应用已保存的显示设置（字体、色彩）
+    initSettings();
+
     // 工具栏
     io.setupFilePicker($('#btn-import'), json => store.loadChapter(json));
     $('#btn-export').addEventListener('click', () => { const clean = store.toCleanJSON(); io.exportJSON(clean); });
@@ -235,6 +239,8 @@ export async function initUI(store, io) {
             $('#side-panel-title').textContent = VIEW_LABELS[view] || view;
             sidePanel.classList.remove('collapsed');
             _sidePanelOpen = true;
+            // 点击设置标签时渲染面板
+            if (view === 'settings') renderSettingsPanel();
         });
     });
     $('#btn-close-side').addEventListener('click', () => { $('#panel-side').classList.add('collapsed'); _sidePanelOpen = false; $$('.activity-btn').forEach(b => b.classList.remove('active')); });

@@ -7,7 +7,7 @@
 
 let _activeModal = null; // 当前打开的弹窗实例（防止多个叠加）
 
-import { makeModalDraggable } from './view-modalDialog.js';
+import { makeModalDraggable } from './ui-modalDialog.js';
 
 /**
  * 打开新建选择弹窗

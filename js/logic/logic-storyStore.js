@@ -2,9 +2,9 @@
 // storyStore.js — 数据管理层（核心）
 // ==========================================
 
-import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from './svc-storyTypes.js';
-import { ensureExpanded } from '../ui/view-storyTree.js';
-import { showObjectAddDialog } from '../ui/view-modalDialog.js';
+import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from './logic-storyTypes.js';
+import { ensureExpanded } from '../ui/ui-storyTree.js';
+import { showObjectAddDialog } from '../ui/ui-modalDialog.js';
 
 class StoryStore {
     constructor() {

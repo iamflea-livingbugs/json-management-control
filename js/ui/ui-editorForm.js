@@ -3,8 +3,8 @@
 // 包含表单渲染、字段类型标签、行内编辑、标签改名
 // ==========================================
 
-import { getFieldLabel } from '../logic/svc-storyTypes.js';
-import { store } from '../logic/svc-storyStore.js';
+import { getFieldLabel } from '../logic/logic-storyTypes.js';
+import { store } from '../logic/logic-storyStore.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);

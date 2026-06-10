@@ -3,9 +3,9 @@
 // 查看和编辑所有字段的自定义显示名（标签翻译）
 // ==========================================
 
-import { loadLabels, saveLabel } from '../logic/svc-storyTypes.js';
-import { store } from '../logic/svc-storyStore.js';
-import { showConfirm, showPrompt, makeModalDraggable } from './view-modalDialog.js';
+import { loadLabels, saveLabel } from '../logic/logic-storyTypes.js';
+import { store } from '../logic/logic-storyStore.js';
+import { showConfirm, showPrompt, makeModalDraggable } from './ui-modalDialog.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);

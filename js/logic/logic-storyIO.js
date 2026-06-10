@@ -2,7 +2,7 @@
 // storyIO.js — JSON 文件导入 / 导出
 // ==========================================
 
-import { showAlert } from '../ui/view-modalDialog.js';
+import { showAlert } from '../ui/ui-modalDialog.js';
 
 export function importJSON(file) {
     return new Promise((resolve, reject) => {

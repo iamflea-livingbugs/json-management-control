@@ -2,9 +2,9 @@
 // configDialog.js — 配置编辑弹窗（上下文配置）
 // ==========================================
 
-import { getContextsConfig, saveConfigToLocal, exportConfigJSON } from '../logic/svc-storyTypes.js';
-import { store } from '../logic/svc-storyStore.js';
-import { showAlert, makeModalDraggable } from './view-modalDialog.js';
+import { getContextsConfig, saveConfigToLocal, exportConfigJSON } from '../logic/logic-storyTypes.js';
+import { store } from '../logic/logic-storyStore.js';
+import { showAlert, makeModalDraggable } from './ui-modalDialog.js';
 
 const $ = (sel) => document.querySelector(sel);
 

@@ -3,7 +3,7 @@
 // 以列表形式展示 content 数组，快速编辑对白
 // ==========================================
 
-import { getLanguages } from '../logic/svc-storyTypes.js';
+import { getLanguages } from '../logic/logic-storyTypes.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
