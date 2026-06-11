@@ -3,7 +3,7 @@
 // 所有增删改操作仅修改内存草稿，点"保存"才写入 localStorage
 // ==========================================
 
-import { loadTemplates, getContextKeys, getContextsConfig, getFieldLabel, saveLabel, saveTemplates } from '../logic/logic-storyTypes.js';
+import { loadTemplates, getContextsConfig, getFieldLabel, saveLabel, saveTemplates } from '../logic/logic-storyTypes.js';
 import { store } from '../logic/logic-storyStore.js';
 import { showConfirm, makeModalDraggable } from './ui-modalDialog.js';
 
@@ -85,12 +85,18 @@ export function closeTemplateEditor() {
     _dirty = false;
 }
 
-// ----- 从草稿获取当前上下文的模板 -----
+// ----- 从草稿获取当前上下文的模板（返回 undefined 表示已删除）-----
 
 function getDraftCtx() {
     if (!_draft) _draft = JSON.parse(JSON.stringify(loadTemplates()));
-    if (!_draft[_currentCtx]) _draft[_currentCtx] = {};
     return _draft[_currentCtx];
+}
+
+// ----- 获取草稿中有模板的所有上下文键 -----
+
+function getDraftCtxKeys() {
+    if (!_draft) _draft = JSON.parse(JSON.stringify(loadTemplates()));
+    return Object.keys(_draft).filter(k => _draft[k] !== undefined && _draft[k] !== null);
 }
 
 // ----- 渲染弹窗内容 -----
@@ -99,9 +105,29 @@ function renderModalContent() {
     const body = $('#modal-template-body');
     if (!body) return;
 
-    const ctxKeys = getContextKeys();
     const ctxConfig = getContextsConfig();
+    const ctxKeys = getDraftCtxKeys();
     const tpl = getDraftCtx();
+
+    // 确保当前上下文存在，否则切到第一个可用
+    if (!ctxKeys.includes(_currentCtx)) {
+        _currentCtx = ctxKeys.length > 0 ? ctxKeys[0] : null;
+    }
+
+    // 如果没有模板了，显示空状态
+    if (!_currentCtx) {
+        body.innerHTML = `<div style="padding:40px 12px;text-align:center;color:var(--text-dim)">
+            <p>暂无模板</p>
+            <button class="btn btn-sm btn-success" id="btn-create-first-template" style="margin-top:12px">＋ 创建第一个模板</button>
+        </div>`;
+        $('#btn-create-first-template').addEventListener('click', () => {
+            _draft['content'] = {};
+            _currentCtx = 'content';
+            _dirty = true;
+            renderModalContent();
+        });
+        return;
+    }
 
     const ctxBtns = ctxKeys.map(k =>
         `<button class="tpl-ctx-btn ${k === _currentCtx ? 'active' : ''}" data-ctx="${k}" title="${(ctxConfig[k]||{}).description||''}">${(ctxConfig[k]||{}).label||k}</button>`
@@ -110,7 +136,10 @@ function renderModalContent() {
     const jsonStr = JSON.stringify(tpl, null, 4);
 
     body.innerHTML = `
-        <div class="tpl-ctx-bar"><label>模板上下文：</label>${ctxBtns}</div>
+        <div class="tpl-ctx-bar"><label>模板上下文：</label>${ctxBtns}
+            <span style="flex:1"></span>
+            <button class="btn btn-sm" id="btn-del-template" style="color:var(--accent)" title="删除当前整个模板">✕ 删除此模板</button>
+        </div>
         <div class="editor-fields" id="tpl-fields">${fields}</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
             <button class="btn btn-sm btn-success" id="btn-add-tpl-field">＋ 添加字段</button>
@@ -134,6 +163,20 @@ function renderModalContent() {
     $$('.tpl-ctx-btn').forEach(btn =>
         btn.addEventListener('click', () => { _currentCtx = btn.dataset.ctx; renderModalContent(); })
     );
+
+    // 删除整个模板
+    $('#btn-del-template').addEventListener('click', () => {
+        showConfirm(`确定删除模板 "${_currentCtx}" 吗？此操作不可撤销。`).then(ok => {
+            if (!ok) return;
+            delete _draft[_currentCtx];
+            _dirty = true;
+            // 切换到下一个可用的上下文
+            const keys = Object.keys(_draft);
+            if (keys.length > 0) _currentCtx = keys[0];
+            else _draft[_currentCtx = 'content'] = {};
+            renderModalContent();
+        });
+    });
 
     // 添加字段（仅修改草稿）
     $('#btn-add-tpl-field').addEventListener('click', () => {

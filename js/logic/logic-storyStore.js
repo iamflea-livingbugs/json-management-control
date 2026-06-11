@@ -1,10 +1,9 @@
 // ==========================================
 // storyStore.js — 数据管理层（核心）
+// 纯逻辑层，不依赖 UI
 // ==========================================
 
 import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from './logic-storyTypes.js';
-import { ensureExpanded } from '../ui/ui-storyTree.js';
-import { showObjectAddDialog } from '../ui/ui-modalDialog.js';
 
 class StoryStore {
     constructor() {
@@ -13,7 +12,6 @@ class StoryStore {
         this.selectedId = null;
         this.filters = {};
         this._listeners = [];
-        this._configUrl = null;
         this._dataVersion = 0;
     }
 
@@ -34,7 +32,6 @@ class StoryStore {
         this.selectedId = null;
         this.currentPath = [];
         this.filters = {};
-        this._configUrl = null;
         this._emit();
     }
 
@@ -43,36 +40,7 @@ class StoryStore {
         this.selectedId = null;
         this.currentPath = [];
         this.filters = {};
-        this._configUrl = null;
         this._emit();
-    }
-
-    loadConfig(url) {
-        this._configUrl = url;
-        const filename = url.split('/').pop();
-        const saved = localStorage.getItem('storyeditor_config_' + filename);
-        if (saved) {
-            try {
-                this.chapter = JSON.parse(saved);
-                this.selectedId = null; this.currentPath = []; this.filters = {};
-                this._emit(); return Promise.resolve();
-            } catch {}
-        }
-        return fetch(url).then(r => r.json()).then(json => {
-            this.chapter = json;
-            this.selectedId = null; this.currentPath = []; this.filters = {};
-            this._emit();
-        });
-    }
-
-    saveConfig() {
-        if (!this._configUrl) return;
-        const url = this._configUrl, filename = url.split('/').pop();
-        const json = this.toCleanJSON();
-        localStorage.setItem('storyeditor_config_' + filename, JSON.stringify(json));
-        const blob = new Blob([JSON.stringify(json, null, 4)], { type: 'application/json' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
-        return filename;
     }
 
     getChapterName() { return this.chapter.meta?.name || 'Untitled'; }
@@ -93,9 +61,9 @@ class StoryStore {
         return merged;
     }
 
-    addNode() {
+    addNode(ctx = 'content') {
         const id = String(this.chapter.content.length);
-        const node = createNodeFromTemplate('content', id);
+        const node = createNodeFromTemplate(ctx, id);
         this.chapter.content.push(node);
         this.selectedId = id;
         this._emit();
@@ -249,28 +217,28 @@ class StoryStore {
         this._emit();
     }
 
-    async addAt(path, type) {
+    // ----- 纯数据操作：新增/删除（UI 层负责交互）-----
+
+    // 在对象中添加属性（纯数据，UI 层调用前先弹窗）
+    addObjectProperty(path, key, val) {
         const parent = this.getByPath(path);
-        if (!parent) return;
-        if (type === 'object') {
-            const result = await showObjectAddDialog();
-            if (!result || !result.key) return;
-            const val = result.type === 'number' ? 0 : result.type === 'array' ? [] : result.type === 'object' ? {} : '';
-            parent[result.key] = val;
-            ensureExpanded(path);
-            this.currentPath = [...path, result.key];
-            this._emit();
-        } else if (type === 'array') {
-            if (path.length === 1 && path[0] === 'content') { this.addNode(); return; }
-            const ctx = resolveTemplateContext([...path, '0']);
-            const tpl = createNodeFromTemplate(ctx);
-            delete tpl.id;
-            const newIndex = parent.length;
-            parent.push(tpl);
-            ensureExpanded(path);
-            this.currentPath = [...path, String(newIndex)];
-            this._emit();
-        }
+        if (!parent || typeof parent !== 'object' || Array.isArray(parent)) return;
+        parent[key] = val;
+        this.currentPath = [...path, key];
+        this._emit();
+    }
+
+    // 在数组中添加元素（根据上下文创建模板节点）
+    addArrayItem(path) {
+        const parent = this.getByPath(path);
+        if (!parent || !Array.isArray(parent)) return;
+        if (path.length === 1 && path[0] === 'content') { this.addNode(); return; }
+        const ctx = resolveTemplateContext([...path, '0']);
+        const tpl = createNodeFromTemplate(ctx);
+        delete tpl.id;
+        parent.push(tpl);
+        this.currentPath = [...path, String(parent.length - 1)];
+        this._emit();
     }
 
     deleteAt(path) {

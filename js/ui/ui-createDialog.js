@@ -8,6 +8,7 @@
 let _activeModal = null; // 当前打开的弹窗实例（防止多个叠加）
 
 import { makeModalDraggable } from './ui-modalDialog.js';
+import { getContextKeys, getContextsConfig } from '../logic/logic-storyTypes.js';
 
 /**
  * 打开新建选择弹窗
@@ -118,6 +119,54 @@ export function closeCreateDialog() {
             _activeModal = null;
         }, 200);
     }
+}
+
+/**
+ * 显示模板上下文选择弹窗
+ * @returns {Promise<string|null>} 选中返回上下文 key，取消返回 null
+ */
+export function showTemplatePicker() {
+    return new Promise((resolve) => {
+        const ctxKeys = getContextKeys();
+        const ctxConfig = getContextsConfig();
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-template-picker';
+        modal.className = 'modal-overlay';
+
+        const cards = ctxKeys.map(k => {
+            const cfg = ctxConfig[k] || {};
+            return `<div class="create-choice-card" data-ctx="${k}">
+                <div class="create-choice-label">${esc(cfg.label || k)}</div>
+                <div class="create-choice-desc" style="font-size:0.75rem">${esc(cfg.description || '')}</div>
+            </div>`;
+        }).join('');
+
+        modal.innerHTML = `
+            <div class="modal-box" style="width:480px">
+                <div class="modal-header"><h2>选择模板</h2><button class="modal-close picker-close">✕</button></div>
+                <div class="modal-body">
+                    <div class="create-choices" style="flex-wrap:wrap">${cards}</div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-sm picker-close">取消</button></div>
+            </div>`;
+        document.body.appendChild(modal);
+        requestAnimationFrame(() => modal.classList.add('open'));
+        makeModalDraggable(modal);
+
+        const close = (result) => {
+            modal.classList.remove('open');
+            setTimeout(() => { if (modal.parentNode) modal.parentNode.removeChild(modal); }, 200);
+            resolve(result);
+        };
+
+        modal.querySelectorAll('.picker-close').forEach(el => el.addEventListener('click', () => close(null)));
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(null); });
+
+        modal.querySelectorAll('.create-choice-card').forEach(card => {
+            card.addEventListener('click', () => close(card.dataset.ctx));
+        });
+    });
 }
 
 // HTML 转义

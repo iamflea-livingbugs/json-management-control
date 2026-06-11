@@ -1,8 +1,7 @@
 // ==========================================
 // storyIO.js — JSON 文件导入 / 导出
+// 纯逻辑层，不依赖 UI
 // ==========================================
-
-import { showAlert } from '../ui/ui-modalDialog.js';
 
 export function importJSON(file) {
     return new Promise((resolve, reject) => {
@@ -27,27 +26,27 @@ export function exportJSON(json, filename = 'chapter.json') {
     a.click();
 }
 
-export function setupFilePicker(btn, onLoad) {
+export function setupFilePicker(btn, onLoad, onError) {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
     input.addEventListener('change', () => {
         const file = input.files[0];
         if (!file) return;
-        importJSON(file).then(onLoad).catch(err => showAlert(err.message));
+        importJSON(file).then(onLoad).catch(err => { if (onError) onError(err.message); });
         input.value = '';
     });
     btn.addEventListener('click', () => input.click());
 }
 
-export function setupDropZone(el, onLoad) {
+export function setupDropZone(el, onLoad, onError) {
     el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop-active'); });
     el.addEventListener('dragleave', () => el.classList.remove('drop-active'));
     el.addEventListener('drop', (e) => {
         e.preventDefault();
         el.classList.remove('drop-active');
         const file = e.dataTransfer.files[0];
-        if (!file || !file.name.endsWith('.json')) { showAlert('请拖入 .json 文件'); return; }
-        importJSON(file).then(onLoad).catch(err => showAlert(err.message));
+        if (!file || !file.name.endsWith('.json')) { if (onError) onError('请拖入 .json 文件'); return; }
+        importJSON(file).then(onLoad).catch(err => { if (onError) onError(err.message); });
     });
 }

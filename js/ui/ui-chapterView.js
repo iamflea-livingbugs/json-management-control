@@ -4,6 +4,7 @@
 // ==========================================
 
 import { getLanguages } from '../logic/logic-storyTypes.js';
+import { showTemplatePicker } from './ui-createDialog.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -160,8 +161,9 @@ export function renderChapterView(store) {
     });
 
     // 新增行
-    $('#btn-chapter-add')?.addEventListener('click', () => {
-        store.addNode();
+    $('#btn-chapter-add')?.addEventListener('click', async () => {
+        const ctx = await showTemplatePicker();
+        if (ctx) store.addNode(ctx);
         renderChapterView(store);
     });
 

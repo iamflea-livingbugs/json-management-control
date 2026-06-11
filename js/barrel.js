@@ -13,7 +13,7 @@ export * as io from './logic/logic-storyIO.js';
 
 // UI 层：主界面初始化 + 工具函数
 export { initUI } from './ui/ui-init.js';
-export { showCreateDialog } from './ui/ui-createDialog.js';
+export { showCreateDialog, showTemplatePicker } from './ui/ui-createDialog.js';
 export { openLabelManager } from './ui/ui-labelManager.js';
 export { renderChapterView } from './ui/ui-chapterView.js';
 export { showAlert, showConfirm, showPrompt, showObjectAddDialog } from './ui/ui-modalDialog.js';

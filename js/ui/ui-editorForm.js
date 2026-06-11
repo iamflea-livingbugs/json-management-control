@@ -106,7 +106,7 @@ export function renderEditor(store) {
             const typeSelect = $('#array-add-type');
             const selected = typeSelect ? typeSelect.value : 'object';
             if (selected === 'content' || selected === 'option' || selected === 'action') {
-                store.addAt(path, 'array');
+                store.addArrayItem(path);
             } else {
                 const parent = store.getByPath(path);
                 if (!parent || !Array.isArray(parent)) return;

@@ -7,8 +7,8 @@ import { createChapter, createBlankChapter } from '../logic/logic-storyTypes.js'
 import { renderTree } from './ui-storyTree.js';
 import { openTemplateEditor } from './ui-storyTemplateUI.js';
 import { openLabelManager } from './ui-labelManager.js';
-import { showCreateDialog } from './ui-createDialog.js';
-import { showAlert, showConfirm } from './ui-modalDialog.js';
+import { showCreateDialog, showTemplatePicker } from './ui-createDialog.js';
+import { showConfirm, showObjectAddDialog, showAlert } from './ui-modalDialog.js';
 import { renderChapterView } from './ui-chapterView.js';
 import { renderEditor, updateJSONTabContent } from './ui-editorForm.js';
 import { openConfigEditor } from './ui-configDialog.js';
@@ -53,9 +53,6 @@ function renderAll(store) {
     renderTreePanel(store);
     applyTreeSearch(_searchTerm);
 
-    const saveBtn = $('#btn-save-config');
-    if (saveBtn) saveBtn.style.display = store._configUrl ? '' : 'none';
-
     if (store.chapter !== _prevChapter || store._dataVersion !== _prevDataVersion) {
         _prevChapter = store.chapter;
         _prevDataVersion = store._dataVersion;
@@ -84,7 +81,16 @@ function renderTreePanel(store) {
     const data = store.chapter;
     renderTree(container, data, store.currentPath,
         (path) => store.selectPath(path),
-        (path, type) => store.addAt(path, type),
+        async (path, type) => {
+            if (type === 'object') {
+                const result = await showObjectAddDialog();
+                if (!result || !result.key) return;
+                const val = result.type === 'number' ? 0 : result.type === 'array' ? [] : result.type === 'object' ? {} : '';
+                store.addObjectProperty(path, result.key, val);
+            } else if (type === 'array') {
+                store.addArrayItem(path);
+            }
+        },
         (path) => { showConfirm('确定删除该节点吗？').then(ok => { if (ok) store.deleteAt(path); }); }
     );
 
@@ -96,12 +102,9 @@ function renderTreePanel(store) {
     }
     const contentNodeCount = (store.chapter.content || []).length;
     footer.innerHTML = `<button class="btn btn-sm btn-success" id="tree-add-node">＋ 新建对话节点 (当前${contentNodeCount}个)</button>`;
-    footer.querySelector('#tree-add-node').addEventListener('click', () => {
-        showCreateDialog({
-            title: '新建对话节点', blankLabel: '空白节点', blankDesc: '仅含 id 字段',
-            templateLabel: '模板创建', templateDesc: '使用 content 模板的完整字段',
-            onBlank: () => store.addBlankNode(), onTemplate: () => store.addNode()
-        });
+    footer.querySelector('#tree-add-node').addEventListener('click', async () => {
+        const ctx = await showTemplatePicker();
+        if (ctx) store.addNode(ctx);
     });
 }
 
@@ -196,11 +199,8 @@ export async function initUI(store, io) {
     initSettings();
 
     // 工具栏
-    io.setupFilePicker($('#btn-import'), json => store.loadChapter(json));
+    io.setupFilePicker($('#btn-import'), json => store.loadChapter(json), (msg) => showAlert(msg));
     $('#btn-export').addEventListener('click', () => { const clean = store.toCleanJSON(); io.exportJSON(clean); });
-    $('#btn-open-content-config').addEventListener('click', () => { store.loadConfig('config/template-content.json').then(() => { $('#btn-save-config').style.display = ''; }).catch(() => showAlert('加载配置文件失败')); });
-    $('#btn-open-contexts-config').addEventListener('click', () => { store.loadConfig('config/template-contexts.json').then(() => { $('#btn-save-config').style.display = ''; }).catch(() => showAlert('加载配置文件失败')); });
-    $('#btn-save-config').addEventListener('click', () => { const name = store.saveConfig(); if (name) showAlert('✅ 已保存到本地存储\n📥 已下载 ' + name + ' 文件\n\n请用下载的文件替换项目中的 config/' + name); });
     $('#btn-add-node').addEventListener('click', () => { showCreateDialog({ title: '新建章节', blankDesc: '仅返回 {}，不添加任何字段', onBlank: () => store.newChapter(createBlankChapter()), onTemplate: () => store.loadChapter(createChapter()) }); });
     $('#btn-edit-template').addEventListener('click', () => openTemplateEditor());
     $('#btn-config').addEventListener('click', () => openConfigEditor());

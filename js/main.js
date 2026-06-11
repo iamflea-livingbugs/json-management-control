@@ -3,7 +3,7 @@
 // 只引用 barrel.js，由 barrel 统一导出所有模块
 // ==========================================
 
-import { store, io, initUI, loadContextsConfig, loadSavedConfig, loadContentConfig } from './barrel.js';
+import { store, io, initUI, loadContextsConfig, loadSavedConfig, loadContentConfig, showAlert } from './barrel.js';
 
 // ---------- 启动阶段 ----------
 
@@ -17,7 +17,7 @@ Promise.all([loadContextsConfig(), loadContentConfig()]).then(() => {
 });
 
 // step 3: 拖放功能——拖入 .json 文件到窗口任意位置即可加载
-io.setupDropZone(document.body, json => store.loadChapter(json));
+io.setupDropZone(document.body, json => store.loadChapter(json), (msg) => showAlert(msg));
 
 // step 4: 初始化界面（工具栏、树面板、编辑器、预览面板等）
 initUI(store, io);
