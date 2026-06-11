@@ -45,25 +45,37 @@ function isI18n(val) {
 
 /**
  * 渲染章节对话列表
+ * 根据 store.currentPath 渲染对应的值
+ * 是数组则逐行展示，不是则显示值
  */
 export function renderChapterView(store) {
     const container = $('#panel-chapter');
     if (!container) return;
 
-    const chapter = store.chapter;
-    const content = chapter?.content || [];
+    const path = store.currentPath || [];
+    const val = store.getByPath(path);
+    const dataPath = path.length > 0 ? path : [];
+
+    // 确保是数组才能逐行编辑
+    if (!Array.isArray(val)) {
+        container.innerHTML = `<div class="empty-hint" style="padding:40px 12px">当前路径不是数组（${path.join(' → ') || '(root)'}），无法以列表视图展示</div>`;
+        return;
+    }
+
+    const content = val;
     const cols = loadColumnConfig();
     const languages = getLanguages();
 
     // 头部
+    const pathLabel = dataPath.join(' → ') || '(root)';
     let html = `<div class="chapter-toolbar">
-        <span class="chapter-count">共 ${content.length} 句对白</span>
+        <span class="chapter-count">${pathLabel} · 共 ${content.length} 条</span>
         <button class="btn btn-sm" id="btn-chapter-cols">⚙️ 显示列</button>
         <button class="btn btn-sm btn-success" id="btn-chapter-add">＋ 新增</button>
     </div>`;
 
     if (content.length === 0) {
-        html += '<div class="empty-hint" style="padding:40px 12px">暂无对白，点击"＋ 新增"添加第一句</div>';
+        html += '<div class="empty-hint" style="padding:40px 12px">当前路径下无数据，点击"＋ 新增"添加</div>';
     } else {
         html += '<div class="chapter-list">';
         content.forEach((node, rowIdx) => {
@@ -126,7 +138,7 @@ export function renderChapterView(store) {
     // 列配置
     $('#btn-chapter-cols')?.addEventListener('click', () => {
         let colHtml = '<div style="margin-bottom:8px">选择要在列表中显示的字段：</div>';
-        const fieldSet = new Set(['speaker', 'text']);
+        const fieldSet = new Set();
         content.forEach(n => { if (n && typeof n === 'object') Object.keys(n).forEach(k => fieldSet.add(k)); });
         colHtml += [...fieldSet].map(f => `
             <label style="display:block;margin:4px 0">
@@ -163,7 +175,7 @@ export function renderChapterView(store) {
     // 新增行
     $('#btn-chapter-add')?.addEventListener('click', async () => {
         const ctx = await showTemplatePicker();
-        if (ctx) store.addNode(ctx);
+        if (ctx) store.addNode(ctx, dataPath);
         renderChapterView(store);
     });
 
@@ -212,7 +224,7 @@ export function renderChapterView(store) {
             const row = parseInt(btn.dataset.row);
             const node = content[row];
             if (!node) return;
-            store.currentPath = ['content', String(row)];
+            store.currentPath = [...dataPath, String(row)];
             store._emit();
             const formTab = document.getElementById('tab-form');
             if (formTab) formTab.click();
@@ -225,7 +237,7 @@ export function renderChapterView(store) {
             const i = parseInt(row.dataset.index);
             const node = content[i];
             if (!node) return;
-            store.currentPath = ['content', String(i)];
+            store.currentPath = [...dataPath, String(i)];
             store._emit();
             const formTab = document.getElementById('tab-form');
             if (formTab) formTab.click();

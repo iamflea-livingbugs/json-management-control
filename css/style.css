@@ -315,6 +315,7 @@ html, body {
     caret-color: #fff;
     background: transparent;
     border: none; resize: none; outline: none;
+    overflow: auto;
     white-space: pre-wrap; word-wrap: break-word;
     z-index: 1;
 }
@@ -350,7 +351,7 @@ html, body {
     border-radius: var(--radius);
     overflow: hidden;
 }
-.tpl-json-mirror .json-highlight { padding: 8px 10px; }
+.tpl-json-mirror .json-highlight, .tpl-json-mirror .json-editor { padding: 10px 12px; }
 
 /* ==========================================
    7. 通用组件 — 按钮、输入框、下拉框

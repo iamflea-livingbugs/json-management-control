@@ -118,17 +118,48 @@ export function exportConfigJSON() {
 }
 
 export function loadTemplates() {
-    try { const saved = JSON.parse(localStorage.getItem(TEMPLATE_KEY) || '{}'); return { ...getDefaultTemplates(), ...saved }; }
+    try {
+        const saved = JSON.parse(localStorage.getItem(TEMPLATE_KEY) || '{}');
+        const defaults = getDefaultTemplates();
+        return { ...defaults, ...saved };
+    }
     catch { return { ...getDefaultTemplates() }; }
 }
 
-export function saveTemplates(tpls) {
+const DELETED_KEY = 'storyeditor_deleted_templates';
+
+function loadDeletedTemplates() {
+    try { return JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'); }
+    catch { return []; }
+}
+
+function saveDeletedTemplates(arr) {
+    localStorage.setItem(DELETED_KEY, JSON.stringify([...new Set(arr)]));
+}
+
+export function loadEffectiveTemplates() {
+    const merged = loadTemplates();
+    const deleted = loadDeletedTemplates();
+    for (const key of deleted) {
+        delete merged[key];
+    }
+    return merged;
+}
+
+export function saveTemplates(tpls, deletedKeys = []) {
     const toSave = {};
     const defaults = getDefaultTemplates();
     for (const [k, v] of Object.entries(tpls)) {
         if (JSON.stringify(defaults[k]) !== JSON.stringify(v)) toSave[k] = v;
     }
+    // 从保存结果中移除被删的默认模板（不存即表示使用默认值，删了才需要显式排除）
+    // 但如果用户保存了一个空对象 {} 表示清空该模板
     localStorage.setItem(TEMPLATE_KEY, JSON.stringify(toSave));
+    // 持久化删除列表
+    if (deletedKeys.length > 0) {
+        const existing = loadDeletedTemplates();
+        saveDeletedTemplates([...new Set([...existing, ...deletedKeys])]);
+    }
 }
 
 export function saveTemplate(ctx, tpl) { const all = loadTemplates(); all[ctx] = tpl; saveTemplates(all); }

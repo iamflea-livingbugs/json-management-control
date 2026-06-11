@@ -3,13 +3,14 @@
 // 所有增删改操作仅修改内存草稿，点"保存"才写入 localStorage
 // ==========================================
 
-import { loadTemplates, getContextsConfig, getFieldLabel, saveLabel, saveTemplates } from '../logic/logic-storyTypes.js';
+import { loadTemplates, loadEffectiveTemplates, getContextsConfig, getFieldLabel, saveLabel, saveTemplates } from '../logic/logic-storyTypes.js';
 import { store } from '../logic/logic-storyStore.js';
 import { showConfirm, makeModalDraggable } from './ui-modalDialog.js';
 
 let _currentCtx = 'content';   // 当前正在编辑的上下文
 let _draft = null;             // 内存草稿：{ [ctx]: templateObj }
 let _dirty = false;            // 是否有未保存的修改
+let _deletedCtxs = [];         // 本次编辑中被删除的上下文（持久化用）
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -26,9 +27,10 @@ export function openTemplateEditor() {
     const existing = $('#modal-template-editor');
     if (existing) { existing.classList.add('open'); return; }
 
-    // 从 localStorage 深拷贝到草稿
-    _draft = JSON.parse(JSON.stringify(loadTemplates()));
+    // 从 localStorage 深拷贝到草稿（使用 loadEffectiveTemplates 过滤掉已删除的）
+    _draft = JSON.parse(JSON.stringify(loadEffectiveTemplates()));
     _dirty = false;
+    _deletedCtxs = [];
 
     const modal = document.createElement('div');
     modal.id = 'modal-template-editor';
@@ -57,7 +59,7 @@ export function openTemplateEditor() {
 
     // 保存
     $('#btn-template-save').addEventListener('click', () => {
-        saveTemplates(_draft);
+        saveTemplates(_draft, _deletedCtxs);
         store._emit();
         _dirty = false;
         closeTemplateEditor();
@@ -123,6 +125,7 @@ function renderModalContent() {
         $('#btn-create-first-template').addEventListener('click', () => {
             _draft['content'] = {};
             _currentCtx = 'content';
+            _deletedCtxs = _deletedCtxs.filter(k => k !== 'content');
             _dirty = true;
             renderModalContent();
         });
@@ -168,6 +171,7 @@ function renderModalContent() {
     $('#btn-del-template').addEventListener('click', () => {
         showConfirm(`确定删除模板 "${_currentCtx}" 吗？此操作不可撤销。`).then(ok => {
             if (!ok) return;
+            _deletedCtxs.push(_currentCtx);
             delete _draft[_currentCtx];
             _dirty = true;
             // 切换到下一个可用的上下文
@@ -244,28 +248,28 @@ function renderModalContent() {
 // ----- 字段事件绑定（仅修改草稿）-----
 
 function bindFieldEvents() {
-    $$('.tmpl-field').forEach(inp => inp.addEventListener('input', debounce(() => {
+    $$('.tmpl-field').forEach(inp => inp.addEventListener('input', () => {
         const ctx = getDraftCtx();
         ctx[inp.dataset.field] = inp.value;
         _dirty = true;
         syncJSONEditorFromDraft();
-    }, 250)));
+    }));
 
-    $$('.tmpl-i18n-zh').forEach(inp => inp.addEventListener('input', debounce(() => {
+    $$('.tmpl-i18n-zh').forEach(inp => inp.addEventListener('input', () => {
         const ctx = getDraftCtx();
         if (typeof ctx[inp.dataset.field] !== 'object') ctx[inp.dataset.field] = { zh: '', en: '' };
         ctx[inp.dataset.field].zh = inp.value;
         _dirty = true;
         syncJSONEditorFromDraft();
-    }, 250)));
+    }));
 
-    $$('.tmpl-i18n-en').forEach(inp => inp.addEventListener('input', debounce(() => {
+    $$('.tmpl-i18n-en').forEach(inp => inp.addEventListener('input', () => {
         const ctx = getDraftCtx();
         if (typeof ctx[inp.dataset.field] !== 'object') ctx[inp.dataset.field] = { zh: '', en: '' };
         ctx[inp.dataset.field].en = inp.value;
         _dirty = true;
         syncJSONEditorFromDraft();
-    }, 250)));
+    }));
 }
 
 function rebindFieldEvents() {
@@ -340,7 +344,13 @@ function handleLabelEdit(e) {
     function finish() {
         const newLabel = input.value.trim();
         if (newLabel && newLabel !== current) {
-            saveLabel(key, newLabel);
+            // 真正改键名（和主表单一致）
+            const ctx = getDraftCtx();
+            if (ctx && key in ctx) {
+                ctx[newLabel] = ctx[key];
+                delete ctx[key];
+                _dirty = true;
+            }
             renderModalContent();
         } else {
             const lbl = document.createElement('label');

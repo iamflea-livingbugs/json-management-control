@@ -61,10 +61,14 @@ class StoryStore {
         return merged;
     }
 
-    addNode(ctx = 'content') {
-        const id = String(this.chapter.content.length);
+    // 在指定路径的数组中新增节点（path 默认 content）
+    addNode(ctx = 'content', path = null) {
+        const targetPath = path || ['content'];
+        const parent = this.getByPath(targetPath);
+        if (!parent || !Array.isArray(parent)) return;
+        const id = String(parent.length);
         const node = createNodeFromTemplate(ctx, id);
-        this.chapter.content.push(node);
+        parent.push(node);
         this.selectedId = id;
         this._emit();
     }
@@ -232,7 +236,6 @@ class StoryStore {
     addArrayItem(path) {
         const parent = this.getByPath(path);
         if (!parent || !Array.isArray(parent)) return;
-        if (path.length === 1 && path[0] === 'content') { this.addNode(); return; }
         const ctx = resolveTemplateContext([...path, '0']);
         const tpl = createNodeFromTemplate(ctx);
         delete tpl.id;
