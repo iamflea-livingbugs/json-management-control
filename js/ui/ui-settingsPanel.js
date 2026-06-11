@@ -74,7 +74,7 @@ function loadSettings() {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) return JSON.parse(saved);
     } catch {}
-    return { theme: 'dark', fontSize: 16 };
+    return { theme: 'dark', fontSize: 16, labelColor: 'default' };
 }
 
 // 保存设置
@@ -97,6 +97,9 @@ export function applySettings(settings) {
             root.style.setProperty(key, val);
         }
     }
+
+    // 标签颜色模式
+    root.dataset.labelColor = s.labelColor || 'default';
 }
 
 // 初始化设置（页面加载时调用）
@@ -139,6 +142,20 @@ export function renderSettingsPanel() {
             </div>
         </div>
         <div class="settings-section">
+            <label class="settings-label">标签颜色模式</label>
+            <div style="display:flex;gap:12px">
+                <label style="cursor:pointer">
+                    <input type="radio" name="label-color" value="default" ${s.labelColor === 'default' || !s.labelColor ? 'checked' : ''} /> 跟随主题
+                </label>
+                <label style="cursor:pointer">
+                    <input type="radio" name="label-color" value="type" ${s.labelColor === 'type' ? 'checked' : ''} /> 按类型着色
+                </label>
+            </div>
+            <div style="margin-top:6px;font-size:0.75rem;color:var(--text-dim)">
+                按类型：str=蓝, i18n=紫, arr=绿, obj=橙, num=黄, nil=红
+            </div>
+        </div>
+        <div class="settings-section">
             <button class="btn btn-sm" id="btn-settings-reset">重置为默认</button>
         </div>
     `;
@@ -174,10 +191,19 @@ export function renderSettingsPanel() {
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
             localStorage.removeItem(STORAGE_KEY);
-            const defaults = { theme: 'dark', fontSize: 16 };
+            const defaults = { theme: 'dark', fontSize: 16, labelColor: 'default' };
             saveSettings(defaults);
             applySettings(defaults);
             renderSettingsPanel();
         });
     }
+
+    // 标签颜色模式
+    document.querySelectorAll('input[name="label-color"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            s.labelColor = radio.value;
+            saveSettings(s);
+            applySettings(s);
+        });
+    });
 }

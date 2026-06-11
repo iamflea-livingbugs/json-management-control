@@ -251,6 +251,14 @@ html, body {
 .field-label { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3; cursor: text; }
 .field-label-alias { font-size: 0.75rem; color: var(--accent); opacity: 0.6; font-weight: normal; }
 
+/* 标签颜色模式：按类型着色 */
+[data-label-color="type"] .field-row-i18n .field-label-alias { color: #a78bfa; opacity: 0.8; }
+[data-label-color="type"] .field-row-arr .field-label-alias { color: #4ecca3; opacity: 0.8; }
+[data-label-color="type"] .field-row-obj .field-label-alias { color: #f59e0b; opacity: 0.8; }
+[data-label-color="type"] .field-row-num .field-label-alias { color: #f9c859; opacity: 0.8; }
+[data-label-color="type"] .field-row-null .field-label-alias { color: #f87171; opacity: 0.8; }
+[data-label-color="type"] .field-row:not(.field-row-i18n):not(.field-row-arr):not(.field-row-obj):not(.field-row-num):not(.field-row-null) .field-label-alias { color: #7ec8e3; opacity: 0.8; }
+
 /* i18n 双输入框组 */
 .i18n-group { display: flex; gap: 4px; flex: 1; }
 .i18n-group .input { flex: 1; }

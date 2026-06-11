@@ -307,23 +307,27 @@ function syncJSONEditorFromDraft() {
     applyHighlight(hlCode, jsonStr);
 }
 
-// ----- 字段渲染 -----
+// ----- 字段渲染（显示键名 + 别名，与中栏一致）-----
 
 function renderField(key, v) {
-    const labelText = getFieldLabel(key);
+    const customLabel = getFieldLabel(key);
+    const labelHtml = customLabel !== key
+        ? `<label class="editable-label field-label" data-key="${key}" title="双击编辑标签 · 显示名: ${esc(customLabel)}">${esc(key)}<span class="field-label-alias">${esc(customLabel)}</span></label>`
+        : `<label class="editable-label field-label" data-key="${key}" title="双击编辑标签">${esc(key)}</label>`;
+
     if (typeof v === 'object' && !Array.isArray(v) && v !== null && v.zh !== undefined && v.en !== undefined) {
-        return `<div class="field-row field-row-i18n"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><span class="type-badge type-i18n">i18n</span><div class="i18n-group"><input class="input tmpl-i18n-zh" data-field="${key}" value="${esc(v.zh||'')}" placeholder="zh" /><input class="input tmpl-i18n-en" data-field="${key}" value="${esc(v.en||'')}" placeholder="en" /></div><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
+        return `<div class="field-row field-row-i18n">${labelHtml}<span class="type-badge type-i18n">i18n</span><div class="i18n-group"><input class="input tmpl-i18n-zh" data-field="${key}" value="${esc(v.zh||'')}" placeholder="zh" /><input class="input tmpl-i18n-en" data-field="${key}" value="${esc(v.en||'')}" placeholder="en" /></div><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
     }
     if (Array.isArray(v)) {
-        return `<div class="field-row field-row-arr"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><span class="type-badge type-arr">arr[${v.length}]</span><input class="input tmpl-field" data-field="${key}" value="${esc(JSON.stringify(v))}" placeholder="[]" /><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
+        return `<div class="field-row field-row-arr">${labelHtml}<span class="type-badge type-arr">arr[${v.length}]</span><input class="input tmpl-field" data-field="${key}" value="${esc(JSON.stringify(v))}" placeholder="[]" /><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
     }
     if (typeof v === 'object' && v !== null) {
-        return `<div class="field-row field-row-obj"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><span class="type-badge type-obj">obj{${Object.keys(v).length}}</span><input class="input tmpl-field" data-field="${key}" value="${esc(JSON.stringify(v))}" placeholder="{}" /><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
+        return `<div class="field-row field-row-obj">${labelHtml}<span class="type-badge type-obj">obj{${Object.keys(v).length}}</span><input class="input tmpl-field" data-field="${key}" value="${esc(JSON.stringify(v))}" placeholder="{}" /><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
     }
     const strVal = v === null || v === undefined ? '' : String(v);
     const isNum = typeof v === 'number';
     const typeLabel = isNum ? 'num' : 'str';
-    return `<div class="field-row ${isNum ? 'field-row-num' : ''}"><label class="editable-label" data-key="${key}" title="双击编辑标签">${esc(labelText)}</label><span class="type-badge type-${typeLabel}">${typeLabel}</span><input class="input tmpl-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
+    return `<div class="field-row ${isNum ? 'field-row-num' : ''}">${labelHtml}<span class="type-badge type-${typeLabel}">${typeLabel}</span><input class="input tmpl-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
 }
 
 // ----- 标签双击改名 -----
