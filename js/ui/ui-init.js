@@ -314,7 +314,22 @@ export async function initUI(store, io) {
     initSplitters();
 
     // 搜索
-    $('#tree-search').addEventListener('input', () => { _searchTerm = $('#tree-search').value.toLowerCase().trim(); applyTreeSearch(_searchTerm); });
+    const searchInput = $('#tree-search');
+    const searchClear = $('#tree-search-clear');
+    if (searchInput && searchClear) {
+        searchInput.addEventListener('input', () => {
+            _searchTerm = searchInput.value.toLowerCase().trim();
+            applyTreeSearch(_searchTerm);
+            searchClear.style.display = _searchTerm ? '' : 'none';
+        });
+        searchClear.addEventListener('click', () => {
+            searchInput.value = '';
+            _searchTerm = '';
+            applyTreeSearch(_searchTerm);
+            searchClear.style.display = 'none';
+            searchInput.focus();
+        });
+    }
 
     // 中间 JSON Tab
     const centerTa = $('#path-editor-center');

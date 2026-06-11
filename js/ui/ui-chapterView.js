@@ -3,8 +3,7 @@
 // 以列表形式展示 content 数组，快速编辑对白
 // ==========================================
 
-import { getLanguages } from '../logic/logic-storyTypes.js';
-import { showTemplatePicker } from './ui-createDialog.js';
+import { getLanguages, getContextKeys, getContextsConfig } from '../logic/logic-storyTypes.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -66,11 +65,19 @@ export function renderChapterView(store) {
     const cols = loadColumnConfig();
     const languages = getLanguages();
 
+    const ctxKeys = getContextKeys();
+    const ctxConfig = getContextsConfig();
+
     // 头部
     const pathLabel = dataPath.join(' → ') || '(root)';
+    const ctxOptions = ctxKeys.map(k => {
+        const cfg = ctxConfig[k] || {};
+        return `<option value="${k}">${cfg.label || k}</option>`;
+    }).join('');
     let html = `<div class="chapter-toolbar">
         <span class="chapter-count">${pathLabel} · 共 ${content.length} 条</span>
         <button class="btn btn-sm" id="btn-chapter-cols">⚙️ 显示列</button>
+        <select id="chapter-ctx-select" class="input-sm">${ctxOptions}</select>
         <button class="btn btn-sm btn-success" id="btn-chapter-add">＋ 新增</button>
     </div>`;
 
@@ -172,10 +179,10 @@ export function renderChapterView(store) {
         modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
     });
 
-    // 新增行
-    $('#btn-chapter-add')?.addEventListener('click', async () => {
-        const ctx = await showTemplatePicker();
-        if (ctx) store.addNode(ctx, dataPath);
+    // 新增行（从下拉框读取模板上下文）
+    $('#btn-chapter-add')?.addEventListener('click', () => {
+        const ctx = $('#chapter-ctx-select')?.value || 'content';
+        store.addNode(ctx, dataPath);
         renderChapterView(store);
     });
 
