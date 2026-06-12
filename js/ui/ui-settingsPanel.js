@@ -1,5 +1,9 @@
+import { store } from '../logic/logic-storyStore.js';
+import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, getEffectiveFields } from '../logic/logic-storyTypes.js';
+
+const $ = (sel) => document.querySelector(sel);
 // ==========================================
-// ui-settingsPanel.js — 设置面板（字体、色彩方案）
+// ui-settingsPanel.js — 设置面板（字体、色彩方案、语言管理）
 // ==========================================
 
 const STORAGE_KEY = 'storyeditor_settings';
@@ -68,6 +72,11 @@ const THEMES = {
     }
 };
 
+function esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // 加载已保存的设置
 function loadSettings() {
     try {
@@ -87,10 +96,8 @@ export function applySettings(settings) {
     const s = settings || loadSettings();
     const root = document.documentElement;
 
-    // 字体大小
     root.style.setProperty('--font-size-base', s.fontSize + 'px');
 
-    // 色彩方案
     const theme = THEMES[s.theme];
     if (theme) {
         for (const [key, val] of Object.entries(theme.vars)) {
@@ -98,7 +105,6 @@ export function applySettings(settings) {
         }
     }
 
-    // 标签颜色模式
     root.dataset.labelColor = s.labelColor || 'default';
 }
 
@@ -109,12 +115,185 @@ export function initSettings() {
     return s;
 }
 
+// 新建结构类型弹窗
+function openNewStructDialog() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `<div class="modal-box" style="width:680px;max-width:90vw">
+        <div class="modal-header"><h2>新建结构类型</h2><button class="modal-close" id="ns-close">✕</button></div>
+        <div class="modal-body" style="display:flex;gap:16px;padding:12px">
+            <div style="flex:1;min-width:0">
+                <div style="margin-bottom:8px">
+                    <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">ID</label>
+                    <input id="ns-id" class="input" placeholder="如 myType" style="width:100%;font-family:var(--font-mono)" />
+                </div>
+                <div style="margin-bottom:8px">
+                    <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">显示名称</label>
+                    <input id="ns-label" class="input" placeholder="如 自定义类型" style="width:100%" />
+                </div>
+                <div style="margin-bottom:8px">
+                    <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">匹配方式</label>
+                    <select id="ns-match-type" class="input" style="width:100%">
+                        <option value="struct">属性检测（struct）</option>
+                        <option value="glob">键名通配（glob）</option>
+                        <option value="path">路径匹配（path）</option>
+                    </select>
+                </div>
+                <div id="ns-marker-group" style="margin-bottom:8px">
+                    <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">标记属性键名</label>
+                    <input id="ns-marker" class="input" placeholder="如 zh" style="width:100%;font-family:var(--font-mono)" />
+                    <div style="font-size:0.7rem;color:var(--text-dim);margin-top:2px">
+                        具有此键的对象才算匹配，同时自动保证此键存在
+                    </div>
+                </div>
+                <div id="ns-pattern-group" style="margin-bottom:8px;display:none">
+                    <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">Glob 通配模式</label>
+                    <input id="ns-pattern" class="input" placeholder="如 **.speaker" style="width:100%;font-family:var(--font-mono)" />
+                    <div style="font-size:0.7rem;color:var(--text-dim);margin-top:2px;line-height:1.4">
+                        <code>**</code> = 任意层 · <code>*</code> = 单级通配 · 字面量精确匹配
+                    </div>
+                </div>
+                <div id="ns-fields-group" style="margin-bottom:8px;display:none">
+                    <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">初始字段（逗号分隔）</label>
+                    <input id="ns-fields" class="input" placeholder="如 zh, en" style="width:100%;font-family:var(--font-mono)" />
+                    <div style="font-size:0.7rem;color:var(--text-dim);margin-top:2px">
+                        匹配到的对象保证拥有以上所有字段
+                    </div>
+                </div>
+            </div>
+            <div style="width:280px;min-width:0;border-left:1px solid var(--border);padding-left:12px">
+                <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">匹配预览</label>
+                <div id="ns-preview" style="font-size:0.75rem;font-family:var(--font-mono);background:var(--bg-input);border-radius:var(--radius);padding:8px;min-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;line-height:1.6;color:var(--text-dim)">等待输入...</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-sm" id="ns-cancel">取消</button>
+            <button class="btn btn-sm btn-primary" id="ns-ok">创建</button>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+    requestAnimationFrame(() => modal.classList.add('open'));
+
+    const close = () => { modal.classList.remove('open'); setTimeout(() => modal.remove(), 200); };
+    modal.querySelector('#ns-close').onclick = close;
+    modal.querySelector('#ns-cancel').onclick = close;
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+
+    // 实时预览
+    function updatePreview() {
+        const matchType = modal.querySelector('#ns-match-type').value;
+        const marker = modal.querySelector('#ns-marker').value.trim();
+        const pattern = modal.querySelector('#ns-pattern').value.trim();
+        const fields = modal.querySelector('#ns-fields').value.trim();
+        const preview = modal.querySelector('#ns-preview');
+        const fieldList = fields ? fields.split(/[,，\s]+/).filter(Boolean) : [];
+
+        let matchDesc = '', examples = [];
+        switch (matchType) {
+            case 'struct': {
+                if (!marker) { preview.textContent = '等待输入标记键名...'; return; }
+                matchDesc = `对象含有关键键「${marker}」`;
+                examples = [
+                    `{ "${marker}": "..." }`,
+                    `{ "${marker}": "...", "other": "..." }   ← 也一起匹配，但不管 other`,
+                ];
+                break;
+            }
+            case 'glob': {
+                if (!pattern) { preview.textContent = '等待输入通配模式...'; return; }
+                matchDesc = `键名匹配 Glob 模式「${pattern}」`;
+                const last = pattern.split('.').pop() || pattern;
+                if (pattern.startsWith('**.')) {
+                    examples = [
+                        `content[0].${last}`,
+                        `meta.${last}`,
+                        `content[0].options[0].${last}`,
+                    ];
+                } else if (pattern.includes('*')) {
+                    examples = [
+                        pattern.replace('*', '0'),
+                        pattern.replace('*', '1'),
+                    ];
+                } else {
+                    examples = [pattern];
+                }
+                break;
+            }
+            case 'path': {
+                if (!pattern) { preview.textContent = '等待输入路径模式...'; return; }
+                matchDesc = `路径匹配模式「${pattern}」`;
+                if (pattern.includes('*')) {
+                    examples = [
+                        pattern.replace('*', '0'),
+                        pattern.replace('*', '1'),
+                    ];
+                } else {
+                    examples = [pattern];
+                }
+                break;
+            }
+        }
+        const fieldsNote = matchType === 'struct'
+            ? `\n\n保证字段: [${marker}]（标记键自动保证）`
+            : (fieldList.length > 0 ? `\n\n保证字段: [${fieldList.join(', ')}]` : '');
+        preview.innerHTML = `<div style="color:var(--accent);margin-bottom:4px">${esc(matchDesc)}</div>`
+            + examples.map(ex => `<div style="color:var(--text)">  → ${esc(ex)}</div>`).join('')
+            + esc(fieldsNote);
+    }
+
+    modal.querySelector('#ns-match-type').addEventListener('change', (e) => {
+        const v = e.target.value;
+        modal.querySelector('#ns-marker-group').style.display = v === 'struct' ? '' : 'none';
+        modal.querySelector('#ns-pattern-group').style.display = (v === 'glob' || v === 'path') ? '' : 'none';
+        modal.querySelector('#ns-fields-group').style.display = (v === 'glob' || v === 'path') ? '' : 'none';
+        updatePreview();
+    });
+    modal.querySelector('#ns-marker').addEventListener('input', updatePreview);
+    modal.querySelector('#ns-pattern').addEventListener('input', updatePreview);
+    modal.querySelector('#ns-fields').addEventListener('input', updatePreview);
+    updatePreview();
+
+    modal.querySelector('#ns-ok').onclick = () => {
+        const id = modal.querySelector('#ns-id').value.trim();
+        const label = modal.querySelector('#ns-label').value.trim() || id;
+        const matchType = modal.querySelector('#ns-match-type').value;
+        const marker = modal.querySelector('#ns-marker').value.trim();
+        const pattern = modal.querySelector('#ns-pattern').value.trim();
+        const fieldsStr = modal.querySelector('#ns-fields').value.trim();
+
+        if (!id) { alert('ID 不能为空'); return; }
+        if (matchType === 'struct' && !marker) { alert('标记属性键名不能为空'); return; }
+        if ((matchType === 'glob' || matchType === 'path') && !pattern) { alert('通配模式不能为空'); return; }
+
+        const fields = matchType === 'struct'
+            ? [marker]
+            : (fieldsStr ? fieldsStr.split(/[,，\s]+/).filter(Boolean) : []);
+        const structs = loadStructs();
+        if (structs.some(s => s.id === id)) { alert('该 ID 已存在'); return; }
+
+        const match = matchType === 'struct'
+            ? { type: matchType, marker }
+            : { type: matchType, pattern };
+
+        structs.push({ id, label, match, fields });
+        saveStructs(structs);
+        close();
+        renderSettingsPanel();
+    };
+
+    modal.querySelector('#ns-id').addEventListener('keydown', e => {
+        if (e.key === 'Enter') modal.querySelector('#ns-ok').click();
+    });
+}
+
 // 渲染设置面板
 export function renderSettingsPanel() {
     const container = document.querySelector('#view-settings .side-view-content');
     if (!container) return;
 
     const s = loadSettings();
+    const langs = getLanguages();
+    const structs = loadStructs();
 
     container.innerHTML = `
         <div class="settings-section">
@@ -156,6 +335,51 @@ export function renderSettingsPanel() {
             </div>
         </div>
         <div class="settings-section">
+            <label class="settings-label">语言管理</label>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                ${langs.map(l => `<span class="settings-lang-badge">${esc(l)}</span>`).join('')}
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px">
+                <input id="setting-new-lang" class="input-sm" placeholder="如 fr" style="width:80px;font-family:var(--font-mono)" />
+                <button class="btn btn-sm btn-success" id="btn-add-lang">＋ 添加语言</button>
+            </div>
+            <div style="margin-top:4px;font-size:0.75rem;color:var(--text-dim)">
+                添加后自动补充到所有多语言文本字段
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <label class="settings-label">结构类型管理</label>
+            <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:6px">
+                定义数据中需要统一维护字段的"类型"（如多语言文本）
+            </div>
+            ${structs.map(st => {
+                const matchDesc = st.match.type === 'struct'
+                    ? `struct(${esc(st.match.marker)})`
+                    : st.match.type === 'glob'
+                        ? `glob(${esc(st.match.pattern)})`
+                        : `path(${esc(st.match.pattern)})`;
+                return `
+                <div class="settings-struct-card">
+                    <div class="settings-struct-header">
+                        <span class="settings-struct-id">${esc(st.id)}</span>
+                        <span class="settings-struct-label">${esc(st.label)}</span>
+                        <span class="settings-struct-match">${esc(matchDesc)}</span>
+                        ${st.id !== 'i18n' ? `<button class="btn-icon btn-del-struct" data-struct="${esc(st.id)}" title="删除此类型">✕</button>` : ''}
+                    </div>
+                    <div class="settings-struct-fields">
+                        ${st.match.type === 'struct' ? `<span class="settings-lang-badge" style="opacity:0.7">${esc(st.match.marker)} (标记)</span>` : ''}
+                        ${st.fields.filter(f => st.match.type !== 'struct' || f !== st.match.marker).map(f => `<span class="settings-lang-badge">${esc(f)} <button class="btn-icon btn-del-field" data-struct="${esc(st.id)}" data-field="${esc(f)}" title="删除字段">✕</button></span>`).join('')}
+                        <input class="input-sm settings-struct-new-field" data-struct="${esc(st.id)}" placeholder="新字段名" style="width:70px;font-family:var(--font-mono)" />
+                        <button class="btn btn-sm btn-success btn-add-struct-field" data-struct="${esc(st.id)}">＋</button>
+                    </div>
+                </div>`;
+            }).join('')}
+            <div style="margin-top:8px;display:flex;gap:6px">
+                <button class="btn btn-sm" id="btn-new-struct">＋ 新建结构类型</button>
+            </div>
+        </div>
+        <div class="settings-section">
             <button class="btn btn-sm" id="btn-settings-reset">重置为默认</button>
         </div>
     `;
@@ -180,10 +404,80 @@ export function renderSettingsPanel() {
             s.theme = theme;
             saveSettings(s);
             applySettings(s);
-            // 更新 active 状态
             document.querySelectorAll('.settings-theme-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
         });
+    });
+
+    // 标签颜色模式
+    document.querySelectorAll('input[name="label-color"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            s.labelColor = radio.value;
+            saveSettings(s);
+            applySettings(s);
+        });
+    });
+
+    // 添加语言（通过结构类型系统）
+    const addBtn = document.getElementById('btn-add-lang');
+    const langInput = document.getElementById('setting-new-lang');
+    if (addBtn && langInput) {
+        const doAdd = () => {
+            const lang = langInput.value.trim().toLowerCase();
+            if (!lang) return;
+            addStructField('i18n', lang, store.chapter);
+            renderSettingsPanel();
+        };
+        addBtn.addEventListener('click', doAdd);
+        langInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') doAdd();
+        });
+    }
+
+    // 结构类型管理事件
+    // 添加结构字段
+    document.querySelectorAll('.btn-add-struct-field').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const structId = btn.dataset.struct;
+            const input = btn.parentNode.querySelector('.settings-struct-new-field');
+            const field = input?.value.trim();
+            if (!field) return;
+            addStructField(structId, field, store.chapter);
+            renderSettingsPanel();
+        });
+    });
+    // 字段输入框回车
+    document.querySelectorAll('.settings-struct-new-field').forEach(inp => {
+        inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const btn = inp.parentNode.querySelector('.btn-add-struct-field');
+                if (btn) btn.click();
+            }
+        });
+    });
+    // 删除字段
+    document.querySelectorAll('.btn-del-field').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const structId = btn.dataset.struct;
+            const field = btn.dataset.field;
+            removeStructField(structId, field);
+            renderSettingsPanel();
+        });
+    });
+    // 删除整个结构类型
+    document.querySelectorAll('.btn-del-struct').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const structId = btn.dataset.struct;
+            if (structId === 'i18n') { alert('不能删除内置类型'); return; }
+            const structs = loadStructs();
+            saveStructs(structs.filter(s => s.id !== structId));
+            renderSettingsPanel();
+        });
+    });
+    // 新建结构类型
+    $('#btn-new-struct')?.addEventListener('click', () => {
+        // 弹窗选择匹配方式
+        openNewStructDialog();
     });
 
     // 重置
@@ -197,13 +491,4 @@ export function renderSettingsPanel() {
             renderSettingsPanel();
         });
     }
-
-    // 标签颜色模式
-    document.querySelectorAll('input[name="label-color"]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            s.labelColor = radio.value;
-            saveSettings(s);
-            applySettings(s);
-        });
-    });
 }

@@ -5,7 +5,13 @@
 // ==========================================
 
 // 基础层：数据模型、配置加载、模板读写
-export { loadContentConfig } from './logic/logic-storyTypes.js';
+export { loadTemplates, getContextKeys, getContextsConfig, resolveTemplateContext, loadContentConfig, loadEffectiveTemplates,
+    createChapter, createBlankChapter, createOption, isEmpty, createNodeFromTemplate,
+    loadLabels, saveLabel, getFieldLabel,
+    getLanguages, saveLanguages,
+    saveTemplate, saveTemplates, loadTemplateKeys, saveTemplateKeys,
+    loadStructs, saveStructs, getEffectiveFields, findMatchingValues, syncStruct, syncAllStructs, addStructField, removeStructField,
+    isI18nObj, addLanguage } from './logic/logic-storyTypes.js';
 
 // 数据层：数据 CRUD 管理 + 文件导入导出
 export { store } from './logic/logic-storyStore.js';

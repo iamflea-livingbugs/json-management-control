@@ -3,7 +3,7 @@
 // 包含表单渲染、字段类型标签、行内编辑、标签改名
 // ==========================================
 
-import { getFieldLabel } from '../logic/logic-storyTypes.js';
+import { getFieldLabel, getLanguages } from '../logic/logic-storyTypes.js';
 import { store } from '../logic/logic-storyStore.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -150,9 +150,18 @@ function renderFormField(key, v, parentPath, store) {
     if (v === null || v === undefined) {
         return `<div class="field-row field-row-null" ${fieldAttr}>${labelHtml}<span class="type-badge type-nil">nil</span><input class="input form-field" data-field="${key}" value="" placeholder="null" /><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>`;
     }
-    if (typeof v === 'object' && !Array.isArray(v) && v.zh !== undefined && v.en !== undefined) {
+    // 检测 i18n 对象：有 zh 键的对象
+    const isI18n = typeof v === 'object' && !Array.isArray(v) && v && 'zh' in v;
+    if (isI18n) {
+        const activeLangs = getLanguages();
+        // 渲染所有存在的语言输入框
+        const langInputs = activeLangs.map(lang => {
+            const val = v[lang] || '';
+            return `<input class="input form-i18n-lang" data-field="${key}" data-lang="${lang}" value="${esc(val)}" placeholder="${lang}" />`;
+        }).join('');
+        // 非语言键的额外属性
         let extraHtml = '';
-        const extraKeys = Object.keys(v).filter(k => k !== 'zh' && k !== 'en');
+        const extraKeys = Object.keys(v).filter(k => !activeLangs.includes(k));
         if (extraKeys.length > 0) {
             extraHtml = `<div class="i18n-extra">${extraKeys.map(ek => {
                 const ev = v[ek];
@@ -162,7 +171,7 @@ function renderFormField(key, v, parentPath, store) {
                 return `<div class="field-row" data-field="${ek}" data-parentpath="${esc(childPath.join('|'))}"><label class="field-label">${esc(ek)}</label><span class="type-badge type-${typeof ev === 'number' ? 'num' : Array.isArray(ev) ? 'arr' : typeof ev === 'object' && ev !== null ? 'obj' : 'str'}">${typeof ev === 'number' ? 'num' : Array.isArray(ev) ? 'arr' : typeof ev === 'object' && ev !== null ? 'obj' : 'str'}</span><input class="input form-field" data-field="${ek}" value="${esc(String(ev))}" /><button class="btn-icon btn-del-field" data-del-key="${ek}" title="删除属性">✕</button></div>`;
             }).join('')}</div>`;
         }
-        return `<div class="field-row field-row-i18n" ${fieldAttr}>${labelHtml}<span class="type-badge type-i18n">i18n</span><div class="i18n-group"><input class="input form-i18n-zh" data-field="${key}" value="${esc(v.zh || '')}" placeholder="zh" /><input class="input form-i18n-en" data-field="${key}" value="${esc(v.en || '')}" placeholder="en" /></div><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>${extraHtml}`;
+        return `<div class="field-row field-row-i18n" ${fieldAttr}>${labelHtml}<span class="type-badge type-i18n">i18n</span><div class="i18n-group">${langInputs}</div><button class="btn-icon btn-del-field" data-del-key="${key}" title="删除属性">✕</button></div>${extraHtml}`;
     }
     if (Array.isArray(v)) {
         const pathKey = childPath.join('|');
@@ -181,6 +190,7 @@ function renderFormField(key, v, parentPath, store) {
 // ===== 选项渲染 =====
 
 function renderOptions(node) {
+    const activeLangs = getLanguages();
     const rows = node.options.map((opt, i) => {
         const actionRows = (opt.actions || []).map((act, j) => `
             <div class="action-inline">
@@ -189,13 +199,15 @@ function renderOptions(node) {
                 <button class="btn-icon btn-del-action" data-node="${node.id}" data-opt="${i}" data-action="${j}" title="删除动作">✕</button>
             </div>`).join('');
 
+        const langInputs = activeLangs.map(lang => {
+            const val = opt.text?.[lang] || '';
+            return `<input class="input input-sm opt-text-lang" data-node="${node.id}" data-opt="${i}" data-lang="${lang}" value="${esc(val)}" placeholder="选项文本(${lang})" />`;
+        }).join('');
+
         return `<div class="option-row">
             <span class="option-index">#${i}</span>
             <div class="option-i18n">
-                <div class="i18n-group">
-                    <input class="input input-sm opt-text-zh" data-node="${node.id}" data-opt="${i}" value="${esc(opt.text?.zh || '')}" placeholder="选项文本(zh)" />
-                    <input class="input input-sm opt-text-en" data-node="${node.id}" data-opt="${i}" value="${esc(opt.text?.en || '')}" placeholder="选项文本(en)" />
-                </div>
+                <div class="i18n-group">${langInputs}</div>
                 <div style="display:flex;gap:4px;margin-top:4px">
                     <input class="input input-sm opt-next" data-node="${node.id}" data-opt="${i}" value="${esc(opt.next || '')}" placeholder="跳转ID" style="width:120px" />
                     <button class="btn btn-sm btn-add-action" data-node="${node.id}" data-opt="${i}">＋ 动作</button>
@@ -225,18 +237,12 @@ function bindFormInputs(path, val, store) {
         });
     });
 
-    $$('.form-i18n-zh').forEach(inp => {
+    $$('.form-i18n-lang').forEach(inp => {
         inp.addEventListener('input', () => {
             const obj = store.getByPath(path);
-            if (obj && typeof obj === 'object' && obj[inp.dataset.field]) obj[inp.dataset.field].zh = inp.value;
-            store._emit();
-        });
-    });
-
-    $$('.form-i18n-en').forEach(inp => {
-        inp.addEventListener('input', () => {
-            const obj = store.getByPath(path);
-            if (obj && typeof obj === 'object' && obj[inp.dataset.field]) obj[inp.dataset.field].en = inp.value;
+            if (obj && typeof obj === 'object' && obj[inp.dataset.field]) {
+                obj[inp.dataset.field][inp.dataset.lang] = inp.value;
+            }
             store._emit();
         });
     });
@@ -252,8 +258,18 @@ function bindFormInputs(path, val, store) {
 function bindOptionButtons(node, store) {
     $('#btn-add-option')?.addEventListener('click', (e) => store.addOption(e.target.dataset.node));
     $$('.btn-del-option').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); store.deleteOption(btn.dataset.node, parseInt(btn.dataset.opt)); }));
-    $$('.opt-text-zh').forEach(inp => inp.addEventListener('input', () => store.updateOptionText(inp.dataset.node, parseInt(inp.dataset.opt), inp.value, null)));
-    $$('.opt-text-en').forEach(inp => inp.addEventListener('input', () => store.updateOptionText(inp.dataset.node, parseInt(inp.dataset.opt), null, inp.value)));
+    $$('.opt-text-lang').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const nodeId = inp.dataset.node;
+            const optIdx = parseInt(inp.dataset.opt);
+            const lang = inp.dataset.lang;
+            const opt = store.getNode(nodeId)?.options?.[optIdx];
+            if (!opt) return;
+            if (typeof opt.text !== 'object') opt.text = {};
+            opt.text[lang] = inp.value;
+            store._emit();
+        });
+    });
     $$('.opt-next').forEach(inp => inp.addEventListener('input', () => store.updateOption(inp.dataset.node, parseInt(inp.dataset.opt), { next: inp.value })));
     $$('.btn-add-action').forEach(btn => btn.addEventListener('click', () => store.addAction(btn.dataset.node, parseInt(btn.dataset.opt))));
     $$('.opt-action-cmd').forEach(inp => inp.addEventListener('input', () => store.updateActionCmd(inp.dataset.node, parseInt(inp.dataset.opt), parseInt(inp.dataset.action), inp.value)));

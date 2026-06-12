@@ -3,12 +3,13 @@
 // 所有增删改操作仅修改内存草稿，点"保存"才写入 localStorage
 // ==========================================
 
-import { loadTemplates, loadEffectiveTemplates, getContextsConfig, getFieldLabel, saveLabel, saveTemplates } from '../logic/logic-storyTypes.js';
+import { loadTemplates, loadEffectiveTemplates, loadTemplateKeys, saveTemplateKeys, getContextsConfig, getFieldLabel, saveLabel, saveTemplates } from '../logic/logic-storyTypes.js';
 import { store } from '../logic/logic-storyStore.js';
 import { showConfirm, makeModalDraggable } from './ui-modalDialog.js';
 
 let _currentCtx = 'content';   // 当前正在编辑的上下文
 let _draft = null;             // 内存草稿：{ [ctx]: templateObj }
+let _draftKeys = null;         // 键名模式：{ [ctx]: keyPattern }
 let _dirty = false;            // 是否有未保存的修改
 let _deletedCtxs = [];         // 本次编辑中被删除的上下文（持久化用）
 
@@ -27,8 +28,9 @@ export function openTemplateEditor() {
     const existing = $('#modal-template-editor');
     if (existing) { existing.classList.add('open'); return; }
 
-    // 从 localStorage 深拷贝到草稿（使用 loadEffectiveTemplates 过滤掉已删除的）
+    // 从 localStorage 深拷贝到草稿
     _draft = JSON.parse(JSON.stringify(loadEffectiveTemplates()));
+    _draftKeys = JSON.parse(JSON.stringify(loadTemplateKeys()));
     _dirty = false;
     _deletedCtxs = [];
 
@@ -48,18 +50,23 @@ export function openTemplateEditor() {
     requestAnimationFrame(() => modal.classList.add('open'));
     makeModalDraggable(modal);
 
-    // Enter 键触发保存
+    // Enter 键触发保存（只在字段输入框内有效，不干扰键名输入）
     modal.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && document.activeElement?.tagName === 'INPUT') {
-            e.preventDefault();
-            const saveBtn = document.getElementById('btn-template-save');
-            if (saveBtn) saveBtn.click();
+        if (e.key === 'Enter') {
+            const tag = document.activeElement?.tagName;
+            const id = document.activeElement?.id;
+            if (tag === 'INPUT' && id !== 'tpl-key-pattern' && id !== 'newtpl-key') {
+                e.preventDefault();
+                const saveBtn = document.getElementById('btn-template-save');
+                if (saveBtn) saveBtn.click();
+            }
         }
     });
 
     // 保存
     $('#btn-template-save').addEventListener('click', () => {
         saveTemplates(_draft, _deletedCtxs);
+        saveTemplateKeys(_draftKeys);
         store._emit();
         _dirty = false;
         closeTemplateEditor();
@@ -140,8 +147,14 @@ function renderModalContent() {
 
     body.innerHTML = `
         <div class="tpl-ctx-bar"><label>模板上下文：</label>${ctxBtns}
+            <button class="btn btn-sm" id="btn-new-template" style="margin-left:4px">＋ 新建</button>
             <span style="flex:1"></span>
             <button class="btn btn-sm" id="btn-del-template" style="color:var(--accent)" title="删除当前整个模板">✕ 删除此模板</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
+            <label style="font-size:0.75rem;color:var(--text-dim);white-space:nowrap">自动增长键名：</label>
+            <input id="tpl-key-pattern" class="input-sm" style="width:120px;font-family:var(--font-mono)" value="${esc(_draftKeys[_currentCtx] || '')}" placeholder="留空=数字自增" />
+            <span style="font-size:0.7rem;color:var(--text-dim)">属性模式新建时按此模式自动生成键名（如 content → content0 → content1）</span>
         </div>
         <div class="editor-fields" id="tpl-fields">${fields}</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
@@ -181,6 +194,54 @@ function renderModalContent() {
             renderModalContent();
         });
     });
+
+    // 新建模板
+    $('#btn-new-template').addEventListener('click', () => {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `<div class="modal-box" style="width:360px">
+            <div class="modal-header"><h2>新建模板</h2><button class="modal-close" id="newtpl-close">✕</button></div>
+            <div class="modal-body">
+                <div style="margin-bottom:12px">
+                    <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">模板键名</label>
+                    <input id="newtpl-key" class="input" placeholder="如：content" style="width:100%;font-family:var(--font-mono)" autofocus />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm" id="newtpl-cancel">取消</button>
+                <button class="btn btn-sm btn-primary" id="newtpl-ok">创建</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+        requestAnimationFrame(() => modal.classList.add('open'));
+        const close = () => { modal.classList.remove('open'); setTimeout(() => modal.remove(), 200); };
+        modal.querySelector('#newtpl-close').onclick = close;
+        modal.querySelector('#newtpl-cancel').onclick = close;
+        modal.addEventListener('click', e => { if (e.target === modal) close(); });
+        modal.querySelector('#newtpl-ok').onclick = () => {
+            const key = modal.querySelector('#newtpl-key').value.trim();
+            if (!key) return;
+            _draft[key] = {};
+            _currentCtx = key;
+            _dirty = true;
+            close();
+            renderModalContent();
+        };
+        modal.querySelector('#newtpl-key').addEventListener('keydown', e => {
+            if (e.key === 'Enter') modal.querySelector('#newtpl-ok').click();
+        });
+    });
+
+    // 键名模式修改（即时保存到草稿）
+    const keyInput = $('#tpl-key-pattern');
+    if (keyInput) {
+        keyInput.addEventListener('input', () => {
+            const val = keyInput.value.trim();
+            if (val) _draftKeys[_currentCtx] = val;
+            else delete _draftKeys[_currentCtx];
+            _dirty = true;
+        });
+    }
 
     // 添加字段（仅修改草稿）
     $('#btn-add-tpl-field').addEventListener('click', () => {

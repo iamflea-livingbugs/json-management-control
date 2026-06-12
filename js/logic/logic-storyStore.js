@@ -2,8 +2,7 @@
 // storyStore.js — 数据管理层（核心）
 // 纯逻辑层，不依赖 UI
 // ==========================================
-
-import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from './logic-storyTypes.js';
+import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext, syncAllStructs } from './logic-storyTypes.js';
 
 class StoryStore {
     constructor() {
@@ -58,6 +57,8 @@ class StoryStore {
             text: typeof opt.text === 'string' ? { zh: opt.text, en: '' } : (opt.text || { zh: '', en: '' }),
             next: opt.next || '', showif: opt.showif || {}, actions: opt.actions || []
         }));
+        // 补充所有结构类型定义的缺失字段
+        syncAllStructs(merged);
         return merged;
     }
 
@@ -223,12 +224,11 @@ class StoryStore {
 
     // ----- 纯数据操作：新增/删除（UI 层负责交互）-----
 
-    // 在对象中添加属性（纯数据，UI 层调用前先弹窗）
+    // 在对象中添加属性（纯数据，不跳转）
     addObjectProperty(path, key, val) {
         const parent = this.getByPath(path);
         if (!parent || typeof parent !== 'object' || Array.isArray(parent)) return;
         parent[key] = val;
-        this.currentPath = [...path, key];
         this._emit();
     }
 

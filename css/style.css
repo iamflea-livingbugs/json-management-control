@@ -593,7 +593,13 @@ select {
    ========================================== */
 
 .chapter-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 4px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.chapter-count { color: var(--text-dim); font-size: 0.875rem; margin-right: auto; }
+.chapter-count { color: var(--text-dim); font-size: 0.875rem; }
+.chapter-type-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 0.75rem; font-family: var(--font-mono); line-height: 1.5;
+    background: var(--bg-input); color: var(--accent); border: 1px solid var(--border);
+}
+.chapter-toolbar #btn-chapter-cols { margin-left: auto; }
 .chapter-list { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; }
 .chapter-row { border: 1px solid transparent; border-radius: var(--radius); padding: 6px 8px; cursor: pointer; transition: border-color 0.1s, background 0.1s; }
 .chapter-row:hover { background: rgba(255,255,255,0.04); border-color: var(--border); }
@@ -628,6 +634,10 @@ select {
 .chapter-speaker-input:focus,
 .chapter-cell-input:focus { border-color: var(--accent); background: var(--bg-input); }
 .chapter-speaker-input { width: 90px; }
+.chapter-key-label {
+    display:inline-block; padding:4px 6px; font-size:0.875rem;
+    font-family: var(--font-mono); color: var(--accent); line-height:1.4;
+}
 .chapter-cell-input { width: 100%; box-sizing: border-box; }
 .chapter-cell-input.chapter-cell-null { color: var(--text-dim); font-style: italic; }
 
@@ -716,6 +726,51 @@ select {
     color: var(--text-dim);
 }
 
+/* 结构类型卡片 */
+.settings-struct-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px;
+    margin-bottom: 6px;
+}
+.settings-struct-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.settings-struct-id {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--accent);
+}
+.settings-struct-label {
+    font-size: 0.8125rem;
+    color: var(--text);
+}
+.settings-struct-match {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    flex: 1;
+}
+.settings-struct-fields {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.settings-struct-fields .btn-icon {
+    font-size: 0.6rem;
+    padding: 0 2px;
+    margin-left: 2px;
+}
+.settings-struct-new-field {
+    height: 24px;
+}
+.btn-add-struct-field {
+    height: 24px;
+}
+
 /* ==========================================
    13. 工具 — 滚动条
    ========================================== */
@@ -724,3 +779,15 @@ select {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+.settings-lang-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.8rem; font-family: var(--font-mono);
+    background: var(--bg-input); color: var(--accent); border: 1px solid var(--border);
+}
+
+.settings-lang-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.8rem; font-family: var(--font-mono);
+    background: var(--bg-input); color: var(--accent); border: 1px solid var(--border);
+}
