@@ -1,30 +1,32 @@
-﻿﻿# StoryEditor 剧情对话编辑器
+# StoryEditor 剧情对话编辑器
 
 可视化编辑 JSON 格式对话剧本，支持多语言、树形导航、实时预览，专为游戏剧情设计。
 
 ## 功能
 
-- **树形导航** — 从 JSON 根节点逐层展开，点击任意路径直接定位编辑
+- **树形导航** — 从 JSON 根节点逐层展开，点击任意路径直接定位编辑，支持搜索筛选
 - **双模式编辑** — 表单模式（按字段拆分双语输入框）和 JSON 模式（带语法高亮的镜像编辑器），Tab 切换
 - **多语言支持** — 每个文本字段内置 {zh, en} 双语组，实时输入
 - **选项系统** — 可视化编辑选项分支，支持 actions（命令 + 参数）
-- **节点模板** — content / option / action 各层级独立模板，自由定制字段，新建节点自动套用
-- **实时 JSON 预览** — 右侧面板实时同步高亮显示，支持格式化
-- **JSON 语法校验** — 编辑器底部实时显示 JSON 解析错误
-- **路径定位** — 点击树节点，JSON 面板自动滚动并选中对应值区域
-- **搜索筛选** — 按路径或键名搜索树节点，🔍 按钮一键填充路径前缀
-- **动态表单** — 对象属性自动遍历，简单值输入框，嵌套值摘要+跳转按钮
+- **节点模板** — 按上下文（content/option/action）独立模板，自由定制字段，新建节点自动套用
+- **实时 JSON 预览** — 右侧面板实时同步高亮显示，支持格式化、语法校验
+- **路径定位** — 点击树节点，预览面板自动滚动并选中对应值区域
+- **章节列表视图** — 表格化展示对话数组，支持列配置、行内快速编辑
+- **搜索筛选** — 树形面板搜索过滤，支持一键清空
+- **动态表单** — 对象属性自动遍历，嵌套值摘要+跳转
 - **属性管理** — 表单内直接新增/删除属性，不影响原始 JSON
 - **导入/导出** — 导入本地 JSON 文件，导出清洗后的 JSON
-- **双击改名** — 字段标签支持双击自定义名称（存 localStorage）
-- **JSON 配置文件驱动** — 模板上下文、默认内容结构、工具栏按钮均由 config/ 下的 JSON 文件定义
+- **拖放导入** — 直接将 .json 文件拖入窗口加载
+- **色彩方案** — 内置暗色/深海蓝/森林绿/浅色四套主题，可保存到 localStorage
+- **标签颜色模式** — 字段别名支持"跟随主题"或"按类型着色"（str 蓝 / i18n 紫 / arr 绿 / obj 橙 / num 黄 / nil 红）
+- **字段标签管理** — 双击字段名自定义显示别名，全局统一管理
 
 ## 使用
 
-1. 在浏览器中打开 index.html
-2. 点击"导入 JSON"加载对话剧本文件
+1. 在浏览器中打开 index.html（需要本地 HTTP 服务器，如 `python -m http.server 8080`）
+2. 点击"导入 JSON"或直接拖入 .json 文件加载对话剧本
 3. 左侧树形面板逐层展开，点击节点
-4. 中间面板表单模式编辑字段，或切到 JSON 模式直接编辑源码
+4. 中间面板 Tab 切换：表单模式编辑字段 / JSON 模式直接编辑源码 / 章节列表模式
 5. 右侧面板实时预览完整 JSON，支持格式化
 6. 编辑完成后点击"导出 JSON"
 
@@ -32,61 +34,64 @@
 
 ```
 StoryEditor/
-├── index.html            ← HTML 入口
-├── layout.html           ← 页面布局（HTML 独立文件，与 JS 分离）
+├── index.html              ← HTML 入口
+├── layout.html             ← 页面布局（与 JS 分离）
 ├── css/
-│   └── style.css         ← 全部样式
+│   └── style.css           ← 全部样式（CSS 变量主题系统）
 ├── js/
-│   ├── main.js           ← 入口（只引用 barrel.js）
-│   ├── barrel.js          ← 统一导出中枢
-│   ├── base/
-│   │   └── storyTypes.js ← 底层：数据模型、配置加载、模板读写
-│   ├── data/
-│   │   ├── storyStore.js ← 数据管理：CRUD、选中、导出
-│   │   ├── storyIO.js    ← 导入/导出 JSON 文件
-│   │   └── dragDrop.js   ← 拖拽排序
-│   └── ui/
-│       ├── storyUI.js    ← 界面渲染：工具栏、编辑器、配置弹窗
-│       ├── storyTree.js  ← 树形导航
-│       └── storyTemplateUI.js ← 模板编辑弹窗
-├── config/               ← JSON 配置（JSON 工具编辑 JSON 配置）
-│   ├── template-content.json   ← 空白章节/节点/选项结构 + 默认模板
-│   └── template-contexts.json  ← 模板编辑器上下文按钮、匹配规则
-├── fonts/                ← 字体文件
+│   ├── main.js             ← 入口：启动加载 + 拖放绑定
+│   ├── barrel.js           ← 统一导出中枢
+│   ├── logic/              ← 纯数据层（不依赖 UI）
+│   │   ├── logic-storyTypes.js   ← 数据模型、模板读写、配置常量
+│   │   ├── logic-storyStore.js   ← 数据管理：CRUD、路径导航、导出
+│   │   └── logic-storyIO.js      ← 文件导入/导出、拖放绑定
+│   └── ui/                 ← 视图层（依赖 logic/）
+│       ├── ui-init.js            ← 主界面初始化、树形搜索、事件绑定
+│       ├── ui-storyTree.js       ← 树形导航面板
+│       ├── ui-editorForm.js      ← 表单编辑器（中栏表单模式）
+│       ├── ui-chapterView.js     ← 章节列表视图（数组行内编辑）
+│       ├── ui-createDialog.js    ← 新建节点/章节弹窗
+│       ├── ui-storyTemplateUI.js ← 模板编辑弹窗
+│       ├── ui-labelManager.js    ← 字段标签管理弹窗
+│       ├── ui-settingsPanel.js   ← 设置面板（色彩方案、字体、标签颜色）
+│       └── ui-modalDialog.js     ← 通用模态组件（弹窗、确认、提示）
+├── config/
+│   └── template-content.json     ← 空白章节/节点/选项结构 + 默认模板
+├── fonts/                       ← 字体文件
 ├── lib/
-│   └── highlight.min.js  ← JSON 语法高亮
-├── LICENSE               ← Mulan PSL v2
+│   └── highlight.min.js          ← JSON 语法高亮
+├── LICENSE                       ← Mulan PSL v2
 ├── README.md
 └── PROJECT_HANDOVER.md
 ```
 
-## 配置文件说明
-
-所有配置均为 JSON 格式，可在编辑器中直接打开编辑，导出的文件可替换项目 `config/` 目录下的原文件。
-
-| 文件 | 作用 | 在 UI 中打开 |
-|:----:|:----:|:-----------:|
-| `config/template-content.json` | 定义空白章节/节点/选项的数据结构及各上下文的默认模板字段 | 工具栏「📄 内容配置」|
-| `config/template-contexts.json` | 定义模板编辑器中的上下文按钮名称和路径匹配规则 | 工具栏「📄 上下文配置」或右上角「⚙️ 配置」|
-
 ## 依赖层级
 
 ```
-main.js → barrel.js → base/    ← 谁都不依赖
-                      → data/   ← 依赖 base/ + ui/
-                      → ui/     ← 依赖 base/ + data/
-- base/ 层：纯工具函数和配置加载
-- data/ 层：数据管理和 CRUD
-- ui/ 层：界面渲染
+main.js → barrel.js → logic/    ← 纯数据，不依赖 UI
+                     → ui/       ← 依赖 logic/，不反向依赖
+- logic/ 层：纯数据模型、CRUD 操作、文件 IO
+- ui/ 层：界面渲染、事件绑定、交互反馈
+- barrel.js：唯一同时引用 logic/ 和 ui/ 的中转文件
 ```
+
+## 持久化存储（localStorage）
+
+| Key | 用途 |
+|-----|------|
+| `storyeditor_templates` | 用户自定义模板字段（覆盖默认） |
+| `storyeditor_labels` | 字段显示别名 |
+| `storyeditor_settings` | 色彩方案、字体大小、标签颜色模式 |
+| `storyeditor_chapter_cols` | 章节视图的列配置 |
+| `storyeditor_languages` | 已启用的语言列表 |
 
 ## 技术栈
 
 - 原生 JavaScript (ES Module)
 - Highlight.js — JSON 语法高亮
-- 纯 CSS — 暗色主题，flex 布局，可拖拽分栏
-- localStorage — 标签别名、节点模板、配置持久化
+- 纯 CSS — CSS 变量主题系统、flex/grid 布局、可拖拽分栏
+- localStorage — 模板、标签、设置持久化
 
 ## 许可
 
-[Mulan PSL v2](https://license.coscl.org.cn/MulanPSL2)（木兰宽松许可证，第2版）
+[Mulan PSL v2](https://license.coscl.org.cn/MulanPSL2)
