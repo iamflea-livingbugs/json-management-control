@@ -11,7 +11,6 @@ import { showCreateDialog, showTemplatePicker } from './ui-createDialog.js';
 import { showConfirm, showObjectAddDialog, showAlert } from './ui-modalDialog.js';
 import { renderChapterView } from './ui-chapterView.js';
 import { renderEditor, updateJSONTabContent } from './ui-editorForm.js';
-import { openConfigEditor } from './ui-configDialog.js';
 import { store } from '../logic/logic-storyStore.js';
 import { initSettings, renderSettingsPanel } from './ui-settingsPanel.js';
 
@@ -203,7 +202,6 @@ export async function initUI(store, io) {
     $('#btn-export').addEventListener('click', () => { const clean = store.toCleanJSON(); io.exportJSON(clean); });
     $('#btn-add-node').addEventListener('click', () => { showCreateDialog({ title: '新建章节', blankDesc: '仅返回 {}，不添加任何字段', onBlank: () => store.newChapter(createBlankChapter()), onTemplate: () => store.loadChapter(createChapter()) }); });
     $('#btn-edit-template').addEventListener('click', () => openTemplateEditor());
-    $('#btn-config').addEventListener('click', () => openConfigEditor());
     $('#btn-label-manager').addEventListener('click', () => openLabelManager());
 
     // 章节名

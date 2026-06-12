@@ -80,42 +80,19 @@ const HARDCODED_CONTEXTS = {
     default: { label: '默认', description: '兜底模板', match: '*' },
 };
 
-let _contextsConfig = null;
-
-export async function loadContextsConfig() {
-    try { _contextsConfig = await (await fetch('config/template-contexts.json')).json(); }
-    catch { _contextsConfig = null; }
-}
-
-export function getContextsConfig() { return _contextsConfig || HARDCODED_CONTEXTS; }
-export function getContextKeys() { return Object.keys(getContextsConfig()); }
+export function getContextsConfig() { return HARDCODED_CONTEXTS; }
+export function getContextKeys() { return Object.keys(HARDCODED_CONTEXTS); }
 
 export function resolveTemplateContext(path) {
     const str = path.join('.');
-    for (const [key, cfg] of Object.entries(getContextsConfig())) {
+    for (const [key, cfg] of Object.entries(HARDCODED_CONTEXTS)) {
         if (key !== 'default' && new RegExp('^' + cfg.match.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$').test(str)) return key;
     }
     return 'default';
 }
 
-const CONFIG_KEY = 'storyeditor_config';
 const TEMPLATE_KEY = 'storyeditor_templates';
 const LABEL_STORAGE_KEY = 'storyeditor_labels';
-
-export function loadSavedConfig() {
-    try { const raw = localStorage.getItem(CONFIG_KEY); if (raw) { _contextsConfig = JSON.parse(raw); return true; } } catch {}
-    return false;
-}
-
-export function saveConfigToLocal(config) {
-    _contextsConfig = config;
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-}
-
-export function exportConfigJSON() {
-    const blob = new Blob([JSON.stringify(getContextsConfig(), null, 4)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'template-contexts.json'; a.click();
-}
 
 export function loadTemplates() {
     try {

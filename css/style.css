@@ -344,6 +344,37 @@ html, body {
     display: none;
 }
 
+/* ==========================================
+   配置弹窗 — 上下文路径匹配表单
+   ========================================== */
+
+.config-list { padding: 8px 0; }
+
+.config-row {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 12px;
+    border-bottom: 1px solid var(--border);
+}
+.config-row:last-child { border-bottom: none; }
+
+.config-row-fields {
+    display: flex; gap: 6px; flex: 1; min-width: 0;
+}
+.config-row-fields .input {
+    font-size: 0.8125rem; padding: 4px 6px; min-width: 0;
+}
+.config-key { width: 90px; flex-shrink: 0; font-family: var(--font-mono); }
+.config-match { width: 140px; flex-shrink: 0; font-family: var(--font-mono); }
+.config-label { width: 90px; flex-shrink: 0; }
+.config-desc { flex: 1; }
+
+.config-del-btn {
+    flex-shrink: 0; padding: 2px 6px;
+    color: var(--text-dim); cursor: pointer;
+    background: transparent; border: none; border-radius: 3px; line-height: 1;
+}
+.config-del-btn:hover { background: rgba(233,69,96,0.2); color: var(--accent); }
+
 /* 路径编辑器内的镜像高亮（继承自 json-highlight/json-editor） */
 .path-mirror {
     position: relative;

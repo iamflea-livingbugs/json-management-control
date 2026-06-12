@@ -3,15 +3,13 @@
 // 只引用 barrel.js，由 barrel 统一导出所有模块
 // ==========================================
 
-import { store, io, initUI, loadContextsConfig, loadSavedConfig, loadContentConfig, showAlert } from './barrel.js';
+import { store, io, initUI, loadContentConfig, showAlert } from './barrel.js';
 
 // ---------- 启动阶段 ----------
 
-// step 1: 加载 JSON 配置文件（template-content.json 和 template-contexts.json）
-// 这两个文件定义了空白结构和模板字段，加载失败会回退到 storyTypes.js 里的 HARDCODED_* 硬编码
-Promise.all([loadContextsConfig(), loadContentConfig()]).then(() => {
-    // step 2: 从 localStorage 读取用户保存过的上下文配置
-    loadSavedConfig();
+// step 1: 加载 JSON 配置文件（template-content.json）
+// 这个文件定义了空白结构和模板字段，加载失败会回退到 storyTypes.js 里的 HARDCODED_* 硬编码
+loadContentConfig().then(() => {
     // 触发首次渲染，让界面显示默认空章节
     store._emit();
 });

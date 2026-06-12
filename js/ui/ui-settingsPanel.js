@@ -74,7 +74,7 @@ function loadSettings() {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) return JSON.parse(saved);
     } catch {}
-    return { theme: 'dark', fontSize: 16, labelColor: 'default' };
+    return { theme: 'dark', fontSize: 16, labelColor: 'type' };
 }
 
 // 保存设置
@@ -191,7 +191,7 @@ export function renderSettingsPanel() {
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
             localStorage.removeItem(STORAGE_KEY);
-            const defaults = { theme: 'dark', fontSize: 16, labelColor: 'default' };
+            const defaults = { theme: 'dark', fontSize: 16, labelColor: 'type' };
             saveSettings(defaults);
             applySettings(defaults);
             renderSettingsPanel();
