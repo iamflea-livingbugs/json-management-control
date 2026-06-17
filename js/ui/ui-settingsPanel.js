@@ -1,5 +1,5 @@
 import { store } from '../logic/logic-storyStore.js';
-import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, getEffectiveFields } from '../logic/logic-storyTypes.js';
+import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, getEffectiveFields, deleteStruct, syncStruct } from '../logic/logic-storyTypes.js';
 
 const $ = (sel) => document.querySelector(sel);
 // ==========================================
@@ -275,8 +275,14 @@ function openNewStructDialog() {
             ? { type: matchType, marker }
             : { type: matchType, pattern };
 
-        structs.push({ id, label, match, fields });
+        const newStruct = { id, label, match, fields };
+        structs.push(newStruct);
         saveStructs(structs);
+        // 同步到当前 chapter 数据
+        if (store.chapter) {
+            syncStruct(store.chapter, newStruct);
+            store._emit();
+        }
         close();
         renderSettingsPanel();
     };
@@ -443,6 +449,7 @@ export function renderSettingsPanel() {
             const field = input?.value.trim();
             if (!field) return;
             addStructField(structId, field, store.chapter);
+            store._emit();
             renderSettingsPanel();
         });
     });
@@ -460,7 +467,8 @@ export function renderSettingsPanel() {
         btn.addEventListener('click', () => {
             const structId = btn.dataset.struct;
             const field = btn.dataset.field;
-            removeStructField(structId, field);
+            removeStructField(structId, field, store.chapter);
+            store._emit();
             renderSettingsPanel();
         });
     });
@@ -469,8 +477,8 @@ export function renderSettingsPanel() {
         btn.addEventListener('click', () => {
             const structId = btn.dataset.struct;
             if (structId === 'i18n') { alert('不能删除内置类型'); return; }
-            const structs = loadStructs();
-            saveStructs(structs.filter(s => s.id !== structId));
+            deleteStruct(structId, store.chapter);
+            store._emit();
             renderSettingsPanel();
         });
     });

@@ -10,7 +10,7 @@ export { loadTemplates, getContextKeys, getContextsConfig, resolveTemplateContex
     loadLabels, saveLabel, getFieldLabel,
     getLanguages, saveLanguages,
     saveTemplate, saveTemplates, loadTemplateKeys, saveTemplateKeys,
-    loadStructs, saveStructs, getEffectiveFields, findMatchingValues, syncStruct, syncAllStructs, addStructField, removeStructField,
+    loadStructs, saveStructs, getEffectiveFields, findMatchingValues, syncStruct, syncAllStructs, addStructField, removeStructField, deleteStruct,
     isI18nObj, addLanguage } from './logic/logic-storyTypes.js';
 
 // 数据层：数据 CRUD 管理 + 文件导入导出

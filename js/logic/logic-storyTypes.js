@@ -341,7 +341,7 @@ export function addStructField(structId, field, chapter) {
 }
 
 /**
- * 从结构类型中移除字段
+ * 从结构类型中移除字段，并从当前 chapter 数据中清理该字段
  */
 export function removeStructField(structId, field, chapter) {
     const structs = loadStructs();
@@ -351,6 +351,36 @@ export function removeStructField(structId, field, chapter) {
     if (s.match.type === 'struct' && field === s.match.marker) return;
     s.fields = s.fields.filter(f => f !== field);
     saveStructs(structs);
+    // 从 chapter 数据中删除该字段
+    if (chapter) {
+        const matches = findMatchingValues(chapter, s);
+        for (const { value } of matches) {
+            if (field in value) delete value[field];
+        }
+    }
+}
+
+/**
+ * 删除整个结构类型，并从当前 chapter 数据中清理所有相关字段
+ */
+export function deleteStruct(structId, chapter) {
+    const structs = loadStructs();
+    const s = structs.find(x => x.id === structId);
+    if (!s) return;
+    // 内置类型不允许删除
+    if (structId === 'i18n') return;
+    // 先从 chapter 中清理所有字段（struct 类型的标记键不删除）
+    if (chapter) {
+        const matches = findMatchingValues(chapter, s);
+        for (const { value } of matches) {
+            for (const field of s.fields) {
+                if (s.match.type === 'struct' && field === s.match.marker) continue;
+                if (field in value) delete value[field];
+            }
+        }
+    }
+    // 再移除结构定义
+    saveStructs(structs.filter(x => x.id !== structId));
 }
 
 // 语言相关（向后兼容包装器）
