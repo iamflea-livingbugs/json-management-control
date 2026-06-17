@@ -132,9 +132,12 @@ html, body {
     overflow: hidden;
 }
 .panel:last-child { border-right: none; }
-.panel-side { width: 320px; min-width: 180px; overflow: hidden; }
-.panel-side.collapsed { width: 0 !important; min-width: 0 !important; border-right: none; }
-.panel-side.collapsed + .splitter { width: 0 !important; min-width: 0 !important; }
+.panel-side { width: 320px; min-width: 180px; overflow: hidden; transition: width 0.3s ease, min-width 0.3s ease; }
+.panel-side.no-transition { transition: none !important; }
+.panel-side.collapsed { width: 0; min-width: 0; border-right: none; }
+.panel-side.collapsed + .splitter { width: 0; min-width: 0; transition: none; }
+.panel-side-inner { opacity: 1; transition: opacity 0.15s ease; min-width: 320px; }
+.panel-side.collapsed .panel-side-inner { opacity: 0; }
 .panel-center { flex: 1; min-width: 200px; overflow: hidden; }
 .panel-right { flex: 1; min-width: 200px; overflow: hidden; }
 
@@ -162,7 +165,7 @@ html, body {
     cursor: col-resize;
     background: var(--border);
     flex-shrink: 0;
-    transition: background 0.15s;
+    transition: background 0.15s, width 0.3s ease;
 }
 .splitter:hover, .splitter.dragging { background: var(--accent); }
 

@@ -28,24 +28,26 @@
             <span id="side-panel-title">大纲</span>
             <button class="btn-icon" id="btn-close-side" title="关闭侧面板">◀</button>
         </div>
-        <!-- 大纲视图 -->
-        <div class="side-view" id="view-outline">
-            <div class="tree-search-box">
-                <input id="tree-search" class="input-sm tree-search-input" placeholder="🔍 搜索节点..." />
-                <button id="tree-search-clear" class="tree-search-clear" style="display:none">✕</button>
+        <div class="panel-side-inner">
+            <!-- 大纲视图 -->
+            <div class="side-view" id="view-outline">
+                <div class="tree-search-box">
+                    <input id="tree-search" class="input-sm tree-search-input" placeholder="🔍 搜索节点..." />
+                    <button id="tree-search-clear" class="tree-search-clear" style="display:none">✕</button>
+                </div>
+                <div id="tree-container" class="tree-container"></div>
             </div>
-            <div id="tree-container" class="tree-container"></div>
-        </div>
-        <!-- 统计视图 -->
-        <div class="side-view hidden" id="view-stats">
-            <div class="side-view-content">
-                <div class="side-view-placeholder">📊 统计面板（待实现）</div>
+            <!-- 统计视图 -->
+            <div class="side-view hidden" id="view-stats">
+                <div class="side-view-content">
+                    <div class="side-view-placeholder">📊 统计面板（待实现）</div>
+                </div>
             </div>
-        </div>
-        <!-- 设置视图 -->
-        <div class="side-view hidden" id="view-settings">
-            <div class="side-view-content">
-                <div class="side-view-placeholder">⚙️ 设置面板（待实现）</div>
+            <!-- 设置视图 -->
+            <div class="side-view hidden" id="view-settings">
+                <div class="side-view-content">
+                    <div class="side-view-placeholder">⚙️ 设置面板（待实现）</div>
+                </div>
             </div>
         </div>
     </div>

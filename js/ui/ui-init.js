@@ -223,26 +223,60 @@ export async function initUI(store, io) {
     // 活动栏
     const VIEW_LABELS = { outline: '大纲', stats: '统计', settings: '设置' };
     let _sidePanelOpen = true;
+    let _savedPanelWidth = null;
+
+    function collapseSidePanel() {
+        const sidePanel = $('#panel-side');
+        // 保存当前宽度，清内联样式让 transition 生效
+        _savedPanelWidth = sidePanel.style.width || (sidePanel.getBoundingClientRect().width + 'px');
+        sidePanel.style.width = '';
+        sidePanel.style.flex = '';
+        sidePanel.classList.add('collapsed');
+        _sidePanelOpen = false;
+    }
+
+    function expandSidePanel(view) {
+        const sidePanel = $('#panel-side');
+        sidePanel.classList.remove('collapsed');
+        // 恢复之前保存的宽度
+        if (_savedPanelWidth) {
+            sidePanel.style.width = _savedPanelWidth;
+            sidePanel.style.flex = 'none';
+        }
+        $$('.side-view').forEach(v => v.classList.add('hidden'));
+        const targetView = $('#view-' + view);
+        if (targetView) targetView.classList.remove('hidden');
+        $('#side-panel-title').textContent = VIEW_LABELS[view] || view;
+        _sidePanelOpen = true;
+    }
+
     $$('.activity-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const view = btn.dataset.view;
             const sidePanel = $('#panel-side');
             const isActive = btn.classList.contains('active');
-            if (isActive && _sidePanelOpen) { sidePanel.classList.add('collapsed'); _sidePanelOpen = false; btn.classList.remove('active'); return; }
+            if (isActive && _sidePanelOpen) {
+                $$('.activity-btn').forEach(b => b.classList.remove('active'));
+                collapseSidePanel();
+                return;
+            }
             $$('.activity-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            $$('.side-view').forEach(v => v.classList.add('hidden'));
-            const targetView = $('#view-' + view);
-            if (targetView) targetView.classList.remove('hidden');
-            $('#side-panel-title').textContent = VIEW_LABELS[view] || view;
-            sidePanel.classList.remove('collapsed');
-            _sidePanelOpen = true;
+            expandSidePanel(view);
             // 点击设置标签时渲染面板
             if (view === 'settings') renderSettingsPanel();
         });
     });
-    $('#btn-close-side').addEventListener('click', () => { $('#panel-side').classList.add('collapsed'); _sidePanelOpen = false; $$('.activity-btn').forEach(b => b.classList.remove('active')); });
-    $('#activity-bar').addEventListener('dblclick', (e) => { if (e.target === $('#activity-bar')) { const outlineBtn = document.querySelector('.activity-btn[data-view="outline"]'); if (outlineBtn) outlineBtn.click(); } });
+    $('#btn-close-side').addEventListener('click', () => {
+        $$('.activity-btn').forEach(b => b.classList.remove('active'));
+        collapseSidePanel();
+    });
+    $('#activity-bar').addEventListener('dblclick', (e) => {
+        if (e.target === $('#activity-bar')) {
+            const outlineBtn = document.querySelector('.activity-btn[data-view="outline"]');
+            if (outlineBtn) outlineBtn.click();
+        }
+    });
 
     // store 监听
     store.onChange(() => {
@@ -369,9 +403,23 @@ function initSplitters() {
             if (targetPanel) startW = targetPanel.getBoundingClientRect().width;
             splitter.classList.add('dragging');
             document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
+            // 拖拽时禁用过渡
+            if (targetPanel) targetPanel.classList.add('no-transition');
             e.preventDefault();
         });
-        document.addEventListener('mousemove', (e) => { if (!dragging || !targetPanel) return; const delta = (e.clientX - startX) * sign; targetPanel.style.width = Math.max(180, startW + delta) + 'px'; targetPanel.style.flex = 'none'; });
-        document.addEventListener('mouseup', () => { if (!dragging) return; dragging = false; splitter.classList.remove('dragging'); document.body.style.cursor = ''; document.body.style.userSelect = ''; });
+        document.addEventListener('mousemove', (e) => {
+            if (!dragging || !targetPanel) return;
+            const delta = (e.clientX - startX) * sign;
+            targetPanel.style.width = Math.max(180, startW + delta) + 'px';
+            targetPanel.style.flex = 'none';
+        });
+        document.addEventListener('mouseup', () => {
+            if (!dragging) return;
+            dragging = false; splitter.classList.remove('dragging');
+            document.body.style.cursor = ''; document.body.style.userSelect = '';
+            // 恢复过渡
+            if (targetPanel) targetPanel.classList.remove('no-transition');
+            targetPanel = null;
+        });
     });
 }
