@@ -223,12 +223,11 @@ export async function initUI(store, io) {
     // 活动栏
     const VIEW_LABELS = { outline: '大纲', stats: '统计', settings: '设置' };
     let _sidePanelOpen = true;
-    let _savedPanelWidth = null;
 
     function collapseSidePanel() {
         const sidePanel = $('#panel-side');
-        // 保存当前宽度，清内联样式让 transition 生效
-        _savedPanelWidth = sidePanel.style.width || (sidePanel.getBoundingClientRect().width + 'px');
+        // 保存当前宽度到元素属性，清内联样式让 transition 生效
+        sidePanel.dataset.savedWidth = sidePanel.style.width || (sidePanel.getBoundingClientRect().width + 'px');
         sidePanel.style.width = '';
         sidePanel.style.flex = '';
         sidePanel.classList.add('collapsed');
@@ -239,8 +238,9 @@ export async function initUI(store, io) {
         const sidePanel = $('#panel-side');
         sidePanel.classList.remove('collapsed');
         // 恢复之前保存的宽度
-        if (_savedPanelWidth) {
-            sidePanel.style.width = _savedPanelWidth;
+        const w = sidePanel.dataset.savedWidth;
+        if (w) {
+            sidePanel.style.width = w;
             sidePanel.style.flex = 'none';
         }
         $$('.side-view').forEach(v => v.classList.add('hidden'));

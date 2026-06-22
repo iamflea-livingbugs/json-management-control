@@ -385,8 +385,9 @@ export function renderSettingsPanel() {
                 <button class="btn btn-sm" id="btn-new-struct">＋ 新建结构类型</button>
             </div>
         </div>
-        <div class="settings-section">
+        <div class="settings-section" style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn btn-sm" id="btn-settings-reset">重置为默认</button>
+            <button class="btn btn-sm" id="btn-layout-reset">恢复默认布局</button>
         </div>
     `;
 
@@ -497,6 +498,25 @@ export function renderSettingsPanel() {
             saveSettings(defaults);
             applySettings(defaults);
             renderSettingsPanel();
+        });
+    }
+
+    // 恢复默认布局
+    const layoutBtn = document.getElementById('btn-layout-reset');
+    if (layoutBtn) {
+        layoutBtn.addEventListener('click', () => {
+            const sidePanel = document.getElementById('panel-side');
+            if (sidePanel) {
+                sidePanel.classList.remove('collapsed', 'no-transition');
+                sidePanel.style.width = '';
+                sidePanel.style.flex = '';
+                delete sidePanel.dataset.savedWidth;
+            }
+            const rightPanel = document.getElementById('panel-right');
+            if (rightPanel) {
+                rightPanel.style.width = '';
+                rightPanel.style.flex = '';
+            }
         });
     }
 }
