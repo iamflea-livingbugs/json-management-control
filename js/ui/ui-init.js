@@ -373,8 +373,15 @@ export async function initUI(store, io) {
             const text = centerTa.value;
             const hlPre = $('#path-mirror-center code');
             if (window.hljs && hlPre) { try { hlPre.innerHTML = window.hljs.highlight(text, { language: 'json' }).value; } catch (e) { hlPre.textContent = text; } }
-            try { const parsed = JSON.parse(text); const path = store.currentPath; if (path && path.length > 0) store.setByPath([...path], parsed); centerErr.style.display = 'none'; }
+            try { JSON.parse(text); centerErr.style.display = 'none'; }
             catch (e) { centerErr.textContent = '⚠️ ' + e.message; centerErr.style.display = ''; }
+        });
+        centerTa.addEventListener('blur', () => {
+            try {
+                const parsed = JSON.parse(centerTa.value);
+                const path = store.currentPath;
+                if (path && path.length > 0) store.setByPath([...path], parsed);
+            } catch (e) { /* 语法错误不更新，input 事件已显示错误提示 */ }
         });
         centerTa.addEventListener('scroll', () => { const preEl = $('#path-mirror-center pre'); if (preEl) { preEl.scrollTop = centerTa.scrollTop; preEl.scrollLeft = centerTa.scrollLeft; } });
         centerTa.addEventListener('keydown', (e) => {

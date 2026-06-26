@@ -16,13 +16,6 @@ export function esc(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function debounce(fn, delay) {
-    let timer;
-    return function (...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };
-}
-
-// ===== 编辑区渲染 =====
-
 export function renderEditor(store) {
     const path = store.currentPath || [];
     const val = store.getByPath(path);
