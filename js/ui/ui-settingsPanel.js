@@ -1,4 +1,5 @@
 import { store } from '../logic/logic-storyStore.js';
+import { showAlert } from './ui-modalDialog.js';
 import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, getEffectiveFields, deleteStruct, syncStruct } from '../logic/logic-storyTypes.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -261,15 +262,15 @@ function openNewStructDialog() {
         const pattern = modal.querySelector('#ns-pattern').value.trim();
         const fieldsStr = modal.querySelector('#ns-fields').value.trim();
 
-        if (!id) { alert('ID 不能为空'); return; }
-        if (matchType === 'struct' && !marker) { alert('标记属性键名不能为空'); return; }
-        if ((matchType === 'glob' || matchType === 'path') && !pattern) { alert('通配模式不能为空'); return; }
+        if (!id) { showAlert('ID 不能为空'); return; }
+        if (matchType === 'struct' && !marker) { showAlert('标记属性键名不能为空'); return; }
+        if ((matchType === 'glob' || matchType === 'path') && !pattern) { showAlert('通配模式不能为空'); return; }
 
         const fields = matchType === 'struct'
             ? [marker]
             : (fieldsStr ? fieldsStr.split(/[,，\s]+/).filter(Boolean) : []);
         const structs = loadStructs();
-        if (structs.some(s => s.id === id)) { alert('该 ID 已存在'); return; }
+        if (structs.some(s => s.id === id)) { showAlert('该 ID 已存在'); return; }
 
         const match = matchType === 'struct'
             ? { type: matchType, marker }
@@ -477,7 +478,7 @@ export function renderSettingsPanel() {
     document.querySelectorAll('.btn-del-struct').forEach(btn => {
         btn.addEventListener('click', () => {
             const structId = btn.dataset.struct;
-            if (structId === 'i18n') { alert('不能删除内置类型'); return; }
+            if (structId === 'i18n') { showAlert('不能删除内置类型'); return; }
             deleteStruct(structId, store.chapter);
             store._emit();
             renderSettingsPanel();

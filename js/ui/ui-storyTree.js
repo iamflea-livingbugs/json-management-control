@@ -20,8 +20,31 @@ export function ensureExpanded(path) {
 // container: DOM 容器；data: JSON 数据
 // selectedPath: 当前选中路径；onSelect/onAdd/onDelete: 回调
 export function renderTree(container, data, selectedPath, onSelect, onAdd, onDelete) {
+    // 清理 _expandedPaths 中已不存在的路径（节点被删除后）
+    cleanExpandedPaths(data);
     container.innerHTML = '';
     renderNode(container, data, [], '', selectedPath, onSelect, onAdd, onDelete, 0);
+}
+
+// 递归验证路径是否仍存在于数据树中，清理无效路径
+function cleanExpandedPaths(data) {
+    for (const pk of _expandedPaths) {
+        const segments = pk.split('/').filter(Boolean);
+        let cur = data;
+        let valid = true;
+        for (const seg of segments) {
+            if (cur === null || cur === undefined) { valid = false; break; }
+            if (Array.isArray(cur)) {
+                const idx = parseInt(seg);
+                if (isNaN(idx) || idx < 0 || idx >= cur.length) { valid = false; break; }
+                cur = cur[idx];
+            } else if (typeof cur === 'object') {
+                if (!(seg in cur)) { valid = false; break; }
+                cur = cur[seg];
+            } else { valid = false; break; }
+        }
+        if (!valid) _expandedPaths.delete(pk);
+    }
 }
 
 // 递归渲染节点（根据值的类型分派到不同的渲染函数）

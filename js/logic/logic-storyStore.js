@@ -2,7 +2,7 @@
 // storyStore.js — 数据管理层（核心）
 // 纯逻辑层，不依赖 UI
 // ==========================================
-import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext, syncAllStructs } from './logic-storyTypes.js';
+import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from './logic-storyTypes.js';
 
 class StoryStore {
     constructor() {
@@ -57,8 +57,6 @@ class StoryStore {
             text: typeof opt.text === 'string' ? { zh: opt.text, en: '' } : (opt.text || { zh: '', en: '' }),
             next: opt.next || '', showif: opt.showif || {}, actions: opt.actions || []
         }));
-        // 补充所有结构类型定义的缺失字段
-        syncAllStructs(merged);
         return merged;
     }
 
@@ -186,9 +184,8 @@ class StoryStore {
     _findIndex(id) { return this.chapter.content.findIndex(n => n.id === String(id)); }
 
     _genUniqueId() {
-        let i = this.chapter.content.length;
-        while (this.chapter.content.some(n => n.id === String(i))) i++;
-        return String(i);
+        const maxId = this.chapter.content.reduce((max, n) => Math.max(max, parseInt(n.id) || 0), 0);
+        return String(maxId + 1);
     }
 
     selectNode(id) { this.selectedId = String(id); this.currentPath = ['content', String(id)]; this._emit(); }

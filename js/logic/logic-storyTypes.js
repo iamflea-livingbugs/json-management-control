@@ -96,7 +96,15 @@ export function getContextKeys() { return Object.keys(getContextsConfig()).filte
 export function resolveTemplateContext(path) {
     const str = path.join('.');
     for (const [key, cfg] of Object.entries(HARDCODED_CONTEXTS)) {
-        if (key !== 'default' && new RegExp('^' + cfg.match.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$').test(str)) return key;
+        if (key !== 'default') {
+            // 单遍字符处理：* → .* (glob通配), . → \\. (字面点号), 其余特殊字符转义
+            const reStr = '^' + cfg.match.replace(/[.+?^${}()|[\]\\*]/g, (m) => {
+                if (m === '*') return '.*';
+                if (m === '.') return '\\.';
+                return '\\' + m;
+            }) + '$';
+            if (new RegExp(reStr).test(str)) return key;
+        }
     }
     return 'default';
 }
