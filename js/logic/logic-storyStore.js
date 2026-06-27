@@ -60,15 +60,27 @@ class StoryStore {
         return merged;
     }
 
-    // 在指定路径的数组中新增节点（path 默认 content）
-    addNode(ctx = 'content', path = null) {
-        const targetPath = path || ['content'];
+    // 在当前路径下用模板新建内容
+    // 数组 → 添加模板节点作为元素，对象 → 添加属性（模板值）
+    addNode(ctx = null, path = null) {
+        const targetPath = path || this.currentPath;
         const parent = this.getByPath(targetPath);
-        if (!parent || !Array.isArray(parent)) return;
-        const id = String(parent.length);
-        const node = createNodeFromTemplate(ctx, id);
-        parent.push(node);
-        this.selectedId = id;
+        if (!parent) return;
+
+        const tpl = createNodeFromTemplate(ctx || 'default');
+        delete tpl.id;
+
+        if (Array.isArray(parent)) {
+            parent.push(tpl);
+            const idx = parent.length - 1;
+            this.currentPath = [...targetPath, String(idx)];
+        } else if (typeof parent === 'object' && parent !== null) {
+            let key = 'new_key';
+            let i = 1;
+            while (key in parent) key = 'new_key_' + i++;
+            parent[key] = tpl;
+            this.currentPath = [...targetPath, key];
+        }
         this._emit();
     }
 

@@ -1,6 +1,6 @@
 import { store } from '../logic/logic-storyStore.js';
 import { showAlert } from './ui-modalDialog.js';
-import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, getEffectiveFields, deleteStruct, syncStruct } from '../logic/logic-storyTypes.js';
+import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, getEffectiveFields, deleteStruct, syncStruct, loadEffectiveTemplates, loadTemplateKeys, loadLabels } from '../logic/logic-storyTypes.js';
 
 const $ = (sel) => document.querySelector(sel);
 // ==========================================
@@ -387,6 +387,8 @@ export function renderSettingsPanel() {
             </div>
         </div>
         <div class="settings-section" style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-sm" id="btn-export-config">📤 导出配置</button>
+            <button class="btn btn-sm" id="btn-import-config">📥 导入配置</button>
             <button class="btn btn-sm" id="btn-settings-reset">重置为默认</button>
             <button class="btn btn-sm" id="btn-layout-reset">恢复默认布局</button>
         </div>
@@ -519,5 +521,100 @@ export function renderSettingsPanel() {
                 rightPanel.style.flex = '';
             }
         });
+    }
+
+    // 导出配置（editor + custom 分两大块）
+    const exportBtn = document.getElementById('btn-export-config');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            const config = {
+                meta: { version: 1, exportedAt: new Date().toISOString() },
+                editor: {
+                    settings: loadSettings(),
+                    chapterCols: (() => { try { return JSON.parse(localStorage.getItem('storyeditor_chapter_cols') || '["speaker","text"]'); } catch { return ['speaker', 'text']; } })()
+                },
+                custom: {
+                    templates: loadEffectiveTemplates(),
+                    deletedTemplates: (() => { try { return JSON.parse(localStorage.getItem('storyeditor_deleted_templates') || '[]'); } catch { return []; } })(),
+                    templateKeys: loadTemplateKeys(),
+                    structs: loadStructs(),
+                    labels: loadLabels()
+                }
+            };
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'storyeditor-config.json';
+            a.click();
+        });
+    }
+
+    // 导入配置（兼容新版 editor/custom 结构和旧版平铺结构）
+    const importBtn = document.getElementById('btn-import-config');
+    if (importBtn) {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json';
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    let count = 0;
+
+                    if (data.editor && data.custom) {
+                        // 新版结构化格式
+                        if (data.editor.settings) {
+                            localStorage.setItem('storyeditor_settings', JSON.stringify(data.editor.settings));
+                            count++;
+                        }
+                        if (data.editor.chapterCols) {
+                            localStorage.setItem('storyeditor_chapter_cols', JSON.stringify(data.editor.chapterCols));
+                            count++;
+                        }
+                        if (data.custom.templates) {
+                            localStorage.setItem('storyeditor_templates', JSON.stringify(data.custom.templates));
+                            count++;
+                        }
+                        if (data.custom.deletedTemplates) {
+                            localStorage.setItem('storyeditor_deleted_templates', JSON.stringify(data.custom.deletedTemplates));
+                            count++;
+                        }
+                        if (data.custom.templateKeys) {
+                            localStorage.setItem('storyeditor_template_keys', JSON.stringify(data.custom.templateKeys));
+                            count++;
+                        }
+                        if (data.custom.structs) {
+                            localStorage.setItem('storyeditor_structs', JSON.stringify(data.custom.structs));
+                            count++;
+                        }
+                        if (data.custom.labels) {
+                            localStorage.setItem('storyeditor_labels', JSON.stringify(data.custom.labels));
+                            count++;
+                        }
+                    } else {
+                        // 兼容旧版平铺格式（storyeditor_* 键直接在最外层）
+                        for (const [key, val] of Object.entries(data)) {
+                            if (key.startsWith('storyeditor_')) {
+                                localStorage.setItem(key, JSON.stringify(val));
+                                count++;
+                            }
+                        }
+                    }
+
+                    showAlert(`导入成功！已恢复 ${count} 项配置。`);
+                    initSettings();
+                    renderSettingsPanel();
+                    store._emit();
+                } catch (err) {
+                    showAlert('导入失败：配置文件格式错误');
+                }
+            };
+            reader.readAsText(file);
+            fileInput.value = '';
+        });
+        importBtn.addEventListener('click', () => fileInput.click());
     }
 }

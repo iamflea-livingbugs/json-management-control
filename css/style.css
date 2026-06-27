@@ -1255,6 +1255,7 @@ select {
     border: 1px solid var(--border);
 }
 
+
 .chapter-toolbar #btn-chapter-cols {
     margin-left: auto;
 }
