@@ -99,8 +99,10 @@ function renderTreePanel(store) {
         footer.className = 'tree-footer';
         container.appendChild(footer);
     }
-    const contentNodeCount = (store.chapter.content || []).length;
-    footer.innerHTML = `<button class="btn btn-sm btn-success" id="tree-add-node">＋ 新建对话节点 (当前${contentNodeCount}个)</button>`;
+    const currentVal = store.getByPath(store.currentPath);
+    const typeLabel = Array.isArray(currentVal) ? '元素' : (typeof currentVal === 'object' && currentVal ? '属性' : '节点');
+    const itemCount = Array.isArray(currentVal) ? currentVal.length : (typeof currentVal === 'object' && currentVal ? Object.keys(currentVal).length : 0);
+    footer.innerHTML = `<button class="btn btn-sm btn-success" id="tree-add-node">＋ 新建 (当前${itemCount}个)</button>`;
     footer.querySelector('#tree-add-node').addEventListener('click', async () => {
         const ctx = await showTemplatePicker();
         if (ctx) store.addNode(ctx);

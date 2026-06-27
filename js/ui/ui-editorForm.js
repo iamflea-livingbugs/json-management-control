@@ -216,14 +216,14 @@ function renderOptions(node) {
 // ===== 表单输入事件绑定 =====
 
 function bindFormInputs(path, val, store) {
-    $('.form-simple-value')?.addEventListener('input', (e) => {
+    $('.form-simple-value')?.addEventListener('change', (e) => {
         const pathStr = e.target.dataset.pathkey;
         if (!pathStr) return;
         store.setByPath(pathStr.split('|'), e.target.value);
     });
 
     $$('.form-field').forEach(inp => {
-        inp.addEventListener('input', () => {
+        inp.addEventListener('change', () => {
             const obj = store.getByPath(path);
             if (obj && typeof obj === 'object') obj[inp.dataset.field] = inp.value;
             store._emit();
@@ -231,7 +231,7 @@ function bindFormInputs(path, val, store) {
     });
 
     $$('.form-i18n-lang').forEach(inp => {
-        inp.addEventListener('input', () => {
+        inp.addEventListener('change', () => {
             const obj = store.getByPath(path);
             if (obj && typeof obj === 'object' && obj[inp.dataset.field]) {
                 obj[inp.dataset.field][inp.dataset.lang] = inp.value;
@@ -252,7 +252,7 @@ function bindOptionButtons(node, store) {
     $('#btn-add-option')?.addEventListener('click', (e) => store.addOption(e.target.dataset.node));
     $$('.btn-del-option').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); store.deleteOption(btn.dataset.node, parseInt(btn.dataset.opt)); }));
     $$('.opt-text-lang').forEach(inp => {
-        inp.addEventListener('input', () => {
+        inp.addEventListener('change', () => {
             const nodeId = inp.dataset.node;
             const optIdx = parseInt(inp.dataset.opt);
             const lang = inp.dataset.lang;
@@ -263,10 +263,9 @@ function bindOptionButtons(node, store) {
             store._emit();
         });
     });
-    $$('.opt-next').forEach(inp => inp.addEventListener('input', () => store.updateOption(inp.dataset.node, parseInt(inp.dataset.opt), { next: inp.value })));
-    $$('.btn-add-action').forEach(btn => btn.addEventListener('click', () => store.addAction(btn.dataset.node, parseInt(btn.dataset.opt))));
-    $$('.opt-action-cmd').forEach(inp => inp.addEventListener('input', () => store.updateActionCmd(inp.dataset.node, parseInt(inp.dataset.opt), parseInt(inp.dataset.action), inp.value)));
-    $$('.opt-action-params').forEach(inp => inp.addEventListener('input', () => store.updateActionParams(inp.dataset.node, parseInt(inp.dataset.opt), parseInt(inp.dataset.action), inp.value)));
+    $$('.opt-next').forEach(inp => inp.addEventListener('change', () => store.updateOption(inp.dataset.node, parseInt(inp.dataset.opt), { next: inp.value })));
+    $$('.opt-action-cmd').forEach(inp => inp.addEventListener('change', () => store.updateActionCmd(inp.dataset.node, parseInt(inp.dataset.opt), parseInt(inp.dataset.action), inp.value)));
+    $$('.opt-action-params').forEach(inp => inp.addEventListener('change', () => store.updateActionParams(inp.dataset.node, parseInt(inp.dataset.opt), parseInt(inp.dataset.action), inp.value)));
     $$('.btn-del-action').forEach(btn => btn.addEventListener('click', () => store.deleteAction(btn.dataset.node, parseInt(btn.dataset.opt), parseInt(btn.dataset.action))));
 }
 

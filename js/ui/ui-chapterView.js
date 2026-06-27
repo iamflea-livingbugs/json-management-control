@@ -136,30 +136,30 @@ export function renderChapterView(store) {
 
     // 头部
     const pathLabel = dataPath.join(' → ') || '(root)';
-    const ctxOptions = ctxKeys.map(k => {
-        const cfg = ctxConfig[k] || {};
-        return `<option value="${k}">${cfg.label || k}</option>`;
-    }).join('');
     // 路径 → 类型映射
     let typeLabel = '';
     if (Array.isArray(val)) typeLabel = '[]';
     else if (val && typeof val === 'object' && val !== null) typeLabel = '{}';
     else typeLabel = typeof val;
 
-    let html = `<div class="chapter-toolbar">
-        <span class="chapter-count">${pathLabel}</span>
-        <span class="chapter-type-badge">${esc(typeLabel)}</span>
-        <span class="chapter-count">· 共 ${entries.length} 条</span>
-        <button class="btn btn-sm" id="btn-chapter-cols">⚙️ 显示列</button>
-        <select id="chapter-ctx-select" class="input-sm">${ctxOptions}</select>
-        <button class="btn btn-sm btn-success" id="btn-chapter-add">＋ 新增</button>
-        ${!isArrayMode ? `<button class="btn btn-sm" id="btn-chapter-add-custom">＋ 自定义</button>` : ''}
-    </div>`;
+    // 填充工具栏模板
+    $('#chapter-path-label').textContent = pathLabel;
+    $('#chapter-type-badge').textContent = typeLabel;
+    $('#chapter-count-label').textContent = `· 共 ${entries.length} 条`;
+    const ctxOpts = ctxKeys.map(k => {
+        const cfg = ctxConfig[k] || {};
+        return `<option value="${k}">${cfg.label || k}</option>`;
+    }).join('');
+    $('#chapter-ctx-select').innerHTML = ctxOpts;
+    const customBtn = $('#btn-chapter-add-custom');
+    if (customBtn) customBtn.style.display = isArrayMode ? 'none' : '';
 
     if (entries.length === 0) {
-        html += '<div class="empty-hint" style="padding:40px 12px">当前路径下无数据，点击"＋"添加</div>';
-    } else {
-        html += '<div class="chapter-list">';
+        container.innerHTML = '<div class="empty-hint" style="padding:40px 12px">当前路径下无数据，点击"＋"添加</div>';
+        return;
+    }
+
+    let html = '<div class="chapter-list">';
         entries.forEach(([rowKey, node]) => {
             const isArr = isArrayMode;
             const speakerStr = typeof node?.speaker === 'object' ? (node.speaker.zh || '') : (node?.speaker || '');
@@ -220,9 +220,9 @@ export function renderChapterView(store) {
             </div>`;
         });
         html += '</div>';
-    }
 
-    container.innerHTML = html;
+    const listContainer = $('#chapter-list-container');
+    if (listContainer) listContainer.innerHTML = html;
 
     // ===== 事件绑定 =====
 
