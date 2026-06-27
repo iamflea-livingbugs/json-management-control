@@ -3,6 +3,8 @@
 // 工具栏、Tab切换、活动栏、渲染调度、右侧 JSON 预览
 // ==========================================
 
+import 'bootstrap/dist/css/bootstrap-grid.min.css'
+
 import { createChapter, createBlankChapter } from '../logic/logic-storyTypes.js';
 import { renderTree } from './ui-storyTree.js';
 import { openTemplateEditor } from './ui-storyTemplateUI.js';
@@ -12,7 +14,10 @@ import { showConfirm, showObjectAddDialog, showAlert } from './ui-modalDialog.js
 import { renderChapterView } from './ui-chapterView.js';
 import { renderEditor, updateJSONTabContent } from './ui-editorForm.js';
 import { store } from '../logic/logic-storyStore.js';
-import { initSettings, renderSettingsPanel } from './ui-settingsPanel.js';
+import { initSettings } from './ui-settingsPanel.js';
+import { createApp } from 'vue'
+import SettingsPanel from '../../components/Settings/SettingsPanel.vue'
+import ActivityBar from '../../components/layout/ActivityBar.vue'
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -252,31 +257,45 @@ export async function initUI(store, io) {
         _sidePanelOpen = true;
     }
 
-    $$('.activity-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const view = btn.dataset.view;
-            const sidePanel = $('#panel-side');
-            const isActive = btn.classList.contains('active');
-            if (isActive && _sidePanelOpen) {
-                $$('.activity-btn').forEach(b => b.classList.remove('active'));
-                collapseSidePanel();
-                return;
+    let _settingsApp = null
+    let _activityApp = null
+
+    // 用 Vue 组件替换原生活动栏
+    const activityBarEl = $('#activity-bar')
+    if (activityBarEl) {
+        _activityApp = createApp(ActivityBar)
+        _activityApp.mount(activityBarEl)
+    }
+
+    // 监听 Vue 活动栏发出的自定义事件
+    activityBarEl.addEventListener('activity-change', (e) => {
+        const { view, action } = e.detail
+        if (action === 'collapse') {
+            collapseSidePanel()
+            return
+        }
+        // action === 'switch'
+        expandSidePanel(view)
+        if (view === 'settings') {
+            const container = document.querySelector('#view-settings .side-view-content')
+            if (container) {
+                if (_settingsApp) { _settingsApp.unmount(); _settingsApp = null }
+                _settingsApp = createApp(SettingsPanel)
+                _settingsApp.mount(container)
             }
-            $$('.activity-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            expandSidePanel(view);
-            // 点击设置标签时渲染面板
-            if (view === 'settings') renderSettingsPanel();
-        });
-    });
+        }
+    })
+
     $('#btn-close-side').addEventListener('click', () => {
-        $$('.activity-btn').forEach(b => b.classList.remove('active'));
         collapseSidePanel();
     });
-    $('#activity-bar').addEventListener('dblclick', (e) => {
-        if (e.target === $('#activity-bar')) {
-            const outlineBtn = document.querySelector('.activity-btn[data-view="outline"]');
-            if (outlineBtn) outlineBtn.click();
+    activityBarEl.addEventListener('dblclick', (e) => {
+        if (e.target === activityBarEl) {
+            // 派发 outline 按钮的点击事件
+            activityBarEl.dispatchEvent(new CustomEvent('activity-change', {
+                detail: { view: 'outline', action: 'switch' },
+                bubbles: true
+            }))
         }
     });
 

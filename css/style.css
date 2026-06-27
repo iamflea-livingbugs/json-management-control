@@ -426,7 +426,7 @@ body {
     opacity: 1;
 }
 
-.tree-children {}
+
 
 .tree-footer {
     margin-top: auto;
@@ -715,7 +715,7 @@ body {
     padding: 10px 12px;
     font-family: var(--font-mono);
     line-height: 1.5;
-    background: #0a0a1a;
+    background: var(--bg);
     overflow: auto;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -912,6 +912,38 @@ body {
 
 .btn-sm {
     padding: 4px 10px;
+    font-size: 0.8rem;
+}
+
+.btn-icon {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+button:disabled,
+.btn:disabled,
+.btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* -- Bootstrap 容器（纯网格模式不包含，手动补充） -- */
+.container-fluid {
+    width: 100%;
+    padding-right: 12px;
+    padding-left: 12px;
+    margin-right: auto;
+    margin-left: auto;
 }
 
 /* 图标按钮（无边框） */
@@ -1384,6 +1416,13 @@ select {
 .settings-section {
     padding: 12px 0;
     border-bottom: 1px solid var(--border);
+}
+
+.settings-section-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 16px 0;
 }
 
 .settings-section:last-child {
