@@ -24,13 +24,14 @@
 
 ## 使用
 
-1. 在浏览器中打开 index.html（需要本地 HTTP 服务器，如 `python -m http.server 8080`）
-2. 点击"导入 JSON"或直接拖入 .json 文件加载对话剧本
-3. 左侧树形面板逐层展开，点击节点
-4. 中间面板 Tab 切换：表单模式编辑字段 / JSON 模式直接编辑源码 / 章节列表模式
-5. 右侧面板实时预览完整 JSON，支持格式化
-6. 右上角 ⚙️ 设置面板管理色彩方案、字体大小、语言列表、结构类型
-7. 编辑完成后点击"导出 JSON"
+1. 启动开发服务器：`npx vite`（或 `npm run dev`）
+2. 浏览器打开 http://localhost:5173
+3. 点击"导入 JSON"或直接拖入 .json 文件加载对话剧本
+4. 左侧树形面板逐层展开，点击节点
+5. 中间面板 Tab 切换：表单模式编辑字段 / JSON 模式直接编辑源码 / 章节列表模式
+6. 右侧面板实时预览完整 JSON，支持格式化
+7. 右上角 ⚙️ 设置面板管理色彩方案、字体大小、语言列表、结构类型
+8. 编辑完成后点击"导出 JSON"
 
 ## 结构类型系统
 
@@ -63,9 +64,32 @@
 ```
 StoryEditor/
 ├── index.html              ← HTML 入口
-├── layout.html             ← 页面布局（与 JS 分离）
+├── layout.html             ← 页面布局（HTML 独立文件，与 JS 分离）
+├── vite.config.js          ← Vite 配置
+├── package.json
 ├── css/
 │   └── style.css           ← 全部样式（CSS 变量主题系统）
+├── components/             ← Vue 组件（渐进式迁移）
+│   ├── base/
+│   │   └── AppButton.vue   ← 通用按钮组件（基于 Naive UI NButton）
+│   ├── Settings/
+│   │   └── SettingsPanel.vue ← 设置面板（已完成 Vue 化）
+│   └── layout/             ← 页面布局片段（.html，待转 Vue）
+│       ├── ActivityBar.vue ← 活动栏（已完成 Vue 化）
+│       ├── toolbar.html
+│       ├── activity-bar.html
+│       ├── panel-right.html
+│       ├── splitters.html
+│       ├── side-panel/
+│       │   ├── side-panel.html
+│       │   ├── outline-view.html
+│       │   ├── stats-view.html
+│       │   └── settings-view.html
+│       └── panel-center/
+│           ├── panel-center.html
+│           ├── form-editor.html
+│           ├── chapter-view.html
+│           └── json-editor.html
 ├── js/
 │   ├── main.js             ← 入口：启动加载 + 拖放绑定
 │   ├── barrel.js           ← 统一导出中枢
@@ -81,7 +105,7 @@ StoryEditor/
 │       ├── ui-createDialog.js    ← 新建节点/章节弹窗
 │       ├── ui-storyTemplateUI.js ← 模板编辑弹窗
 │       ├── ui-labelManager.js    ← 字段标签管理弹窗
-│       ├── ui-settingsPanel.js   ← 设置面板（色彩方案、字体、结构类型管理）
+│       ├── ui-settingsPanel.js   ← 设置面板（原生，待废弃）
 │       └── ui-modalDialog.js     ← 通用模态组件（弹窗、确认、提示）
 ├── config/
 │   ├── template-content.json     ← 空白章节/节点/选项结构 + 默认模板
@@ -89,9 +113,7 @@ StoryEditor/
 ├── fonts/                       ← 字体文件（仓耳与墨 W04 + FiraCode）
 ├── lib/
 │   └── highlight.min.js          ← JSON 语法高亮
-├── LICENSE                       ← Mulan PSL v2
-├── README.md
-└── PROJECT_HANDOVER.md
+└── LICENSE                       ← Mulan PSL v2
 ```
 
 ## 依赖层级
@@ -102,6 +124,7 @@ main.js → barrel.js → logic/    ← 纯数据，不依赖 UI
 - logic/ 层：纯数据模型、CRUD 操作、结构类型系统、文件 IO
 - ui/ 层：界面渲染、事件绑定、交互反馈
 - barrel.js：唯一同时引用 logic/ 和 ui/ 的中转文件
+- components/：Vue 组件，通过 Vite 编译，直接 import 到 ui/ 层使用
 ```
 
 ## 持久化存储（localStorage）
@@ -118,9 +141,14 @@ main.js → barrel.js → logic/    ← 纯数据，不依赖 UI
 
 ## 技术栈
 
-- 原生 JavaScript (ES Module)
+- Vite 8 — 开发服务器与构建工具
+- Vue 3.5（Composition API + `<script setup>`）— 渐进式 UI 层
+- Naive UI — 基础组件库（按钮等）
+- SCSS — CSS 预处理器（可逐步采用）
+- Bootstrap 5 Grid — 响应式网格布局
 - Highlight.js — JSON 语法高亮
-- 纯 CSS — CSS 变量主题系统、flex/grid 布局、可拖拽分栏
+- 原生 JavaScript (ES Module) — 核心逻辑
+- CSS 变量主题系统 — 四套色彩方案
 - localStorage — 模板、标签、结构类型、设置持久化
 
 ## 未来待实现的功能
@@ -129,6 +157,7 @@ main.js → barrel.js → logic/    ← 纯数据，不依赖 UI
 
 - **撤销 / 重做（Undo/Redo）** — 操作历史栈，支持 Ctrl+Z / Ctrl+Shift+Z，任何编辑操作可逆
 - **自动保存（Auto-save）** — 定时将当前章节数据持久化到 localStorage，防止浏览器刷新或崩溃导致数据丢失
+- **Vue 渐进式迁移** — 将 layout/ 下的 .html 片段逐个替换为 Vue 组件
 
 ### 🟡 中优先级
 
@@ -136,6 +165,7 @@ main.js → barrel.js → logic/    ← 纯数据，不依赖 UI
 - **数据校验** — 检查 next 引用的节点 ID 是否存在、必填字段是否为空、导出时校验告警
 - **多章节管理** — 多标签页同时编辑多个章节文件，支持切换和对比
 - **统计面板** — 侧栏统计视图完善，展示节点数量、语言覆盖率、跳转关系等
+- **Naive UI 全面集成** — 用 Naive UI 组件逐步替换原生弹窗、输入框等
 
 ### 🟢 低优先级
 
