@@ -134,7 +134,10 @@ const children = computed(() => {
 // ---- 当前节点的类型（用于添加按钮）----
 const nodeType = computed(() => Array.isArray(props.value) ? 'array' : 'object')
 
-const canAdd = computed(() => isExpandable.value)
+const canAdd = computed(() => {
+  if (!props.value || typeof props.value !== 'object') return false
+  return true
+})
 const canDelete = computed(() => props.path.length > 0)
 
 // ---- 模板标记 ----

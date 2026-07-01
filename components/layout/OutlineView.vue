@@ -12,7 +12,8 @@
     </div>
     <div class="tree-container" id="tree-container">
       <TreeNode
-        :value="storyStore.chapter"
+        :key="storyStore.dataVersion"
+        :value="storyStore.curJson"
         :path="[]"
         key-name=""
         :depth="0"

@@ -13,7 +13,7 @@
         <button id="btn-export" class="btn btn-primary">📤 导出 JSON</button>
         <span class="sep"></span>
         <label>章节名：</label>
-        <input id="chapter-name" class="input-sm" value="Untitled" />
+        <input id="curjson-name" class="input-sm" value="Untitled" />
       </div>
       <div class="toolbar-right">
         <button id="btn-edit-template" class="btn btn-sm">📋 编辑模板</button>

@@ -1,4 +1,4 @@
-# 系统分析文档：JSON 通用编辑器
+﻿# 系统分析文档：JSON 通用编辑器
 
 > 版本: 1.0  
 > 日期: 2026-06-26  
@@ -53,7 +53,7 @@ main.js
 用户操作 → store._emit() → onChange 监听器 → renderAll()
                                                   ├─ renderTreeNode
                                                   ├─ renderEditor
-                                                  ├─ renderChapterView
+                                                  ├─ renderCurJsonView
                                                   └─ renderJSONPreview
 ```
 

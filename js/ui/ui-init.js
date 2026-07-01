@@ -5,7 +5,7 @@
 
 import 'bootstrap/dist/css/bootstrap-grid.min.css'
 
-import { createChapter, createBlankChapter } from '../logic/logic-storyTypes.js';
+import { createCurJson, createBlankCurJson } from '../logic/logic-storyTypes.js';
 import { openTemplateEditor } from './ui-storyTemplateUI.js';
 import { openLabelManager } from './ui-labelManager.js';
 import { showCreateDialog } from '../../components/base/useCreateDialog.js';
@@ -20,17 +20,17 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 export function initUI(store, io) {
     // 应用已保存的显示设置（字体、色彩）
-    initSettings();
+    import('./ui-settingsPanel.js').then(m => m.initSettings());
 
     // 工具栏
-    io.setupFilePicker($('#btn-import'), json => store.loadChapter(json), (msg) => showAlert(msg));
+    io.setupFilePicker($('#btn-import'), json => store.loadCurJson(json), (msg) => showAlert(msg));
     $('#btn-export').addEventListener('click', () => { const clean = store.toCleanJSON(); io.exportJSON(clean); });
-    $('#btn-add-node').addEventListener('click', () => { showCreateDialog({ title: '新建章节', blankDesc: '仅返回 {}，不添加任何字段', onBlank: () => store.newChapter(createBlankChapter()), onTemplate: () => store.loadChapter(createChapter()) }); });
+    $('#btn-add-node').addEventListener('click', () => { showCreateDialog({ title: '新建章节', blankDesc: '仅返回 {}，不添加任何字段', onBlank: () => store.newCurJson(createBlankCurJson()), onTemplate: () => store.loadCurJson(createCurJson()) }); });
     $('#btn-edit-template').addEventListener('click', () => openTemplateEditor());
     $('#btn-label-manager').addEventListener('click', () => openLabelManager());
 
     // 章节名
-    $('#chapter-name').addEventListener('input', (e) => store.setChapterName(e.target.value));
+    $('#curjson-name').addEventListener('input', (e) => store.setCurJsonName(e.target.value));
 
     // 活动栏
     const VIEW_LABELS = { outline: '大纲', stats: '统计', settings: '设置' };
@@ -102,8 +102,8 @@ export function initUI(store, io) {
 
     // store 监听（仅同步章节名到输入框）
     store.onChange(() => {
-        const nameInput = $('#chapter-name');
-        if (nameInput) nameInput.value = store.getChapterName();
+        const nameInput = $('#curjson-name');
+        if (nameInput) nameInput.value = store.getCurJsonName();
     });
 
     // 分隔条

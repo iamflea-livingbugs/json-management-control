@@ -85,11 +85,12 @@ import { store } from '../../js/logic/logic-storyStore.js'
 import { showAlert } from '../base/useDialog.js'
 import {
   getLanguages, loadStructs, saveStructs, getEffectiveFields, deleteStruct,
-  loadEffectiveTemplates, loadTemplateKeys, loadLabels, addStructField,
+  addStructField,
   removeStructField, syncStruct
 } from '../../js/logic/logic-storyTypes.js'
 
 import AppButton from '../base/AppButton.vue'
+import { readConfig, writeConfig, readSchema, writeSchema } from '../../js/logic/logic-migration.js'
 
 const themes = {
   dark:   { label: '暗色默认', vars: { '--bg': '#1a1a2e', '--bg-panel': '#16213e', '--bg-input': '#0f3460', '--border': '#2a2a4a', '--text': '#e0e0e0', '--text-dim': '#888', '--accent': '#e94560', '--accent-hover': '#ff6b81', '--success': '#4ecca3', '--warn': '#f0a500' } },
@@ -99,7 +100,11 @@ const themes = {
 }
 
 function loadSettings() {
-  try { return JSON.parse(localStorage.getItem('storyeditor_settings') || '{}') } catch { return {} }
+  try {
+    const c = readConfig()
+    if (c) return { theme: c.theme || 'dark', fontSize: c.fontSize || 16, labelColor: c.labelColorMode || 'type' }
+  } catch {}
+  return {}
 }
 const defaults = { theme: 'dark', fontSize: 16, labelColor: 'type' }
 const settings = reactive({ ...defaults, ...loadSettings() })
@@ -146,7 +151,12 @@ function applyTheme(key) {
   for (const [k, v] of Object.entries(t.vars)) root.style.setProperty(k, v)
 }
 function save() {
-  localStorage.setItem('storyeditor_settings', JSON.stringify({ ...settings }))
+  const c = readConfig() || {}
+  c.theme = settings.theme
+  c.fontSize = settings.fontSize
+  c.labelColorMode = settings.labelColor || 'type'
+  delete c.meta
+  writeConfig(c)
 }
 function onFontChange() {
   document.documentElement.style.setProperty('--font-size-base', settings.fontSize + 'px')
@@ -160,7 +170,7 @@ function saveLabelColor() {
 function doAddLang() {
   const lang = newLang.value.trim().toLowerCase()
   if (!lang) return
-  addStructField('i18n', lang, store.chapter)
+  addStructField('i18n', lang, store.curJson)
   store._emit()
   langs.value = getLanguages()
   newLang.value = ''
@@ -175,19 +185,19 @@ function displayFields(st) {
 function doAddField(sid) {
   const f = fieldInputs[sid]
   if (!f || !f.trim()) return
-  addStructField(sid, f.trim(), store.chapter)
+  addStructField(sid, f.trim(), store.curJson)
   store._emit()
   structList.value = loadStructs()
   fieldInputs[sid] = ''
 }
 function doRemoveField(sid, field) {
-  removeStructField(sid, field, store.chapter)
+  removeStructField(sid, field, store.curJson)
   store._emit()
   structList.value = loadStructs()
 }
 function doDeleteStruct(sid) {
   if (sid === 'i18n') { showAlert('不能删除内置类型'); return }
-  deleteStruct(sid, store.chapter)
+  deleteStruct(sid, store.curJson)
   store._emit()
   structList.value = loadStructs()
 }
@@ -201,14 +211,8 @@ function newStruct() {
 function doExport(...args) {
   const config = {
     meta: { version: 1, exportedAt: new Date().toISOString() },
-    editor: { settings: loadSettings(), chapterCols: JSON.parse(localStorage.getItem('storyeditor_chapter_cols') || '["speaker","text"]') },
-    custom: {
-      templates: loadEffectiveTemplates(),
-      deletedTemplates: JSON.parse(localStorage.getItem('storyeditor_deleted_templates') || '[]'),
-      templateKeys: loadTemplateKeys(),
-      structs: loadStructs(),
-      labels: loadLabels()
-    }
+    config: readConfig() || {},
+    schema: readSchema() || {}
   }
   const a = document.createElement('a')
   a.href = URL.createObjectURL(new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' }))
@@ -225,17 +229,38 @@ function doImport() {
     r.onload = (e) => {
       try {
         const d = JSON.parse(e.target.result); let c = 0
-        const set = (k, v) => { localStorage.setItem(k, JSON.stringify(v)); c++ }
+        if (d.config) { writeConfig(d.config); c++ }
+        if (d.schema) { writeSchema(d.schema); c++ }
+        // 兼容旧格式（editor/custom 双层结构）：映射到新三层结构
         if (d.editor && d.custom) {
-          if (d.editor.settings) set('storyeditor_settings', d.editor.settings)
-          if (d.editor.chapterCols) set('storyeditor_chapter_cols', d.editor.chapterCols)
-          if (d.custom.templates) set('storyeditor_templates', d.custom.templates)
-          if (d.custom.deletedTemplates) set('storyeditor_deleted_templates', d.custom.deletedTemplates)
-          if (d.custom.templateKeys) set('storyeditor_template_keys', d.custom.templateKeys)
-          if (d.custom.structs) set('storyeditor_structs', d.custom.structs)
-          if (d.custom.labels) set('storyeditor_labels', d.custom.labels)
-        } else {
-          for (const [k, v] of Object.entries(d)) { if (k.startsWith('storyeditor_')) set(k, v) }
+          const cfg = {}
+          if (d.editor.settings) {
+            cfg.theme = d.editor.settings.theme || 'dark'
+            cfg.fontSize = d.editor.settings.fontSize || 16
+            cfg.labelColorMode = d.editor.settings.labelColor || d.editor.settings.labelColorMode || 'type'
+          }
+          if (d.editor.chapterCols) cfg.chapterCols = d.editor.chapterCols
+          if (d.custom.labels) cfg.labels = d.custom.labels
+          if (Object.keys(cfg).length > 0) { writeConfig(cfg); c++ }
+          const sch = {}
+          if (d.custom.templates) sch.templates = d.custom.templates
+          if (d.custom.deletedTemplates) sch.deletedTemplates = d.custom.deletedTemplates
+          if (d.custom.templateKeys) sch.templateKeys = d.custom.templateKeys
+          if (d.custom.structs) sch.structs = d.custom.structs
+          if (Object.keys(sch).length > 0) { writeSchema(sch); c++ }
+        } else if (!d.config && !d.schema) {
+          // 兼容旧版平铺格式：通过 runMigration 类似逻辑处理
+          const oldKeys = {
+            settings: 'storyeditor_settings', labels: 'storyeditor_labels',
+            chapterCols: 'storyeditor_chapter_cols', templates: 'storyeditor_templates',
+            deletedTemplates: 'storyeditor_deleted_templates', templateKeys: 'storyeditor_template_keys',
+            structs: 'storyeditor_structs'
+          }
+          for (const [k, v] of Object.entries(d)) {
+            if (k.startsWith('storyeditor_')) {
+              localStorage.setItem(k, JSON.stringify(v)); c++
+            }
+          }
         }
         showAlert(`导入成功！已恢复 ${c} 项配置。`)
         Object.assign(settings, { ...defaults, ...loadSettings() })
@@ -249,12 +274,12 @@ function doImport() {
 }
 
 function doReset() {
-  localStorage.removeItem('storyeditor_settings')
+  localStorage.removeItem('storyeditor_config')
   Object.assign(settings, { ...defaults })
   applyTheme(defaults.theme)
   document.documentElement.style.setProperty('--font-size-base', defaults.fontSize + 'px')
   document.documentElement.dataset.labelColor = defaults.labelColor
-  localStorage.setItem('storyeditor_settings', JSON.stringify(defaults))
+  writeConfig({ theme: defaults.theme, fontSize: defaults.fontSize, labelColorMode: defaults.labelColor })
 }
 
 function doLayoutReset() {

@@ -6,7 +6,7 @@
 
 // 基础层：数据模型、配置加载、模板读写
 export { loadTemplates, getContextKeys, getContextsConfig, resolveTemplateContext, loadContentConfig, loadEffectiveTemplates,
-    createChapter, createBlankChapter, createOption, isEmpty, createNodeFromTemplate,
+    createCurJson, createBlankCurJson, createOption, isEmpty, createNodeFromTemplate,
     loadLabels, saveLabel, getFieldLabel,
     getLanguages, saveLanguages,
     saveTemplate, saveTemplates, loadTemplateKeys, saveTemplateKeys,
@@ -20,7 +20,12 @@ export * as io from './logic/logic-storyIO.js';
 // UI 层：主界面初始化 + 工具函数
 export { initUI } from './ui/ui-init.js';
 export { openLabelManager } from './ui/ui-labelManager.js';
-export { renderChapterView } from './ui/ui-chapterView.js';
-export { initSettings } from './ui/ui-settingsPanel.js';
+export { renderCurJsonView } from './ui/ui-chapterView.js';
 export { showCreateDialog, showTemplatePicker } from '../components/base/useCreateDialog.js';
 export { showAlert, showConfirm, showPrompt, showObjectAddDialog } from '../components/base/useDialog.js';
+
+// 迁移 & 存储层
+export { runMigration, readConfig, writeConfig, readSchema, writeSchema, readDocument, writeDocument, clearDocument } from './logic/logic-migration.js';
+
+// 自动保存
+export { start, stop, notifyChange, getStatus, onStatusChange, hasSavedDocument, getSavedDocument, discardSavedDocument, setFileName } from './logic/logic-autoSave.js';

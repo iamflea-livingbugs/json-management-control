@@ -7,17 +7,19 @@ import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
 import { store as original } from '../js/logic/logic-storyStore.js'
 import { resolveTemplateContext, createNodeFromTemplate } from '../js/logic/logic-storyTypes.js'
+import { getStatus, onStatusChange } from '../js/logic/logic-autoSave.js'
 
 export const useStoryStore = defineStore('story', () => {
   // ---- 响应式状态（与原始 store 同步） ----
-  const chapter = shallowRef(original.chapter)
+  const curJson = shallowRef(original.curJson)
   const currentPath = ref([...original.currentPath])
   const selectedId = ref(original.selectedId)
   const dataVersion = ref(original._dataVersion)
+  const autoSaveStatus = ref(getStatus())  // 'idle' | 'saving' | 'saved' | 'error'
 
   // ---- 同步函数：从原始 store 同步到 Pinia ----
   function sync() {
-    chapter.value = original.chapter
+    curJson.value = original.curJson
     currentPath.value = [...original.currentPath]
     selectedId.value = original.selectedId
     dataVersion.value = original._dataVersion
@@ -26,17 +28,20 @@ export const useStoryStore = defineStore('story', () => {
   // 监听原始 store 变更
   original.onChange(() => { sync() })
 
+  // 监听 auto-save 状态变更
+  onStatusChange((status) => { autoSaveStatus.value = status })
+
   // ---- 工具方法（委托给原始 store） ----
   function getByPath(path) { return original.getByPath(path || currentPath.value) }
   function getNode(id) { return original.getNode(id) }
-  function getChapterName() { return original.getChapterName() }
+  function getCurJsonName() { return original.getCurJsonName() }
   function getFilteredNodes() { return original.getFilteredNodes() }
   function toCleanJSON() { return original.toCleanJSON() }
 
   // ---- 数据变更方法 ----
-  function loadChapter(json) { original.loadChapter(json) }
-  function newChapter(json) { original.newChapter(json) }
-  function setChapterName(name) { original.setChapterName(name) }
+  function loadCurJson(json) { original.loadCurJson(json) }
+  function newCurJson(json) { original.newCurJson(json) }
+  function setCurJsonName(name) { original.setCurJsonName(name) }
 
   function addNode(ctx = null, path = null) { original.addNode(ctx, path) }
   function addBlankNode() { original.addBlankNode() }
@@ -70,10 +75,10 @@ export const useStoryStore = defineStore('story', () => {
 
   return {
     // 状态
-    chapter, currentPath, selectedId, dataVersion,
+    curJson, currentPath, selectedId, dataVersion, autoSaveStatus,
     // 方法（与原始 store 同名，直接委托）
-    getByPath, getNode, getChapterName, getFilteredNodes, toCleanJSON,
-    loadChapter, newChapter, setChapterName,
+    getByPath, getNode, getCurJsonName, getFilteredNodes, toCleanJSON,
+    loadCurJson, newCurJson, setCurJsonName,
     addNode, addBlankNode, duplicateNode, deleteNode, updateNode, updateNodeField, moveNode,
     selectNode, selectPath, setByPath, deleteAt,
     addObjectProperty, addArrayItem,

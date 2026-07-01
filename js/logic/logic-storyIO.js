@@ -18,7 +18,7 @@ export function importJSON(file) {
     });
 }
 
-export function exportJSON(json, filename = 'chapter.json') {
+export function exportJSON(json, filename = 'curjson.json') {
     const blob = new Blob([JSON.stringify(json, null, 4)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
