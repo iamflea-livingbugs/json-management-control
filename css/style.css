@@ -82,12 +82,32 @@ body {
     background: var(--bg);
     color: var(--text);
     overflow: hidden;
+    cursor: default;
+    user-select: none;
+}
+
+/* 允许在可编辑/输入区域选择文本 */
+input,
+textarea,
+select,
+[contenteditable],
+.code-editor,
+.json-editor textarea {
+    user-select: text;
+    cursor: text;
 }
 
 #app {
     display: flex;
     flex-direction: column;
     height: 100vh;
+}
+
+#app-root {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 /* ==========================================
@@ -122,13 +142,13 @@ body {
 
 /* -- 活动栏 -- */
 .activity-bar {
-    width: 48px;
-    min-width: 48px;
+    width: 64px;
+    min-width: 64px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     padding-top: 8px;
-    gap: 4px;
+    gap: 2px;
     background: var(--bg);
     border-right: 1px solid var(--border);
     flex-shrink: 0;
@@ -136,18 +156,49 @@ body {
 }
 
 .activity-btn {
-    width: 36px;
-    height: 36px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    gap: 2px;
+    padding: 6px 4px 4px;
     border-radius: var(--radius);
     cursor: pointer;
-    font-size: 1.25rem;
     color: var(--text-dim);
     transition: background 0.15s, color 0.15s;
     user-select: none;
     position: relative;
+    margin: 0 4px;
+}
+
+.activity-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+}
+
+.activity-btn.active {
+    color: var(--accent);
+}
+
+.activity-btn.active::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+.activity-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.activity-label {
+    font-size: 0.65rem;
+    line-height: 1.1;
+    white-space: nowrap;
 }
 
 .activity-btn:hover {
@@ -217,7 +268,16 @@ body {
     min-width: 320px;
 }
 
+.panel-side-header {
+    opacity: 1;
+    transition: opacity 0.15s ease;
+}
+
 .panel-side.collapsed .panel-side-inner {
+    opacity: 0;
+}
+
+.panel-side.collapsed .panel-header {
     opacity: 0;
 }
 
@@ -270,6 +330,22 @@ body {
     font-size: 1rem;
 }
 
+/* -- 原生 JS 组件标记 -- */
+.native-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.55rem;
+    padding: 1px 4px;
+    border-radius: 2px;
+    background: rgba(233, 69, 96, 0.15);
+    color: var(--accent);
+    line-height: 1.3;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.6;
+}
+
 /* -- 分隔条 -- */
 .splitter {
     width: 5px;
@@ -311,6 +387,7 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 12px;
+    position: relative;
 }
 
 .editor-tab-panel.hidden {
@@ -426,7 +503,23 @@ body {
     opacity: 1;
 }
 
-
+/* -- 树节点模板/自定义标记 -- */
+.tree-badge {
+    font-size: 0.6rem;
+    margin-left: 4px;
+    padding: 1px 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+.badge-template {
+    color: var(--success);
+    background: rgba(78, 204, 163, 0.15);
+}
+.badge-custom {
+    color: var(--warn);
+    background: rgba(240, 165, 0, 0.15);
+}
 
 .tree-footer {
     margin-top: auto;
