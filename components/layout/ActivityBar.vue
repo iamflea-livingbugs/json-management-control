@@ -14,22 +14,26 @@
         collapse → 关闭侧面板（再次点击已激活的按钮时）
   -->
   <div class="activity-bar" id="activity-bar">
-    <div
-      v-for="item in items"
-      :key="item.view"
-      class="activity-btn"
-      :class="{ active: activeView === item.view }"
-      :title="item.label"
-      @click="onClick(item.view)"
-    >
-      <span class="activity-icon">{{ item.icon }}</span>
-      <span class="activity-label">{{ item.label }}</span>
+    <div class="activity-bar-buttons">
+      <div
+        v-for="item in items"
+        :key="item.view"
+        class="activity-btn"
+        :class="{ active: activeView === item.view }"
+        :title="item.label"
+        @click="onClick(item.view)"
+      >
+        <span class="activity-icon">{{ item.icon }}</span>
+        <span class="activity-label">{{ item.label }}</span>
+      </div>
     </div>
+    <AutoSaveIndicator />
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import AutoSaveIndicator from '../AutoSaveIndicator.vue'
 
 // ===== 按钮数据 =====
 // view：视图标识，与 layout.html 中 #view-xxx 的 xxx 对应
@@ -73,3 +77,15 @@ function dispatchEvent(view, action) {
   if (el) el.dispatchEvent(event)
 }
 </script>
+
+<style scoped>
+.activity-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.activity-bar-buttons {
+  display: flex;
+  flex-direction: column;
+}
+</style>

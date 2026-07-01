@@ -7,6 +7,7 @@ import { loadLabels, saveLabel } from '../logic/logic-storyTypes.js';
 import { store } from '../logic/logic-storyStore.js';
 import { showConfirm, showPrompt } from '../../components/base/useDialog.js';
 import { makeModalDraggable } from './ui-modalDialog.js';
+import { readConfig, writeConfig } from '../logic/logic-migration.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -66,7 +67,9 @@ export function openLabelManager() {
     $('#btn-label-reset').addEventListener('click', async () => {
         const ok = await showConfirm('确定重置所有字段标签为默认值吗？');
         if (ok) {
-            localStorage.removeItem('storyeditor_labels');
+            const c = readConfig() || {};
+            delete c.labels;
+            writeConfig(c);
             store._emit();
             renderLabelList();
         }
@@ -105,7 +108,9 @@ function renderLabelList() {
             else {
                 const all = loadLabels();
                 delete all[key];
-                localStorage.setItem('storyeditor_labels', JSON.stringify(all));
+                const c = readConfig() || {};
+                c.labels = all;
+                writeConfig(c);
             }
             store._emit();
         });
@@ -119,7 +124,9 @@ function renderLabelList() {
             if (!ok) return;
             const all = loadLabels();
             delete all[key];
-            localStorage.setItem('storyeditor_labels', JSON.stringify(all));
+            const c = readConfig() || {};
+            c.labels = all;
+            writeConfig(c);
             store._emit();
             renderLabelList();
         });

@@ -2,11 +2,11 @@
 // storyStore.js — 数据管理层（核心）
 // 纯逻辑层，不依赖 UI
 // ==========================================
-import { createChapter, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from './logic-storyTypes.js';
+import { createCurJson, createNodeFromTemplate, createOption, isEmpty, resolveTemplateContext } from './logic-storyTypes.js';
 
 class StoryStore {
     constructor() {
-        this.chapter = createChapter();
+        this.curJson = createCurJson();
         this.currentPath = [];
         this.selectedId = null;
         this.filters = {};
@@ -24,26 +24,26 @@ class StoryStore {
         this._listeners.forEach(fn => fn(this));
     }
 
-    loadChapter(json) {
-        this.chapter = json;
-        if (!this.chapter.meta) this.chapter.meta = { name: 'Untitled' };
-        this.chapter.content = (this.chapter.content || []).map(n => this._normalizeNode(n));
+    loadCurJson(json) {
+        this.curJson = json;
+        if (!this.curJson.meta) this.curJson.meta = { name: 'Untitled' };
+        this.curJson.content = (this.curJson.content || []).map(n => this._normalizeNode(n));
         this.selectedId = null;
         this.currentPath = [];
         this.filters = {};
         this._emit();
     }
 
-    newChapter(json) {
-        this.chapter = json;
+    newCurJson(json) {
+        this.curJson = json;
         this.selectedId = null;
         this.currentPath = [];
         this.filters = {};
         this._emit();
     }
 
-    getChapterName() { return this.chapter.meta?.name || 'Untitled'; }
-    setChapterName(name) { this.chapter.meta.name = name; this._emit(); }
+    getCurJsonName() { return this.curJson.meta?.name || 'Untitled'; }
+    setCurJsonName(name) { this.curJson.meta.name = name; this._emit(); }
 
     _normalizeNode(raw) {
         const defaults = createNodeFromTemplate('content', '_');
@@ -85,8 +85,8 @@ class StoryStore {
     }
 
     addBlankNode() {
-        const id = String(this.chapter.content.length);
-        this.chapter.content.push({ id });
+        const id = String(this.curJson.content.length);
+        this.curJson.content.push({ id });
         this.selectedId = id;
         this._emit();
     }
@@ -94,10 +94,10 @@ class StoryStore {
     duplicateNode(id) {
         const idx = this._findIndex(id);
         if (idx === -1) return;
-        const src = JSON.parse(JSON.stringify(this.chapter.content[idx]));
+        const src = JSON.parse(JSON.stringify(this.curJson.content[idx]));
         const newId = this._genUniqueId();
         src.id = newId;
-        this.chapter.content.splice(idx + 1, 0, src);
+        this.curJson.content.splice(idx + 1, 0, src);
         this.selectedId = newId;
         this._emit();
     }
@@ -105,8 +105,8 @@ class StoryStore {
     deleteNode(id) {
         const idx = this._findIndex(id);
         if (idx === -1) return;
-        this.chapter.content.splice(idx, 1);
-        if (this.selectedId === id) this.selectedId = this.chapter.content.length > 0 ? this.chapter.content[0].id : null;
+        this.curJson.content.splice(idx, 1);
+        if (this.selectedId === id) this.selectedId = this.curJson.content.length > 0 ? this.curJson.content[0].id : null;
         this._emit();
     }
 
@@ -121,7 +121,7 @@ class StoryStore {
     }
 
     moveNode(fromIndex, toIndex) {
-        const arr = this.chapter.content;
+        const arr = this.curJson.content;
         if (fromIndex < 0 || fromIndex >= arr.length || toIndex < 0 || toIndex >= arr.length) return;
         const [item] = arr.splice(fromIndex, 1); arr.splice(toIndex, 0, item);
         this._emit();
@@ -153,7 +153,7 @@ class StoryStore {
     clearFilters() { this.filters = {}; this._emit(); }
 
     getFilteredNodes() {
-        let nodes = this.chapter.content;
+        let nodes = this.curJson.content;
         for (const [field, value] of Object.entries(this.filters)) {
             if (field === '_search') {
                 const q = value.toLowerCase();
@@ -167,7 +167,7 @@ class StoryStore {
 
     getFieldValues(field) {
         const set = new Set();
-        for (const node of this.chapter.content) {
+        for (const node of this.curJson.content) {
             const raw = node[field];
             if (!raw || isEmpty(raw)) continue;
             if (typeof raw === 'object' && raw.zh !== undefined) { const v = raw.zh || raw.en || ''; if (v) set.add(v); }
@@ -189,22 +189,22 @@ class StoryStore {
             if (obj === '' || obj === null || obj === undefined) return undefined;
             return obj;
         }
-        return clean(this.chapter);
+        return clean(this.curJson);
     }
 
-    getNode(id) { return this.chapter.content.find(n => n.id === String(id)); }
-    _findIndex(id) { return this.chapter.content.findIndex(n => n.id === String(id)); }
+    getNode(id) { return this.curJson.content.find(n => n.id === String(id)); }
+    _findIndex(id) { return this.curJson.content.findIndex(n => n.id === String(id)); }
 
     _genUniqueId() {
-        const maxId = this.chapter.content.reduce((max, n) => Math.max(max, parseInt(n.id) || 0), 0);
+        const maxId = this.curJson.content.reduce((max, n) => Math.max(max, parseInt(n.id) || 0), 0);
         return String(maxId + 1);
     }
 
     selectNode(id) { this.selectedId = String(id); this.currentPath = ['content', String(id)]; this._emit(); }
 
     getByPath(path) {
-        if (!path || path.length === 0) return this.chapter;
-        let cur = this.chapter;
+        if (!path || path.length === 0) return this.curJson;
+        let cur = this.curJson;
         for (const seg of path) {
             if (cur === null || cur === undefined) return undefined;
             if (Array.isArray(cur)) cur = cur[parseInt(seg)];

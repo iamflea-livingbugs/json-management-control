@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="panel panel-center" id="panel-center">
     <div class="panel-header">
       <span
@@ -45,7 +45,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { renderChapterView } from '../../js/ui/ui-chapterView.js'
+import { renderCurJsonView } from '../../js/ui/ui-chapterView.js'
 import { store } from '../../js/logic/logic-storyStore.js'
 import JsonEditor from './JsonEditor.vue'
 import FormEditor from './FormEditor.vue'
@@ -56,7 +56,7 @@ function switchTab(tab) {
   activeTab.value = tab
   if (tab === 'chapter') {
     // 章节视图还是原生 JS，需要触发渲染
-    renderChapterView(store)
+    renderCurJsonView(store)
   }
 }
 </script>

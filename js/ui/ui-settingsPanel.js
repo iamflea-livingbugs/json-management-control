@@ -1,13 +1,14 @@
 import { store } from '../logic/logic-storyStore.js';
 import { showAlert } from '../../components/base/useDialog.js';
-import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, getEffectiveFields, deleteStruct, syncStruct, loadEffectiveTemplates, loadTemplateKeys, loadLabels } from '../logic/logic-storyTypes.js';
+import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, deleteStruct, syncStruct } from '../logic/logic-storyTypes.js';
+import { readConfig, writeConfig, readSchema, writeSchema } from '../logic/logic-migration.js';
 
 const $ = (sel) => document.querySelector(sel);
 // ==========================================
 // ui-settingsPanel.js — 设置面板（字体、色彩方案、语言管理）
 // ==========================================
 
-const STORAGE_KEY = 'storyeditor_settings';
+
 
 // 色彩方案预设
 const THEMES = {
@@ -81,15 +82,20 @@ function esc(str) {
 // 加载已保存的设置
 function loadSettings() {
     try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) return JSON.parse(saved);
+        const c = readConfig();
+        if (c) return { theme: c.theme || 'dark', fontSize: c.fontSize || 16, labelColor: c.labelColorMode || 'type' };
     } catch {}
     return { theme: 'dark', fontSize: 16, labelColor: 'type' };
 }
 
 // 保存设置
 function saveSettings(s) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    const c = readConfig() || {};
+    c.theme = s.theme;
+    c.fontSize = s.fontSize;
+    c.labelColorMode = s.labelColor;
+    delete c.meta; // 让 writeConfig 生成新的 meta
+    writeConfig(c);
 }
 
 // 应用设置到 :root
@@ -280,8 +286,8 @@ export function openNewStructDialog() {
         structs.push(newStruct);
         saveStructs(structs);
         // 同步到当前 chapter 数据
-        if (store.chapter) {
-            syncStruct(store.chapter, newStruct);
+        if (store.curJson) {
+            syncStruct(store.curJson, newStruct);
             store._emit();
         }
         close();
@@ -435,7 +441,7 @@ export function renderSettingsPanel() {
         const doAdd = () => {
             const lang = langInput.value.trim().toLowerCase();
             if (!lang) return;
-            addStructField('i18n', lang, store.chapter);
+            addStructField('i18n', lang, store.curJson);
             renderSettingsPanel();
         };
         addBtn.addEventListener('click', doAdd);
@@ -452,7 +458,7 @@ export function renderSettingsPanel() {
             const input = btn.parentNode.querySelector('.settings-struct-new-field');
             const field = input?.value.trim();
             if (!field) return;
-            addStructField(structId, field, store.chapter);
+            addStructField(structId, field, store.curJson);
             store._emit();
             renderSettingsPanel();
         });
@@ -471,7 +477,7 @@ export function renderSettingsPanel() {
         btn.addEventListener('click', () => {
             const structId = btn.dataset.struct;
             const field = btn.dataset.field;
-            removeStructField(structId, field, store.chapter);
+            removeStructField(structId, field, store.curJson);
             store._emit();
             renderSettingsPanel();
         });
@@ -481,7 +487,7 @@ export function renderSettingsPanel() {
         btn.addEventListener('click', () => {
             const structId = btn.dataset.struct;
             if (structId === 'i18n') { showAlert('不能删除内置类型'); return; }
-            deleteStruct(structId, store.chapter);
+            deleteStruct(structId, store.curJson);
             store._emit();
             renderSettingsPanel();
         });
@@ -496,7 +502,7 @@ export function renderSettingsPanel() {
     const resetBtn = document.getElementById('btn-settings-reset');
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
-            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem('storyeditor_config');
             const defaults = { theme: 'dark', fontSize: 16, labelColor: 'type' };
             saveSettings(defaults);
             applySettings(defaults);
@@ -529,17 +535,8 @@ export function renderSettingsPanel() {
         exportBtn.addEventListener('click', () => {
             const config = {
                 meta: { version: 1, exportedAt: new Date().toISOString() },
-                editor: {
-                    settings: loadSettings(),
-                    chapterCols: (() => { try { return JSON.parse(localStorage.getItem('storyeditor_chapter_cols') || '["speaker","text"]'); } catch { return ['speaker', 'text']; } })()
-                },
-                custom: {
-                    templates: loadEffectiveTemplates(),
-                    deletedTemplates: (() => { try { return JSON.parse(localStorage.getItem('storyeditor_deleted_templates') || '[]'); } catch { return []; } })(),
-                    templateKeys: loadTemplateKeys(),
-                    structs: loadStructs(),
-                    labels: loadLabels()
-                }
+                config: readConfig() || {},
+                schema: readSchema() || {}
             };
             const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
@@ -564,37 +561,33 @@ export function renderSettingsPanel() {
                     const data = JSON.parse(e.target.result);
                     let count = 0;
 
+                    if (data.config) {
+                        writeConfig(data.config);
+                        count++;
+                    }
+                    if (data.schema) {
+                        writeSchema(data.schema);
+                        count++;
+                    }
+                    // 兼容旧格式（editor/custom 双层结构）：映射到新三层结构
                     if (data.editor && data.custom) {
-                        // 新版结构化格式
+                        const cfg = {};
                         if (data.editor.settings) {
-                            localStorage.setItem('storyeditor_settings', JSON.stringify(data.editor.settings));
-                            count++;
+                            cfg.theme = data.editor.settings.theme || 'dark';
+                            cfg.fontSize = data.editor.settings.fontSize || 16;
+                            cfg.labelColorMode = data.editor.settings.labelColor || data.editor.settings.labelColorMode || 'type';
                         }
-                        if (data.editor.chapterCols) {
-                            localStorage.setItem('storyeditor_chapter_cols', JSON.stringify(data.editor.chapterCols));
-                            count++;
-                        }
-                        if (data.custom.templates) {
-                            localStorage.setItem('storyeditor_templates', JSON.stringify(data.custom.templates));
-                            count++;
-                        }
-                        if (data.custom.deletedTemplates) {
-                            localStorage.setItem('storyeditor_deleted_templates', JSON.stringify(data.custom.deletedTemplates));
-                            count++;
-                        }
-                        if (data.custom.templateKeys) {
-                            localStorage.setItem('storyeditor_template_keys', JSON.stringify(data.custom.templateKeys));
-                            count++;
-                        }
-                        if (data.custom.structs) {
-                            localStorage.setItem('storyeditor_structs', JSON.stringify(data.custom.structs));
-                            count++;
-                        }
-                        if (data.custom.labels) {
-                            localStorage.setItem('storyeditor_labels', JSON.stringify(data.custom.labels));
-                            count++;
-                        }
-                    } else {
+                        if (data.editor.chapterCols) cfg.chapterCols = data.editor.chapterCols;
+                        if (data.custom.labels) cfg.labels = data.custom.labels;
+                        if (Object.keys(cfg).length > 0) { writeConfig(cfg); count++; }
+
+                        const sch = {};
+                        if (data.custom.templates) sch.templates = data.custom.templates;
+                        if (data.custom.deletedTemplates) sch.deletedTemplates = data.custom.deletedTemplates;
+                        if (data.custom.templateKeys) sch.templateKeys = data.custom.templateKeys;
+                        if (data.custom.structs) sch.structs = data.custom.structs;
+                        if (Object.keys(sch).length > 0) { writeSchema(sch); count++; }
+                    } else if (!data.config && !data.schema) {
                         // 兼容旧版平铺格式（storyeditor_* 键直接在最外层）
                         for (const [key, val] of Object.entries(data)) {
                             if (key.startsWith('storyeditor_')) {

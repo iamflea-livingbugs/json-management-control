@@ -66,7 +66,7 @@ const storyStore = useStoryStore()
 
 const currentPath = computed(() => storyStore.currentPath || [])
 const currentValue = computed(() => {
-  if (currentPath.value.length === 0) return storyStore.chapter
+  if (currentPath.value.length === 0) return storyStore.curJson
   return storyStore.getByPath(currentPath.value)
 })
 

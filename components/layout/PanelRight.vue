@@ -5,9 +5,7 @@
       <button class="btn btn-sm" title="格式化 JSON" @click="formatJSON">格式化</button>
     </div>
     <div class="json-mirror">
-      <pre class="json-highlight" ref="highlightPre">
-        <code class="language-json" ref="highlightCode"></code>
-      </pre>
+      <pre class="json-highlight" ref="highlightPre"></pre>
       <textarea
         ref="editor"
         class="json-editor"
@@ -23,26 +21,26 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, nextTick } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useStoryStore } from '../../stores/storyStore.js'
 
 const storyStore = useStoryStore()
 
 const editor = ref(null)
 const highlightPre = ref(null)
-const highlightCode = ref(null)
 const errorDiv = ref(null)
 
 // ---- 高亮辅助 ----
 function applyHighlight(text) {
-  const code = highlightCode.value
-  if (!code) return
-  code.textContent = text
+  const pre = highlightPre.value
+  if (!pre) return
   if (window.hljs) {
     try {
-      code.innerHTML = window.hljs.highlight(text, { language: 'json' }).value
+      pre.innerHTML = window.hljs.highlight(text, { language: 'json' }).value
+      return
     } catch (_) {}
   }
+  pre.textContent = text
 }
 
 function showError(msg) {
@@ -131,7 +129,7 @@ function onBlur() {
     hideError()
     const path = storyStore.currentPath
     if (path && path.length > 0) storyStore.setByPath([...path], parsed)
-    else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) storyStore.loadChapter(parsed)
+    else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) storyStore.loadCurJson(parsed)
     else showError('根节点必须是对象 {}')
   } catch (e) { showError(e.message) }
 }
@@ -145,7 +143,7 @@ function formatJSON() {
     hideError()
     const path = storyStore.currentPath
     if (path && path.length > 0) storyStore.setByPath([...path], parsed)
-    else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) storyStore.loadChapter(parsed)
+    else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) storyStore.loadCurJson(parsed)
     else showError('根节点必须是对象 {}')
   } catch (e) { showError(e.message) }
 }

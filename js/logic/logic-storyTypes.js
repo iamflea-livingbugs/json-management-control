@@ -1,13 +1,14 @@
 // ==========================================
 // storyTypes.js — 数据模型 & 常量定义（逻辑层）
 // ==========================================
+import { readConfig, writeConfig, readSchema, writeSchema } from './logic-migration.js';
 
 export function createI18nText(zh = '', en = '') {
     return { zh, en };
 }
 
 const HARDCODED_CONTENT = {
-    chapter: {
+    curJson: {
         meta: { name: 'Untitled', author: '', description: '' },
         content: []
     },
@@ -56,15 +57,15 @@ export function createNodeFromDefaults(id) {
     return node;
 }
 
-export function createChapter(name = 'Untitled') {
-    const ch = deepCopy(cc().chapter);
+export function createCurJson(name = 'Untitled') {
+    const ch = deepCopy(cc().curJson);
     const allTpls = loadTemplates();
     ch.meta = { ...(allTpls.meta || {}) };
     if (name !== undefined) ch.meta.name = name;
     return ch;
 }
 
-export function createBlankChapter(name = 'Untitled') {
+export function createBlankCurJson(name = 'Untitled') {
     return {};
 }
 
@@ -109,38 +110,36 @@ export function resolveTemplateContext(path) {
     return 'default';
 }
 
-const TEMPLATE_KEY = 'storyeditor_templates';
-const LABEL_STORAGE_KEY = 'storyeditor_labels';
-
 export function loadTemplates() {
     try {
-        const saved = JSON.parse(localStorage.getItem(TEMPLATE_KEY) || '{}');
+        const schema = readSchema();
+        const saved = schema?.templates || {};
         const defaults = getDefaultTemplates();
         return { ...defaults, ...saved };
     }
     catch { return { ...getDefaultTemplates() }; }
 }
 
-const DELETED_KEY = 'storyeditor_deleted_templates';
-
 function loadDeletedTemplates() {
-    try { return JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'); }
+    try { const s = readSchema(); return s?.deletedTemplates || []; }
     catch { return []; }
 }
 
 function saveDeletedTemplates(arr) {
-    localStorage.setItem(DELETED_KEY, JSON.stringify([...new Set(arr)]));
+    const s = readSchema() || {};
+    s.deletedTemplates = [...new Set(arr)];
+    writeSchema(s);
 }
 
-const KEYS_KEY = 'storyeditor_template_keys';
-
 export function loadTemplateKeys() {
-    try { return JSON.parse(localStorage.getItem(KEYS_KEY) || '{}'); }
+    try { const s = readSchema(); return s?.templateKeys || {}; }
     catch { return {}; }
 }
 
 export function saveTemplateKeys(keys) {
-    localStorage.setItem(KEYS_KEY, JSON.stringify(keys));
+    const s = readSchema() || {};
+    s.templateKeys = keys;
+    writeSchema(s);
 }
 
 export function loadEffectiveTemplates() {
@@ -158,14 +157,13 @@ export function saveTemplates(tpls, deletedKeys = []) {
     for (const [k, v] of Object.entries(tpls)) {
         if (JSON.stringify(defaults[k]) !== JSON.stringify(v)) toSave[k] = v;
     }
-    // 从保存结果中移除被删的默认模板（不存即表示使用默认值，删了才需要显式排除）
-    // 但如果用户保存了一个空对象 {} 表示清空该模板
-    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(toSave));
-    // 持久化删除列表
+    const s = readSchema() || {};
+    s.templates = toSave;
     if (deletedKeys.length > 0) {
         const existing = loadDeletedTemplates();
-        saveDeletedTemplates([...new Set([...existing, ...deletedKeys])]);
+        s.deletedTemplates = [...new Set([...existing, ...deletedKeys])];
     }
+    writeSchema(s);
 }
 
 export function saveTemplate(ctx, tpl) { const all = loadTemplates(); all[ctx] = tpl; saveTemplates(all); }
@@ -188,15 +186,14 @@ export function createNodeFromTemplate(ctx, id) {
 //   path   — 路径匹配（content.*.options）
 // ==========================================
 
-const STRUCTS_KEY = 'storyeditor_structs';
-
 const DEFAULT_STRUCTS = [
     { id: 'i18n', label: '多语言文本', match: { type: 'struct', marker: 'zh' }, fields: ['zh', 'en'] }
 ];
 
 export function loadStructs() {
     try {
-        const saved = JSON.parse(localStorage.getItem(STRUCTS_KEY) || '[]');
+        const schema = readSchema();
+        const saved = schema?.structs || [];
         if (saved.length === 0) return JSON.parse(JSON.stringify(DEFAULT_STRUCTS));
         // 向后兼容：struct 类型的 marker 不在 fields 里时自动补入
         for (const s of saved) {
@@ -211,7 +208,9 @@ export function loadStructs() {
 }
 
 export function saveStructs(structs) {
-    localStorage.setItem(STRUCTS_KEY, JSON.stringify(structs));
+    const s = readSchema() || {};
+    s.structs = structs;
+    writeSchema(s);
 }
 
 /** 获取结构类型的完整有效字段列表 */
@@ -327,9 +326,9 @@ export function syncAllStructs(obj) {
  * 向指定结构类型添加字段，并同步已匹配的所有位置
  * @param {string} structId - 类型 id
  * @param {string} field - 新字段名
- * @param {object} chapter - 当前章节数据（遍历用）
+ * @param {object} curJson - 当前章节数据（遍历用）
  */
-export function addStructField(structId, field, chapter) {
+export function addStructField(structId, field, curJson) {
     if (!field) return;
     const structs = loadStructs();
     const s = structs.find(x => x.id === structId);
@@ -340,8 +339,8 @@ export function addStructField(structId, field, chapter) {
     if (all.includes(field)) return;
     s.fields.push(field);
     saveStructs(structs);
-    if (chapter) {
-        const matches = findMatchingValues(chapter, s);
+    if (curJson) {
+        const matches = findMatchingValues(curJson, s);
         for (const { value } of matches) {
             if (!(field in value)) value[field] = '';
         }
@@ -349,9 +348,9 @@ export function addStructField(structId, field, chapter) {
 }
 
 /**
- * 从结构类型中移除字段，并从当前 chapter 数据中清理该字段
+ * 从结构类型中移除字段，并从当前 curJson 数据中清理该字段
  */
-export function removeStructField(structId, field, chapter) {
+export function removeStructField(structId, field, curJson) {
     const structs = loadStructs();
     const s = structs.find(x => x.id === structId);
     if (!s) return;
@@ -359,9 +358,9 @@ export function removeStructField(structId, field, chapter) {
     if (s.match.type === 'struct' && field === s.match.marker) return;
     s.fields = s.fields.filter(f => f !== field);
     saveStructs(structs);
-    // 从 chapter 数据中删除该字段
-    if (chapter) {
-        const matches = findMatchingValues(chapter, s);
+    // 从 curJson 数据中删除该字段
+    if (curJson) {
+        const matches = findMatchingValues(curJson, s);
         for (const { value } of matches) {
             if (field in value) delete value[field];
         }
@@ -369,17 +368,17 @@ export function removeStructField(structId, field, chapter) {
 }
 
 /**
- * 删除整个结构类型，并从当前 chapter 数据中清理所有相关字段
+ * 删除整个结构类型，并从当前 curJson 数据中清理所有相关字段
  */
-export function deleteStruct(structId, chapter) {
+export function deleteStruct(structId, curJson) {
     const structs = loadStructs();
     const s = structs.find(x => x.id === structId);
     if (!s) return;
     // 内置类型不允许删除
     if (structId === 'i18n') return;
-    // 先从 chapter 中清理所有字段（struct 类型的标记键不删除）
-    if (chapter) {
-        const matches = findMatchingValues(chapter, s);
+    // 先从 curJson 中清理所有字段（struct 类型的标记键不删除）
+    if (curJson) {
+        const matches = findMatchingValues(curJson, s);
         for (const { value } of matches) {
             for (const field of s.fields) {
                 if (s.match.type === 'struct' && field === s.match.marker) continue;
@@ -411,7 +410,7 @@ export function isI18nObj(val) {
     return val && typeof val === 'object' && !Array.isArray(val) && 'zh' in val;
 }
 
-export function addLanguage(lang, chapter) {
+export function addLanguage(lang, curJson) {
     const structs = loadStructs();
     const i18n = structs.find(s => s.id === 'i18n');
     if (!i18n) return;
@@ -421,16 +420,22 @@ export function addLanguage(lang, chapter) {
     if (i18n.match?.type === 'struct' && lang === i18n.match.marker) return;
     i18n.fields.push(lang);
     saveStructs(structs);
-    if (chapter) {
-        syncStruct(chapter, i18n);
+    if (curJson) {
+        syncStruct(curJson, i18n);
     }
 }
 
 // 标签管理
 export function loadLabels() {
-    try { return JSON.parse(localStorage.getItem(LABEL_STORAGE_KEY) || '{}'); } catch { return {}; }
+    try { const c = readConfig(); return c?.labels || {}; } catch { return {}; }
 }
-export function saveLabel(key, label) { const all = loadLabels(); all[key] = label; localStorage.setItem(LABEL_STORAGE_KEY, JSON.stringify(all)); }
+export function saveLabel(key, label) {
+    const all = loadLabels();
+    all[key] = label;
+    const c = readConfig() || {};
+    c.labels = all;
+    writeConfig(c);
+}
 export function getFieldLabel(key) { const custom = loadLabels(); return custom[key] || key; }
 
 // 判断空值

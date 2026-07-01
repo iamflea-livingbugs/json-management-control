@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // storyChapterView.js — 章节对话列表视图
 // 以列表形式展示当前路径下的数据
 // 数组按索引逐行展示，对象按属性逐行展示
@@ -91,8 +91,8 @@ function showAddPropertyModal(dataPath, store, templateCtx) {
             store.addObjectProperty(dataPath, key, defaultValue);
         }
         close();
-        renderChapterView(store);
-    };
+        renderCurJsonView(store);
+      };
 
     modal.querySelector('#prop-key').addEventListener('keydown', e => {
         if (e.key === 'Enter') modal.querySelector('#prop-ok').click();
@@ -109,7 +109,7 @@ function isI18n(val) {
  * 数组 → 逐行展示每条记录
  * 对象 → 逐行展示每个属性
  */
-export function renderChapterView(store) {
+export function renderCurJsonView(store) {
     const container = $('#panel-chapter');
     if (!container) return;
 
@@ -257,7 +257,7 @@ export function renderChapterView(store) {
             const checked = [...modal.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value);
             saveColumnConfig(checked);
             closeModal();
-            renderChapterView(store);
+            renderCurJsonView(store);
         };
         modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
     });
@@ -267,7 +267,7 @@ export function renderChapterView(store) {
         const ctx = $('#chapter-ctx-select')?.value || 'content';
         if (isArrayMode) {
             store.addNode(ctx, dataPath);
-            renderChapterView(store);
+            renderCurJsonView(store);
         } else {
             // 对象模式：按模板的自动增长键名规则生成不重复的键名
             const allTpls = loadEffectiveTemplates();
@@ -295,7 +295,7 @@ export function renderChapterView(store) {
                 const templateVal = JSON.parse(JSON.stringify(tpl));
                 delete templateVal.id;
                 store.addObjectProperty(dataPath, key, templateVal);
-                renderChapterView(store);
+                renderCurJsonView(store);
                 return;
             }
 
@@ -316,7 +316,7 @@ export function renderChapterView(store) {
             const templateVal = JSON.parse(JSON.stringify(tpl));
             delete templateVal.id;
             store.addObjectProperty(dataPath, key, templateVal);
-            renderChapterView(store);
+            renderCurJsonView(store);
         }
     });
 
