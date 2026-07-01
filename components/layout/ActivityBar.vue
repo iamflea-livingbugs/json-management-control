@@ -22,7 +22,8 @@
       :title="item.label"
       @click="onClick(item.view)"
     >
-      {{ item.icon }}
+      <span class="activity-icon">{{ item.icon }}</span>
+      <span class="activity-label">{{ item.label }}</span>
     </div>
   </div>
 </template>

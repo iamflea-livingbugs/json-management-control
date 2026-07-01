@@ -82,7 +82,7 @@
 import { NConfigProvider } from 'naive-ui'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { store } from '../../js/logic/logic-storyStore.js'
-import { showAlert } from '../../js/ui/ui-modalDialog.js'
+import { showAlert } from '../base/useDialog.js'
 import {
   getLanguages, loadStructs, saveStructs, getEffectiveFields, deleteStruct,
   loadEffectiveTemplates, loadTemplateKeys, loadLabels, addStructField,

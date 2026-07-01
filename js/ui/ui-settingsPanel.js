@@ -1,5 +1,5 @@
 import { store } from '../logic/logic-storyStore.js';
-import { showAlert } from './ui-modalDialog.js';
+import { showAlert } from '../../components/base/useDialog.js';
 import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, getEffectiveFields, deleteStruct, syncStruct, loadEffectiveTemplates, loadTemplateKeys, loadLabels } from '../logic/logic-storyTypes.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -117,7 +117,7 @@ export function initSettings() {
 }
 
 // 新建结构类型弹窗
-function openNewStructDialog() {
+export function openNewStructDialog() {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `<div class="modal-box" style="width:680px;max-width:90vw">
