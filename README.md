@@ -11,6 +11,7 @@
 - **章节列表视图** — 表格化展示对话数组，支持列配置、行内快速编辑，i18n 字段按语言自动展开
 - **选项系统** — 可视化编辑选项分支，支持 actions（命令 + 参数）
 - **节点模板** — 按上下文（content / option / action 等）独立模板，自由定制字段，新建节点自动套用
+- **模板标记（📋/🔧）** — 树节点旁显示模板标记，区分已应用模板节点与普通节点，快速识别结构类型
 - **实时 JSON 预览** — 右侧面板实时同步高亮显示，支持格式化、语法校验
 - **路径定位** — 点击树节点，预览面板自动滚动并选中对应值区域
 - **搜索筛选** — 树形面板搜索过滤，支持一键清空
@@ -24,14 +25,15 @@
 
 ## 使用
 
-1. 启动开发服务器：`npx vite`（或 `npm run dev`）
-2. 浏览器打开 http://localhost:5173
-3. 点击"导入 JSON"或直接拖入 .json 文件加载对话剧本
-4. 左侧树形面板逐层展开，点击节点
-5. 中间面板 Tab 切换：表单模式编辑字段 / JSON 模式直接编辑源码 / 章节列表模式
-6. 右侧面板实时预览完整 JSON，支持格式化
-7. 右上角 ⚙️ 设置面板管理色彩方案、字体大小、语言列表、结构类型
-8. 编辑完成后点击"导出 JSON"
+1. 安装依赖：`npm install`
+2. 启动开发服务器：`npx vite`（或 `npm run dev`）
+3. 浏览器打开 http://localhost:5173
+4. 点击"导入 JSON"或直接拖入 .json 文件加载对话剧本
+5. 左侧树形面板逐层展开，点击节点
+6. 中间面板 Tab 切换：表单模式编辑字段 / JSON 模式直接编辑源码 / 章节列表模式
+7. 右侧面板实时预览完整 JSON，支持格式化
+8. 右上角 ⚙️ 设置面板管理色彩方案、字体大小、语言列表、结构类型
+9. 编辑完成后点击"导出 JSON"
 
 ## 结构类型系统
 
@@ -63,33 +65,49 @@
 
 ```
 StoryEditor/
-├── index.html              ← HTML 入口
-├── layout.html             ← 页面布局（HTML 独立文件，与 JS 分离）
+├── index.html              ← HTML 入口（Vue 挂载点）
 ├── vite.config.js          ← Vite 配置
 ├── package.json
 ├── css/
 │   └── style.css           ← 全部样式（CSS 变量主题系统）
-├── components/             ← Vue 组件（渐进式迁移）
-│   ├── base/
-│   │   └── AppButton.vue   ← 通用按钮组件（基于 Naive UI NButton）
+├── components/             ← Vue 组件
+│   ├── App.vue             ← 根组件，渲染整个布局
+│   ├── base/               ← 通用基础组件
+│   │   ├── AppButton.vue   ← 通用按钮（基于 Naive UI NButton）
+│   │   ├── Modal.vue       ← 通用模态框
+│   │   ├── ConfirmDialog.vue ← 确认对话框
+│   │   ├── useDialog.js    ← 弹窗组合式函数
+│   │   └── useCreateDialog.js ← 新建节点弹窗组合式函数
 │   ├── Settings/
-│   │   └── SettingsPanel.vue ← 设置面板（已完成 Vue 化）
-│   └── layout/             ← 页面布局片段（.html，待转 Vue）
-│       ├── ActivityBar.vue ← 活动栏（已完成 Vue 化）
-│       ├── toolbar.html
-│       ├── activity-bar.html
-│       ├── panel-right.html
-│       ├── splitters.html
-│       ├── side-panel/
-│       │   ├── side-panel.html
-│       │   ├── outline-view.html
-│       │   ├── stats-view.html
-│       │   └── settings-view.html
-│       └── panel-center/
-│           ├── panel-center.html
-│           ├── form-editor.html
-│           ├── chapter-view.html
-│           └── json-editor.html
+│   │   └── SettingsPanel.vue ← 设置面板
+│   └── layout/             ← 页面布局组件
+│       ├── ActivityBar.vue ← 活动栏
+│       ├── PanelRight.vue  ← 右侧 JSON 预览面板
+│       ├── TreeNode.vue    ← 树节点组件
+│       ├── OutlineView.vue ← 大纲视图（左侧树形面板）
+│       ├── PanelCenter.vue ← 中间编辑区容器
+│       ├── JsonEditor.vue  ← JSON 源码编辑器
+│       ├── FormEditor.vue  ← 表单编辑器
+│       ├── FormField.vue   ← 表单字段组件
+│       ├── OptionsEditor.vue ← 选项编辑器
+│       ├── ActionEditor.vue  ← 动作编辑器
+│       ├── activity-bar.html (待转 Vue)
+│       ├── panel-right.html (待转 Vue)
+│       ├── main-area.html  (待转 Vue)
+│       ├── splitters.html  (待转 Vue)
+│       ├── toolbar.html    (待转 Vue)
+│       ├── panel-center/
+│       │   ├── panel-center.html (待转 Vue)
+│       │   ├── form-editor.html  (待转 Vue)
+│       │   ├── chapter-view.html (待转 Vue)
+│       │   └── json-editor.html  (待转 Vue)
+│       └── side-panel/
+│           ├── side-panel.html    (待转 Vue)
+│           ├── outline-view.html  (待转 Vue)
+│           ├── stats-view.html    (待转 Vue)
+│           └── settings-view.html (待转 Vue)
+├── stores/
+│   └── storyStore.js       ← Pinia 状态管理，桥接原生 StoryStore 与 Vue 组件
 ├── js/
 │   ├── main.js             ← 入口：启动加载 + 拖放绑定
 │   ├── barrel.js           ← 统一导出中枢
@@ -99,20 +117,19 @@ StoryEditor/
 │   │   └── logic-storyIO.js      ← 文件导入/导出、拖放绑定
 │   └── ui/                 ← 视图层（依赖 logic/）
 │       ├── ui-init.js            ← 主界面初始化、树形搜索、事件绑定
-│       ├── ui-storyTree.js       ← 树形导航面板
-│       ├── ui-editorForm.js      ← 表单编辑器（中栏表单模式）
 │       ├── ui-chapterView.js     ← 章节列表视图（数组行内编辑）
 │       ├── ui-createDialog.js    ← 新建节点/章节弹窗
 │       ├── ui-storyTemplateUI.js ← 模板编辑弹窗
 │       ├── ui-labelManager.js    ← 字段标签管理弹窗
 │       ├── ui-settingsPanel.js   ← 设置面板（原生，待废弃）
-│       └── ui-modalDialog.js     ← 通用模态组件（弹窗、确认、提示）
+│       └── ui-modalDialog.js     ← 已精简，仅保留 makeModalDraggable
 ├── config/
 │   ├── template-content.json     ← 空白章节/节点/选项结构 + 默认模板
 │   └── template-contexts.json    ← 模板上下文配置
 ├── fonts/                       ← 字体文件（仓耳与墨 W04 + FiraCode）
 ├── lib/
-│   └── highlight.min.js          ← JSON 语法高亮
+│   ├── highlight.min.js          ← JSON 语法高亮
+│   └── atom-one-dark.min.css     ← 高亮主题样式
 └── LICENSE                       ← Mulan PSL v2
 ```
 
@@ -125,6 +142,23 @@ main.js → barrel.js → logic/    ← 纯数据，不依赖 UI
 - ui/ 层：界面渲染、事件绑定、交互反馈
 - barrel.js：唯一同时引用 logic/ 和 ui/ 的中转文件
 - components/：Vue 组件，通过 Vite 编译，直接 import 到 ui/ 层使用
+- stores/：Pinia Store，桥接 Vue 组件与原生 StoryStore
+```
+
+## 架构概览
+
+当前采用 **Vue 3 + 原生 JS 混合架构**：
+
+- **App.vue** 渲染整个布局，替代了原先的 layout.html
+- **Pinia Store**（`stores/storyStore.js`）包装原生 `StoryStore`，使 Vue 组件可通过 `useStoryStore()` 响应式访问数据
+- **Vue 组件** 通过 Composition API 直接使用 Pinia，无需手动同步
+- **原生 JS** 仍直接操作 `logic-storyStore.js` 中的 store 实例，通过 `_emit()` 机制通知 Pinia 同步
+
+### 数据流
+
+```
+原生 JS 操作 → StoryStore._emit() → Pinia sync() → Vue 组件响应式更新
+Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → 触发同步
 ```
 
 ## 持久化存储（localStorage）
@@ -142,8 +176,9 @@ main.js → barrel.js → logic/    ← 纯数据，不依赖 UI
 ## 技术栈
 
 - Vite 8 — 开发服务器与构建工具
-- Vue 3.5（Composition API + `<script setup>`）— 渐进式 UI 层
-- Naive UI — 基础组件库（按钮等）
+- Vue 3.5（Composition API + `<script setup>`）— UI 层
+- Pinia 3 — Vue 状态管理（桥接 Vue 组件与原生 StoryStore）
+- Naive UI — 基础组件库（按钮、弹窗等）
 - SCSS — CSS 预处理器（可逐步采用）
 - Bootstrap 5 Grid — 响应式网格布局
 - Highlight.js — JSON 语法高亮
@@ -151,13 +186,62 @@ main.js → barrel.js → logic/    ← 纯数据，不依赖 UI
 - CSS 变量主题系统 — 四套色彩方案
 - localStorage — 模板、标签、结构类型、设置持久化
 
+## 改动记录
+
+### v0.04 (Vue 渐进式迁移完成)
+
+**阶段 1：App.vue 替代 layout.html**
+- 创建 `components/App.vue`，渲染整个布局
+- `index.html` 简化为仅保留 `<div id="app">` 挂载点
+- 废弃 `layout.html` 文件
+
+**阶段 2：Pinia Store 桥接**
+- 新建 `stores/storyStore.js`，包装原生 StoryStore
+- Vue 组件通过 `useStoryStore()` 响应式访问数据
+- 原生 store 通过 `_emit()` → `sync()` 机制同步到 Pinia
+
+**阶段 3：核心组件 Vue 化**
+- 布局组件：`PanelRight.vue`、`OutlineView.vue`、`TreeNode.vue`
+- 编辑组件：`PanelCenter.vue`、`JsonEditor.vue`、`FormEditor.vue`、`FormField.vue`、`OptionsEditor.vue`、`ActionEditor.vue`
+- 基础组件：`Modal.vue`、`ConfirmDialog.vue`、`useDialog.js`、`useCreateDialog.js`
+
+**阶段 4：清理废弃文件**
+- 删除 `layout.html`
+- 删除 `js/ui/ui-editorForm.js`、`js/ui/ui-storyTree.js`
+- `ui-modalDialog.js` 精简为仅保留 `makeModalDraggable`
+
+### v0.03
+
+- 章节列表视图：表格化展示对话数组，支持列配置、行内快速编辑，i18n 字段按语言自动展开
+- 列配置持久化到 localStorage
+- 设置面板 Vue 组件化
+
+### v0.02
+
+- 结构类型系统：struct / glob / path 三种匹配方式
+- 多语言管理：动态添加语言字段
+- 设置面板：色彩方案、字体大小、语言列表、结构类型管理
+- 标签颜色模式：跟随主题 / 按类型着色
+- 选项系统：可视化编辑选项分支，支持 actions
+- 字段标签管理：双击字段名自定义显示别名
+
+### v0.01
+
+- 初始版本：导入 / 导出 JSON
+- 树形导航：从根节点逐层展开
+- 双模式编辑：表单模式 + JSON 模式
+- 实时 JSON 预览
+- 节点模板：按上下文独立模板
+- 四套色彩方案
+
 ## 未来待实现的功能
 
 ### 🔴 高优先级
 
 - **撤销 / 重做（Undo/Redo）** — 操作历史栈，支持 Ctrl+Z / Ctrl+Shift+Z，任何编辑操作可逆
 - **自动保存（Auto-save）** — 定时将当前章节数据持久化到 localStorage，防止浏览器刷新或崩溃导致数据丢失
-- **Vue 渐进式迁移** — 将 layout/ 下的 .html 片段逐个替换为 Vue 组件
+- **章节视图 Vue 化** — 将 `chapter-view.html` 替换为 Vue 组件
+- **剩余 .html 片段迁移** — 将 `toolbar.html`、`splitters.html`、`side-panel/` 等 .html 替换为 Vue 组件
 
 ### 🟡 中优先级
 
