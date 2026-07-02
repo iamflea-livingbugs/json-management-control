@@ -46,7 +46,7 @@ function createDialog(opts) {
             return h('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
               buttons.map(b =>
                 h('button', {
-                  class: 'btn' + (b.primary ? ' btn-primary' : ''),
+                  class: 'my-btn' + (b.primary ? ' my-btn-primary' : ''),
                   onClick: () => {
                     if (b.getValue) {
                       close(b.getValue(inputVal, selectVal))
@@ -68,7 +68,7 @@ function createDialog(opts) {
     document.body.appendChild(container)
     app.mount(container)
 
-    // 自动聚焦
+    // 自动聚焦 & Enter 键确认
     if (opts.focusSelector) {
       nextTick(() => {
         const el = container.querySelector(opts.focusSelector)
@@ -76,9 +76,18 @@ function createDialog(opts) {
       })
     }
 
+    function onKeydown(e) {
+      if (e.key === 'Enter') {
+        const btn = container.querySelector('.my-btn-primary')
+        if (btn) btn.click()
+      }
+    }
+    document.addEventListener('keydown', onKeydown)
+
     function close(val) {
       if (!visible.value) return
       visible.value = false
+      document.removeEventListener('keydown', onKeydown)
       setTimeout(() => {
         app.unmount()
         if (container.parentNode) container.parentNode.removeChild(container)
@@ -94,7 +103,7 @@ function createDialog(opts) {
 export function showAlert(msg) {
   return createDialog({
     title: '提示',
-    bodyHTML: `<div class="modal-msg">${esc(msg)}</div>`,
+    bodyHTML: `<div class="my-modal-msg">${esc(msg)}</div>`,
     buttons: [{ label: '确定', primary: true, value: undefined }]
   })
 }
@@ -105,7 +114,7 @@ export function showAlert(msg) {
 export function showConfirm(msg) {
   return createDialog({
     title: '确认',
-    bodyHTML: `<div class="modal-msg">${esc(msg)}</div>`,
+    bodyHTML: `<div class="my-modal-msg">${esc(msg)}</div>`,
     buttons: [
       { label: '取消', value: false },
       { label: '确定', primary: true, value: true }
@@ -125,7 +134,7 @@ export function showPrompt(msg, defaultValue = '') {
       h('div', { style: 'margin-bottom:8px' }, msg),
       h('input', {
         id: 'modal-prompt-input',
-        class: 'input',
+        class: 'my-input',
         attrs: { value: defaultValue },
         style: 'width:100%',
         onInput: (e) => onInput(e.target.value)
@@ -150,7 +159,7 @@ export function showObjectAddDialog(msg = '请输入新属性名') {
       h('div', { style: 'margin-bottom:8px' }, msg),
       h('input', {
         id: 'modal-obj-key',
-        class: 'input',
+        class: 'my-input',
         attrs: { value: 'new_key' },
         style: 'width:100%;margin-bottom:6px',
         placeholder: '属性名',
@@ -158,7 +167,7 @@ export function showObjectAddDialog(msg = '请输入新属性名') {
       }),
       h('select', {
         id: 'modal-obj-type',
-        class: 'input-sm',
+        class: 'my-input-sm',
         style: 'width:100%',
         onChange: (e) => onSelect(e.target.value)
       }, [

@@ -19,7 +19,7 @@ export const useStoryStore = defineStore('story', () => {
 
   // ---- 同步函数：从原始 store 同步到 Pinia ----
   function sync() {
-    curJson.value = original.curJson
+    curJson.value = { ...original.curJson }
     currentPath.value = [...original.currentPath]
     selectedId.value = original.selectedId
     dataVersion.value = original._dataVersion

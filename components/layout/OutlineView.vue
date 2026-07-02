@@ -3,7 +3,7 @@
     <div class="tree-search-box">
       <input
         ref="searchInput"
-        class="input-sm tree-search-input"
+        class="my-input-sm tree-search-input"
         placeholder="🔍 搜索节点..."
         v-model="searchTerm"
         @input="onSearchInput"
@@ -12,7 +12,7 @@
     </div>
     <div class="tree-container" id="tree-container">
       <TreeNode
-        :key="storyStore.dataVersion"
+        :key="'tree-' + storyStore.dataVersion"
         :value="storyStore.curJson"
         :path="[]"
         key-name=""
@@ -40,7 +40,7 @@
 import { ref, reactive, provide } from 'vue'
 import { useStoryStore } from '../../stores/storyStore.js'
 import TreeNode from './TreeNode.vue'
-import { showObjectAddDialog } from '../base/useDialog.js'
+import { showObjectAddDialog, showAlert } from '../base/useDialog.js'
 import { resolveTemplateContext, createNodeFromTemplate } from '../../js/logic/logic-storyTypes.js'
 import ConfirmDialog from '../base/ConfirmDialog.vue'
 
@@ -147,6 +147,12 @@ async function onAdd(path, type) {
   if (type === 'object') {
     const result = await showObjectAddDialog()
     if (!result || !result.key) return
+    // 检查重名
+    const parent = storyStore.getByPath(path)
+    if (parent && typeof parent === 'object' && result.key in parent) {
+      await showAlert('属性 "' + result.key + '" 已存在，请使用其他名称')
+      return
+    }
     const val = result.type === 'number' ? 0 : result.type === 'array' ? [] : result.type === 'object' ? {} : ''
     storyStore.addObjectProperty(path, result.key, val)
   } else if (type === 'array') {

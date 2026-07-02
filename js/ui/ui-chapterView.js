@@ -1,4 +1,4 @@
-﻿// ==========================================
+﻿﻿﻿﻿﻿﻿// ==========================================
 // storyChapterView.js — 章节对话列表视图
 // 以列表形式展示当前路径下的数据
 // 数组按索引逐行展示，对象按属性逐行展示
@@ -43,17 +43,17 @@ function speakerColor(name) {
  */
 function showAddPropertyModal(dataPath, store, templateCtx) {
     const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `<div class="modal-box" style="width:400px">
-        <div class="modal-header"><h2>${templateCtx ? `添加属性（${templateCtx} 模板）` : '添加自定义属性'}</h2><button class="modal-close" id="prop-close">✕</button></div>
-        <div class="modal-body">
+    modal.className = 'my-modal-overlay';
+    modal.innerHTML = `<div class="my-modal-box" style="width:400px">
+        <div class="my-modal-header"><h2>${templateCtx ? `添加属性（${templateCtx} 模板）` : '添加自定义属性'}</h2><button class="my-modal-close" id="prop-close">✕</button></div>
+        <div class="my-modal-body">
             <div style="margin-bottom:12px">
                 <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">属性名称</label>
-                <input id="prop-key" class="input" placeholder="key" style="width:100%;font-family:var(--font-mono)" autofocus />
+                <input id="prop-key" class="my-input" placeholder="key" style="width:100%;font-family:var(--font-mono)" autofocus />
             </div>
             ${!templateCtx ? `<div>
                 <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">类型</label>
-                <select id="prop-type" class="input-sm" style="width:100%">
+                <select id="prop-type" class="my-input-sm" style="width:100%">
                     <option value="string">字符串</option>
                     <option value="number">数字</option>
                     <option value="object">对象 {}</option>
@@ -61,9 +61,9 @@ function showAddPropertyModal(dataPath, store, templateCtx) {
                 </select>
             </div>` : `<div style="font-size:0.8125rem;color:var(--text-dim)">将使用 "${templateCtx}" 模板填充属性值</div>`}
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-sm" id="prop-cancel">取消</button>
-            <button class="btn btn-sm btn-primary" id="prop-ok">确定</button>
+        <div class="my-modal-footer">
+            <button class="my-btn my-btn-sm" id="prop-cancel">取消</button>
+            <button class="my-btn my-btn-sm my-btn-primary" id="prop-ok">确定</button>
         </div>
     </div>`;
     document.body.appendChild(modal);
@@ -215,7 +215,7 @@ export function renderCurJsonView(store) {
                         </div>
                         ${cellsHtml}
                     </div>
-                    <button class="btn-icon chapter-open-btn" data-key="${esc(rowKey)}" data-array="${isArr}" title="打开完整编辑">▶</button>
+                    <button class="my-btn-icon chapter-open-btn" data-key="${esc(rowKey)}" data-array="${isArr}" title="打开完整编辑">▶</button>
                 </div>
             </div>`;
         });
@@ -239,13 +239,13 @@ export function renderCurJsonView(store) {
         colHtml += `<div style="margin-top:8px;font-size:0.75rem;color:var(--text-dim)">提示：i18n 字段会根据语言设置自动展开为多列</div>`;
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `<div class="modal-box" style="width:360px">
-            <div class="modal-header"><h2>显示列设置</h2><button class="modal-close" id="col-close">✕</button></div>
-            <div class="modal-body">${colHtml}</div>
-            <div class="modal-footer">
-                <button class="btn btn-sm" id="col-cancel">取消</button>
-                <button class="btn btn-sm btn-primary" id="col-ok">确定</button>
+        modal.className = 'my-modal-overlay';
+        modal.innerHTML = `<div class="my-modal-box" style="width:360px">
+            <div class="my-modal-header"><h2>显示列设置</h2><button class="my-modal-close" id="col-close">✕</button></div>
+            <div class="my-modal-body">${colHtml}</div>
+            <div class="my-modal-footer">
+                <button class="my-btn my-btn-sm" id="col-cancel">取消</button>
+                <button class="my-btn my-btn-sm my-btn-primary" id="col-ok">确定</button>
             </div>
         </div>`;
         document.body.appendChild(modal);

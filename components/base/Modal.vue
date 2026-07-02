@@ -1,16 +1,16 @@
 <template>
   <Teleport to="body">
-    <div v-if="visible" class="modal-overlay open" @click.self="onClose">
-      <div class="modal-box" :style="{ width }">
-        <div class="modal-header">
+    <div v-if="visible" class="my-modal-overlay open" @click.self="onClose">
+      <div class="my-modal-box" :style="{ width }">
+        <div class="my-modal-header">
           <h2 v-if="title">{{ title }}</h2>
           <slot name="header" />
-          <button class="modal-close" @click="onClose">✕</button>
+          <button class="my-modal-close" @click="onClose">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="my-modal-body">
           <slot />
         </div>
-        <div v-if="$slots.footer" class="modal-footer">
+        <div v-if="$slots.footer" class="my-modal-footer">
           <slot name="footer" />
         </div>
       </div>

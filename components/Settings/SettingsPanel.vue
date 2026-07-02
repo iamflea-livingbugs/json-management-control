@@ -40,8 +40,8 @@
         <span v-for="lang in langs" :key="lang" class="settings-lang-badge">{{ lang }}</span>
       </div>
       <div style="display:flex;gap:6px">
-        <input class="input-sm" placeholder="如 fr" style="width:80px;font-family:var(--font-mono)" v-model="newLang" @keydown.enter="doAddLang" />
-        <button class="btn btn-sm btn-success" @click="doAddLang">＋ 添加语言</button>
+        <input class="my-input-sm" placeholder="如 fr" style="width:80px;font-family:var(--font-mono)" v-model="newLang" @keydown.enter="doAddLang" />
+        <button class="my-btn my-btn-sm my-btn-success" @click="doAddLang">＋ 添加语言</button>
       </div>
     </div>
 
@@ -53,19 +53,19 @@
           <span class="settings-struct-id">{{ st.id }}</span>
           <span class="settings-struct-label">{{ st.label }}</span>
           <span class="settings-struct-match">{{ matchLabel(st) }}</span>
-          <button v-if="st.id !== 'i18n'" class="btn-icon" style="color:var(--accent)" @click="doDeleteStruct(st.id)">✕</button>
+          <button v-if="st.id !== 'i18n'" class="my-btn-icon" style="color:var(--accent)" @click="doDeleteStruct(st.id)">✕</button>
         </div>
         <div class="settings-struct-fields">
           <span v-if="st.match.type === 'struct'" class="settings-lang-badge" style="opacity:0.7">{{ st.match.marker }} (标记)</span>
           <span v-for="f in displayFields(st)" :key="f" class="settings-lang-badge">
             {{ f }}
-            <button class="btn-icon" style="font-size:0.6rem" @click="doRemoveField(st.id, f)">✕</button>
+            <button class="my-btn-icon" style="font-size:0.6rem" @click="doRemoveField(st.id, f)">✕</button>
           </span>
-          <input class="input-sm" style="width:70px;font-family:var(--font-mono)" :placeholder="'新字段'" v-model="fieldInputs[st.id]" @keydown.enter="doAddField(st.id)" />
-          <button class="btn btn-sm btn-success" @click="doAddField(st.id)">＋</button>
+          <input class="my-input-sm" style="width:70px;font-family:var(--font-mono)" :placeholder="'新字段'" v-model="fieldInputs[st.id]" @keydown.enter="doAddField(st.id)" />
+          <button class="my-btn my-btn-sm my-btn-success" @click="doAddField(st.id)">＋</button>
         </div>
       </div>
-      <div style="margin-top:8px"><button class="btn btn-sm" @click="newStruct">＋ 新建结构类型</button></div>
+      <div style="margin-top:8px"><button class="my-btn my-btn-sm" @click="newStruct">＋ 新建结构类型</button></div>
     </div>
 
     <div class="settings-section settings-section-row">

@@ -8,7 +8,7 @@
           <input
             v-for="lang in activeLangs"
             :key="lang"
-            class="input input-sm opt-text-lang"
+            class="my-input my-input-sm opt-text-lang"
             :value="opt.text?.[lang] || ''"
             :placeholder="'选项文本(' + lang + ')'"
             @change="(e) => updateOptionText(i, lang, e.target.value)"
@@ -16,14 +16,14 @@
         </div>
         <div style="display:flex;gap:4px;margin-top:4px">
           <input
-            class="input input-sm opt-next"
+            class="my-input my-input-sm opt-next"
             :value="opt.next || ''"
             placeholder="跳转ID"
             style="width:120px"
             @change="(e) => updateOptionNext(i, e.target.value)"
           />
-          <button class="btn btn-sm btn-add-action" @click="addAction(i)">＋ 动作</button>
-          <button class="btn-icon btn-del-option" title="删除选项" @click="deleteOption(i)">✕</button>
+          <button class="my-btn my-btn-sm my-btn-add-action" @click="addAction(i)">＋ 动作</button>
+          <button class="my-btn-icon btn-del-option" title="删除选项" @click="deleteOption(i)">✕</button>
         </div>
         <!-- 动作列表 -->
         <div v-if="opt.actions?.length" style="margin-top:4px;display:flex;flex-direction:column;gap:2px">
@@ -38,7 +38,7 @@
         </div>
       </div>
     </div>
-    <button class="btn btn-sm btn-success" @click="addOption">＋ 选项</button>
+    <button class="my-btn my-btn-sm my-btn-success" @click="addOption">＋ 选项</button>
   </div>
 </template>
 

@@ -11,7 +11,7 @@
     <div v-else-if="typeof currentValue !== 'object'" class="field-row">
       <label class="field-label">值</label>
       <input
-        class="input form-simple-value"
+        class="my-input my-form-simple-value"
         :value="String(currentValue)"
         @change="(e) => updateRootValue(e.target.value)"
       />
@@ -19,10 +19,10 @@
 
     <!-- 对象/数组 -->
     <template v-else>
-      <div class="editor-fields">
+      <div class="editor-fields" :key="'fields-' + renderKey">
         <FormField
           v-for="(entry, idx) in entries"
-          :key="entry.key + '-' + idx"
+          :key="entry.key + '-' + idx + '-' + renderKey"
           :key-name="entry.key"
           :value="entry.value"
           :parent-path="currentPath"
@@ -31,21 +31,21 @@
 
       <!-- 数组添加按钮 -->
       <div v-if="isArray" class="array-add-bar">
-        <select v-model="addType" class="input-sm" style="width:auto">
+        <select v-model="addType" class="my-input-sm" style="width:auto">
           <option v-for="opt in addOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
         </select>
-        <button class="btn btn-sm btn-success" @click="addArrayItem">＋ 添加</button>
+        <button class="my-btn my-btn-sm my-btn-success" @click="addArrayItem">＋ 添加</button>
       </div>
 
       <!-- 对象添加属性按钮 -->
       <div v-else :key="'obj-' + currentPath.join('.')" class="array-add-bar">
-        <select v-model="objAddType" class="input-sm" style="width:auto">
+        <select v-model="objAddType" class="my-input-sm" style="width:auto">
           <option value="string">字符串 ""</option>
           <option value="number">数字 0</option>
           <option value="array">空数组 []</option>
           <option value="object">空对象 {}</option>
         </select>
-        <button class="btn btn-sm btn-success" @click="addObjectProperty">＋ 添加属性</button>
+        <button class="my-btn my-btn-sm my-btn-success" @click="addObjectProperty">＋ 添加属性</button>
       </div>
 
       <!-- 选项编辑器 -->
@@ -63,6 +63,10 @@ import FormField from './FormField.vue'
 import OptionsEditor from './OptionsEditor.vue'
 
 const storyStore = useStoryStore()
+
+// 强制刷新 key：数据版本变化时手动触发表单重新渲染
+const renderKey = ref(0)
+watch(() => storyStore.dataVersion, () => { renderKey.value++ })
 
 const currentPath = computed(() => storyStore.currentPath || [])
 const currentValue = computed(() => {

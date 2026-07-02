@@ -37,14 +37,14 @@ export function openTemplateEditor() {
 
     const modal = document.createElement('div');
     modal.id = 'modal-template-editor';
-    modal.className = 'modal-overlay';
+    modal.className = 'my-modal-overlay';
     modal.innerHTML = `
-        <div class="modal-box">
-            <div class="modal-header"><h2>📋 模板编辑</h2><button class="modal-close" id="btn-modal-close">✕</button></div>
-            <div class="modal-body" id="modal-template-body"></div>
-            <div class="modal-footer">
-                <button class="btn btn-sm btn-primary" id="btn-template-save">💾 保存</button>
-                <button class="btn btn-sm" id="btn-modal-close-bottom">关闭（不保存）</button>
+        <div class="my-modal-box">
+            <div class="my-modal-header"><h2>📋 模板编辑</h2><button class="my-modal-close" id="btn-modal-close">✕</button></div>
+            <div class="my-modal-body" id="modal-template-body"></div>
+            <div class="my-modal-footer">
+                <button class="my-btn my-btn-sm my-btn-primary" id="btn-template-save">💾 保存</button>
+                <button class="my-btn my-btn-sm" id="btn-modal-close-bottom">关闭（不保存）</button>
             </div>
         </div>`;
     document.body.appendChild(modal);
@@ -128,7 +128,7 @@ function renderModalContent() {
     if (!_currentCtx) {
         body.innerHTML = `<div style="padding:40px 12px;text-align:center;color:var(--text-dim)">
             <p>暂无模板</p>
-            <button class="btn btn-sm btn-success" id="btn-create-first-template" style="margin-top:12px">＋ 创建第一个模板</button>
+            <button class="my-btn my-btn-sm my-btn-success" id="btn-create-first-template" style="margin-top:12px">＋ 创建第一个模板</button>
         </div>`;
         $('#btn-create-first-template').addEventListener('click', () => {
             _draft['content'] = {};
@@ -148,19 +148,19 @@ function renderModalContent() {
 
     body.innerHTML = `
         <div class="tpl-ctx-bar"><label>模板上下文：</label>${ctxBtns}
-            <button class="btn btn-sm" id="btn-new-template" style="margin-left:4px">＋ 新建</button>
+            <button class="my-btn my-btn-sm" id="btn-new-template" style="margin-left:4px">＋ 新建</button>
             <span style="flex:1"></span>
-            <button class="btn btn-sm" id="btn-del-template" style="color:var(--accent)" title="删除当前整个模板">✕ 删除此模板</button>
+            <button class="my-btn my-btn-sm" id="btn-del-template" style="color:var(--accent)" title="删除当前整个模板">✕ 删除此模板</button>
         </div>
         <div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
             <label style="font-size:0.75rem;color:var(--text-dim);white-space:nowrap">自动增长键名：</label>
-            <input id="tpl-key-pattern" class="input-sm" style="width:120px;font-family:var(--font-mono)" value="${esc(_draftKeys[_currentCtx] || '')}" placeholder="留空=数字自增" />
+            <input id="tpl-key-pattern" class="my-input-sm" style="width:120px;font-family:var(--font-mono)" value="${esc(_draftKeys[_currentCtx] || '')}" placeholder="留空=数字自增" />
             <span style="font-size:0.7rem;color:var(--text-dim)">属性模式新建时按此模式自动生成键名（如 content → content0 → content1）</span>
         </div>
         <div class="editor-fields" id="tpl-fields">${fields}</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-            <button class="btn btn-sm btn-success" id="btn-add-tpl-field">＋ 添加字段</button>
-            <select id="tpl-add-type" class="input-sm" style="width:auto">
+            <button class="my-btn my-btn-sm my-btn-success" id="btn-add-tpl-field">＋ 添加字段</button>
+            <select id="tpl-add-type" class="my-input-sm" style="width:auto">
                 <option value="string">字符串</option><option value="number">数字</option><option value="array">数组</option><option value="object">对象</option>
             </select>
         </div>
@@ -199,18 +199,18 @@ function renderModalContent() {
     // 新建模板
     $('#btn-new-template').addEventListener('click', () => {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `<div class="modal-box" style="width:360px">
-            <div class="modal-header"><h2>新建模板</h2><button class="modal-close" id="newtpl-close">✕</button></div>
-            <div class="modal-body">
+        modal.className = 'my-modal-overlay';
+        modal.innerHTML = `<div class="my-modal-box" style="width:360px">
+            <div class="my-modal-header"><h2>新建模板</h2><button class="my-modal-close" id="newtpl-close">✕</button></div>
+            <div class="my-modal-body">
                 <div style="margin-bottom:12px">
                     <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">模板键名</label>
-                    <input id="newtpl-key" class="input" placeholder="如：content" style="width:100%;font-family:var(--font-mono)" autofocus />
+                    <input id="newtpl-key" class="my-input" placeholder="如：content" style="width:100%;font-family:var(--font-mono)" autofocus />
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-sm" id="newtpl-cancel">取消</button>
-                <button class="btn btn-sm btn-primary" id="newtpl-ok">创建</button>
+            <div class="my-modal-footer">
+                <button class="my-btn my-btn-sm" id="newtpl-cancel">取消</button>
+                <button class="my-btn my-btn-sm my-btn-primary" id="newtpl-ok">创建</button>
             </div>
         </div>`;
         document.body.appendChild(modal);
@@ -378,18 +378,18 @@ function renderField(key, v) {
         : `<label class="editable-label field-label" data-key="${key}" title="双击编辑标签">${esc(key)}</label>`;
 
     if (typeof v === 'object' && !Array.isArray(v) && v !== null && v.zh !== undefined && v.en !== undefined) {
-        return `<div class="field-row field-row-i18n">${labelHtml}<span class="type-badge type-i18n">i18n</span><div class="i18n-group"><input class="input tmpl-i18n-zh" data-field="${key}" value="${esc(v.zh||'')}" placeholder="zh" /><input class="input tmpl-i18n-en" data-field="${key}" value="${esc(v.en||'')}" placeholder="en" /></div><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
+        return `<div class="field-row field-row-i18n">${labelHtml}<span class="type-badge type-i18n">i18n</span><div class="i18n-group"><input class="my-input tmpl-i18n-zh" data-field="${key}" value="${esc(v.zh||'')}" placeholder="zh" /><input class="my-input tmpl-i18n-en" data-field="${key}" value="${esc(v.en||'')}" placeholder="en" /></div><button class="my-btn-icon my-btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
     }
     if (Array.isArray(v)) {
-        return `<div class="field-row field-row-arr">${labelHtml}<span class="type-badge type-arr">arr[${v.length}]</span><input class="input tmpl-field" data-field="${key}" value="${esc(JSON.stringify(v))}" placeholder="[]" /><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
+        return `<div class="field-row field-row-arr">${labelHtml}<span class="type-badge type-arr">arr[${v.length}]</span><input class="my-input tmpl-field" data-field="${key}" value="${esc(JSON.stringify(v))}" placeholder="[]" /><button class="my-btn-icon my-btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
     }
     if (typeof v === 'object' && v !== null) {
-        return `<div class="field-row field-row-obj">${labelHtml}<span class="type-badge type-obj">obj{${Object.keys(v).length}}</span><input class="input tmpl-field" data-field="${key}" value="${esc(JSON.stringify(v))}" placeholder="{}" /><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
+        return `<div class="field-row field-row-obj">${labelHtml}<span class="type-badge type-obj">obj{${Object.keys(v).length}}</span><input class="my-input tmpl-field" data-field="${key}" value="${esc(JSON.stringify(v))}" placeholder="{}" /><button class="my-btn-icon my-btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
     }
     const strVal = v === null || v === undefined ? '' : String(v);
     const isNum = typeof v === 'number';
     const typeLabel = isNum ? 'num' : 'str';
-    return `<div class="field-row ${isNum ? 'field-row-num' : ''}">${labelHtml}<span class="type-badge type-${typeLabel}">${typeLabel}</span><input class="input tmpl-field" data-field="${key}" value="${esc(strVal)}" /><button class="btn-icon btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
+    return `<div class="field-row ${isNum ? 'field-row-num' : ''}">${labelHtml}<span class="type-badge type-${typeLabel}">${typeLabel}</span><input class="my-input tmpl-field" data-field="${key}" value="${esc(strVal)}" /><button class="my-btn-icon my-btn-del-tmpl" data-del-key="${key}" title="删除字段">✕</button></div>`;
 }
 
 // ----- 标签双击改名 -----
@@ -400,7 +400,7 @@ function handleLabelEdit(e) {
     const key = label.dataset.key;
     const current = label.textContent;
     const input = document.createElement('input');
-    input.className = 'input-sm label-editor';
+    input.className = 'my-input-sm label-editor';
     input.value = current;
     input.style.width = Math.max(60, label.offsetWidth + 20) + 'px';
     label.replaceWith(input);

@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="panel panel-center" id="panel-center">
     <div class="panel-header">
       <span
@@ -21,23 +21,8 @@
       >JSON</span>
     </div>
     <div id="editor-area" class="editor-area">
-      <!-- 表单 Tab -->
       <FormEditor :class="{ hidden: activeTab !== 'form' }" />
-      <!-- 章节 Tab -->
-      <div class="editor-tab-panel" :class="{ hidden: activeTab !== 'chapter' }" id="panel-chapter">
-        <div class="native-badge">原生</div>
-        <div class="chapter-toolbar">
-          <button class="btn btn-sm" id="btn-chapter-cols">⚙️ 显示列</button>
-          <span class="chapter-count" id="chapter-path-label"></span>
-          <span class="chapter-type-badge" id="chapter-type-badge"></span>
-          <span class="chapter-count" id="chapter-count-label"></span>
-          <select id="chapter-ctx-select" class="input-sm"></select>
-          <button class="btn btn-sm btn-success" id="btn-chapter-add">＋ 新增</button>
-          <button class="btn btn-sm" id="btn-chapter-add-custom" style="display:none">＋ 自定义</button>
-        </div>
-        <div id="chapter-list-container"></div>
-      </div>
-      <!-- JSON Tab -->
+      <ChapterView v-show="activeTab === 'chapter'" :key="'cv-' + storyStore.dataVersion" />
       <JsonEditor :class="{ hidden: activeTab !== 'json' }" />
     </div>
   </div>
@@ -45,18 +30,15 @@
 
 <script setup>
 import { ref } from 'vue'
-import { renderCurJsonView } from '../../js/ui/ui-chapterView.js'
-import { store } from '../../js/logic/logic-storyStore.js'
+import { useStoryStore } from '../../stores/storyStore.js'
+import ChapterView from './ChapterView.vue'
 import JsonEditor from './JsonEditor.vue'
 import FormEditor from './FormEditor.vue'
 
+const storyStore = useStoryStore()
 const activeTab = ref('form')
 
 function switchTab(tab) {
   activeTab.value = tab
-  if (tab === 'chapter') {
-    // 章节视图还是原生 JS，需要触发渲染
-    renderCurJsonView(store)
-  }
 }
 </script>
