@@ -150,7 +150,7 @@ const templateBadge = computed(() => {
 })
 
 const templateBadgeClass = computed(() => {
-  return templateBadge.value === '📋' ? 'badge-template' : 'badge-custom'
+  return templateBadge.value === '📋' ? 'my-badge-template' : 'my-badge-custom'
 })
 
 // ---- 传递给子节点的模板键名集合 ----

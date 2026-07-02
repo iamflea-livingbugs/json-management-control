@@ -19,21 +19,21 @@ export function openLabelManager() {
 
     const modal = document.createElement('div');
     modal.id = 'modal-label-manager';
-    modal.className = 'modal-overlay';
+    modal.className = 'my-modal-overlay';
     modal.innerHTML = `
-        <div class="modal-box" style="width:520px">
-            <div class="modal-header">
+        <div class="my-modal-box" style="width:520px">
+            <div class="my-modal-header">
                 <h2>🏷️ 字段标签管理</h2>
-                <button class="modal-close" id="btn-label-close">✕</button>
+                <button class="my-modal-close" id="btn-label-close">✕</button>
             </div>
-            <div class="modal-body" id="label-manager-body">
+            <div class="my-modal-body" id="label-manager-body">
                 <div class="label-manager-hint">在此管理字段的显示名称。修改后表单编辑器和模板中会显示你设置的名字，原始键名不变。</div>
                 <div id="label-manager-list"></div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-sm btn-success" id="btn-label-add">＋ 添加自定义标签</button>
-                <button class="btn btn-sm" id="btn-label-reset">重置全部</button>
-                <button class="btn btn-sm btn-primary" id="btn-label-close-bottom">关闭</button>
+            <div class="my-modal-footer">
+                <button class="my-btn my-btn-sm my-btn-success" id="btn-label-add">＋ 添加自定义标签</button>
+                <button class="my-btn my-btn-sm" id="btn-label-reset">重置全部</button>
+                <button class="my-btn my-btn-sm my-btn-primary" id="btn-label-close-bottom">关闭</button>
             </div>
         </div>`;
 
@@ -92,8 +92,8 @@ function renderLabelList() {
         const label = custom[key] || '';
         html += `<div class="label-manager-row">
             <div class="label-mgr-key">${esc(key)}</div>
-            <input class="input input-sm label-mgr-input" data-key="${esc(key)}" value="${esc(label)}" placeholder="显示名称" />
-            <button class="btn-icon btn-label-del" data-key="${esc(key)}" title="删除此标签">✕</button>
+            <input class="my-input my-input-sm label-mgr-input" data-key="${esc(key)}" value="${esc(label)}" placeholder="显示名称" />
+            <button class="my-btn-icon btn-label-del" data-key="${esc(key)}" title="删除此标签">✕</button>
         </div>`;
     });
     html += '</div>';

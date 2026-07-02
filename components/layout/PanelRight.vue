@@ -2,7 +2,7 @@
   <div class="panel panel-right" id="panel-right">
     <div class="panel-header">
       JSON 预览
-      <button class="btn btn-sm" title="格式化 JSON" @click="formatJSON">格式化</button>
+      <button class="my-btn my-btn-sm" title="格式化 JSON" @click="formatJSON">格式化</button>
     </div>
     <div class="json-mirror">
       <pre class="json-highlight" ref="highlightPre"></pre>

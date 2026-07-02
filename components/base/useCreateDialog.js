@@ -50,7 +50,7 @@ export function showCreateDialog(options) {
           ])
         ]),
         footer: () => h('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
-          h('button', { class: 'btn btn-sm', onClick: () => { close(); if (onCancel) onCancel() } }, '取消')
+          h('button', { class: 'my-btn my-btn-sm', onClick: () => { close(); if (onCancel) onCancel() } }, '取消')
         )
       })
     }
@@ -102,7 +102,7 @@ export function showTemplatePicker() {
             return h('div', { class: 'create-choices', style: 'flex-wrap:wrap' }, cards)
           },
           footer: () => h('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
-            h('button', { class: 'btn btn-sm', onClick: () => close(null) }, '取消')
+            h('button', { class: 'my-btn my-btn-sm', onClick: () => close(null) }, '取消')
           )
         })
       }

@@ -125,22 +125,22 @@ export function initSettings() {
 // 新建结构类型弹窗
 export function openNewStructDialog() {
     const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `<div class="modal-box" style="width:680px;max-width:90vw">
-        <div class="modal-header"><h2>新建结构类型</h2><button class="modal-close" id="ns-close">✕</button></div>
-        <div class="modal-body" style="display:flex;gap:16px;padding:12px">
+    modal.className = 'my-modal-overlay';
+    modal.innerHTML = `<div class="my-modal-box" style="width:680px;max-width:90vw">
+        <div class="my-modal-header"><h2>新建结构类型</h2><button class="my-modal-close" id="ns-close">✕</button></div>
+        <div class="my-modal-body" style="display:flex;gap:16px;padding:12px">
             <div style="flex:1;min-width:0">
                 <div style="margin-bottom:8px">
                     <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">ID</label>
-                    <input id="ns-id" class="input" placeholder="如 myType" style="width:100%;font-family:var(--font-mono)" />
+                    <input id="ns-id" class="my-input" placeholder="如 myType" style="width:100%;font-family:var(--font-mono)" />
                 </div>
                 <div style="margin-bottom:8px">
                     <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">显示名称</label>
-                    <input id="ns-label" class="input" placeholder="如 自定义类型" style="width:100%" />
+                    <input id="ns-label" class="my-input" placeholder="如 自定义类型" style="width:100%" />
                 </div>
                 <div style="margin-bottom:8px">
                     <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">匹配方式</label>
-                    <select id="ns-match-type" class="input" style="width:100%">
+                    <select id="ns-match-type" class="my-input" style="width:100%">
                         <option value="struct">属性检测（struct）</option>
                         <option value="glob">键名通配（glob）</option>
                         <option value="path">路径匹配（path）</option>
@@ -148,21 +148,21 @@ export function openNewStructDialog() {
                 </div>
                 <div id="ns-marker-group" style="margin-bottom:8px">
                     <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">标记属性键名</label>
-                    <input id="ns-marker" class="input" placeholder="如 zh" style="width:100%;font-family:var(--font-mono)" />
+                    <input id="ns-marker" class="my-input" placeholder="如 zh" style="width:100%;font-family:var(--font-mono)" />
                     <div style="font-size:0.7rem;color:var(--text-dim);margin-top:2px">
                         具有此键的对象才算匹配，同时自动保证此键存在
                     </div>
                 </div>
                 <div id="ns-pattern-group" style="margin-bottom:8px;display:none">
                     <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">Glob 通配模式</label>
-                    <input id="ns-pattern" class="input" placeholder="如 **.speaker" style="width:100%;font-family:var(--font-mono)" />
+                    <input id="ns-pattern" class="my-input" placeholder="如 **.speaker" style="width:100%;font-family:var(--font-mono)" />
                     <div style="font-size:0.7rem;color:var(--text-dim);margin-top:2px;line-height:1.4">
                         <code>**</code> = 任意层 · <code>*</code> = 单级通配 · 字面量精确匹配
                     </div>
                 </div>
                 <div id="ns-fields-group" style="margin-bottom:8px;display:none">
                     <label style="display:block;margin-bottom:4px;font-size:0.8125rem;color:var(--text-dim)">初始字段（逗号分隔）</label>
-                    <input id="ns-fields" class="input" placeholder="如 zh, en" style="width:100%;font-family:var(--font-mono)" />
+                    <input id="ns-fields" class="my-input" placeholder="如 zh, en" style="width:100%;font-family:var(--font-mono)" />
                     <div style="font-size:0.7rem;color:var(--text-dim);margin-top:2px">
                         匹配到的对象保证拥有以上所有字段
                     </div>
@@ -173,9 +173,9 @@ export function openNewStructDialog() {
                 <div id="ns-preview" style="font-size:0.75rem;font-family:var(--font-mono);background:var(--bg-input);border-radius:var(--radius);padding:8px;min-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;line-height:1.6;color:var(--text-dim)">等待输入...</div>
             </div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-sm" id="ns-cancel">取消</button>
-            <button class="btn btn-sm btn-primary" id="ns-ok">创建</button>
+        <div class="my-modal-footer">
+            <button class="my-btn my-btn-sm" id="ns-cancel">取消</button>
+            <button class="my-btn my-btn-sm my-btn-primary" id="ns-ok">创建</button>
         </div>
     </div>`;
     document.body.appendChild(modal);
@@ -353,8 +353,8 @@ export function renderSettingsPanel() {
                 ${langs.map(l => `<span class="settings-lang-badge">${esc(l)}</span>`).join('')}
             </div>
             <div style="display:flex;gap:6px;margin-top:6px">
-                <input id="setting-new-lang" class="input-sm" placeholder="如 fr" style="width:80px;font-family:var(--font-mono)" />
-                <button class="btn btn-sm btn-success" id="btn-add-lang">＋ 添加语言</button>
+                <input id="setting-new-lang" class="my-input-sm" placeholder="如 fr" style="width:80px;font-family:var(--font-mono)" />
+                <button class="my-btn my-btn-sm my-btn-success" id="btn-add-lang">＋ 添加语言</button>
             </div>
             <div style="margin-top:4px;font-size:0.75rem;color:var(--text-dim)">
                 添加后自动补充到所有多语言文本字段
@@ -378,25 +378,25 @@ export function renderSettingsPanel() {
                         <span class="settings-struct-id">${esc(st.id)}</span>
                         <span class="settings-struct-label">${esc(st.label)}</span>
                         <span class="settings-struct-match">${esc(matchDesc)}</span>
-                        ${st.id !== 'i18n' ? `<button class="btn-icon btn-del-struct" data-struct="${esc(st.id)}" title="删除此类型">✕</button>` : ''}
+                        ${st.id !== 'i18n' ? `<button class="my-btn-icon btn-del-struct" data-struct="${esc(st.id)}" title="删除此类型">✕</button>` : ''}
                     </div>
                     <div class="settings-struct-fields">
                         ${st.match.type === 'struct' ? `<span class="settings-lang-badge" style="opacity:0.7">${esc(st.match.marker)} (标记)</span>` : ''}
-                        ${st.fields.filter(f => st.match.type !== 'struct' || f !== st.match.marker).map(f => `<span class="settings-lang-badge">${esc(f)} <button class="btn-icon btn-del-field" data-struct="${esc(st.id)}" data-field="${esc(f)}" title="删除字段">✕</button></span>`).join('')}
-                        <input class="input-sm settings-struct-new-field" data-struct="${esc(st.id)}" placeholder="新字段名" style="width:70px;font-family:var(--font-mono)" />
-                        <button class="btn btn-sm btn-success btn-add-struct-field" data-struct="${esc(st.id)}">＋</button>
+                        ${st.fields.filter(f => st.match.type !== 'struct' || f !== st.match.marker).map(f => `<span class="settings-lang-badge">${esc(f)} <button class="my-btn-icon btn-del-field" data-struct="${esc(st.id)}" data-field="${esc(f)}" title="删除字段">✕</button></span>`).join('')}
+                        <input class="my-input-sm settings-struct-new-field" data-struct="${esc(st.id)}" placeholder="新字段名" style="width:70px;font-family:var(--font-mono)" />
+                        <button class="my-btn my-btn-sm my-btn-success btn-add-struct-field" data-struct="${esc(st.id)}">＋</button>
                     </div>
                 </div>`;
             }).join('')}
             <div style="margin-top:8px;display:flex;gap:6px">
-                <button class="btn btn-sm" id="btn-new-struct">＋ 新建结构类型</button>
+                <button class="my-btn my-btn-sm" id="btn-new-struct">＋ 新建结构类型</button>
             </div>
         </div>
         <div class="settings-section" style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn btn-sm" id="btn-export-config">📤 导出配置</button>
-            <button class="btn btn-sm" id="btn-import-config">📥 导入配置</button>
-            <button class="btn btn-sm" id="btn-settings-reset">重置为默认</button>
-            <button class="btn btn-sm" id="btn-layout-reset">恢复默认布局</button>
+            <button class="my-btn my-btn-sm" id="btn-export-config">📤 导出配置</button>
+            <button class="my-btn my-btn-sm" id="btn-import-config">📥 导入配置</button>
+            <button class="my-btn my-btn-sm" id="btn-settings-reset">重置为默认</button>
+            <button class="my-btn my-btn-sm" id="btn-layout-reset">恢复默认布局</button>
         </div>
     `;
 
