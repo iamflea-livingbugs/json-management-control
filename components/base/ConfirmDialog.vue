@@ -3,14 +3,15 @@
     <p style="color:var(--text);line-height:1.6">{{ message }}</p>
     <template #footer>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn" @click="onCancel">取消</button>
-        <button class="btn btn-primary" @click="onConfirm">确定</button>
+        <button class="my-btn" @click="onCancel">取消</button>
+        <button class="my-btn my-btn-primary" @click="onConfirm">确定</button>
       </div>
     </template>
   </Modal>
 </template>
 
 <script setup>
+import { watch, onUnmounted } from 'vue'
 import Modal from './Modal.vue'
 
 const props = defineProps({
@@ -30,4 +31,18 @@ function onCancel() {
   emit('cancel')
   emit('update:visible', false)
 }
+
+// Enter 键确认
+function onKeydown(e) {
+  if (e.key === 'Enter' && props.visible) onConfirm()
+}
+
+watch(() => props.visible, (v) => {
+  if (v) document.addEventListener('keydown', onKeydown)
+  else document.removeEventListener('keydown', onKeydown)
+}, { immediate: true })
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
+})
 </script>

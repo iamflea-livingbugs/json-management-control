@@ -1,18 +1,18 @@
 <template>
   <div class="action-inline">
     <input
-      class="input input-sm opt-action-cmd"
+      class="my-input my-input-sm opt-action-cmd"
       :value="action.cmd"
       placeholder="命令"
       @change="(e) => updateCmd(e.target.value)"
     />
     <input
-      class="input input-sm opt-action-params"
+      class="my-input my-input-sm opt-action-params"
       :value="paramsStr"
       placeholder="参数"
       @change="(e) => updateParams(e.target.value)"
     />
-    <button class="btn-icon btn-del-action" title="删除动作" @click="deleteAction">✕</button>
+    <button class="my-btn-icon my-btn-del-action" title="删除动作" @click="deleteAction">✕</button>
   </div>
 </template>
 

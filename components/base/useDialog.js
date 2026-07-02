@@ -78,7 +78,7 @@ function createDialog(opts) {
 
     function onKeydown(e) {
       if (e.key === 'Enter') {
-        const btn = container.querySelector('.my-btn-primary')
+        const btn = document.querySelector('.my-modal-overlay.open .my-btn-primary')
         if (btn) btn.click()
       }
     }
