@@ -7,17 +7,17 @@
   <div id="app-root">
     <div class="toolbar">
       <div class="toolbar-left">
-        <button id="btn-add-node" class="btn btn-success">＋ 新建 JSON</button>
-        <button id="btn-import" class="btn">📥 导入 JSON</button>
+        <button id="btn-add-node" class="my-btn my-btn-success">＋ 新建 JSON</button>
+        <button id="btn-import" class="my-btn">📥 导入 JSON</button>
         <span class="sep"></span>
-        <button id="btn-export" class="btn btn-primary">📤 导出 JSON</button>
+        <button id="btn-export" class="my-btn my-btn-primary">📤 导出 JSON</button>
         <span class="sep"></span>
-        <label>章节名：</label>
-        <input id="curjson-name" class="input-sm" value="Untitled" />
+        <label>文件名：</label>
+        <input id="curjson-name" class="my-input-sm" value="Untitled" />
       </div>
       <div class="toolbar-right">
-        <button id="btn-edit-template" class="btn btn-sm">📋 编辑模板</button>
-        <button id="btn-label-manager" class="btn btn-sm" title="管理字段显示名称">🏷️ 标签</button>
+        <button id="btn-edit-template" class="my-btn my-btn-sm">📋 编辑模板</button>
+        <button id="btn-label-manager" class="my-btn my-btn-sm" title="管理字段显示名称">🏷️ 标签</button>
       </div>
     </div>
 
@@ -29,7 +29,7 @@
       <div class="panel panel-side" id="panel-side">
         <div class="panel-header" id="side-panel-header">
           <span id="side-panel-title">大纲</span>
-          <button class="btn-icon" id="btn-close-side" title="关闭侧面板">◀</button>
+          <button class="my-btn-icon" id="btn-close-side" title="关闭侧面板">◀</button>
         </div>
         <div class="panel-side-inner">
           <!-- 大纲视图（Vue 组件） -->

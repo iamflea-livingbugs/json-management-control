@@ -3,7 +3,9 @@
 // 工具栏、Tab切换、活动栏、渲染调度、右侧 JSON 预览
 // ==========================================
 
-import 'bootstrap/dist/css/bootstrap-grid.min.css'
+import 'bootstrap/dist/css/bootstrap.min.css'
+import 'bootstrap'
+import '../../css/style.css'
 
 import { createCurJson, createBlankCurJson } from '../logic/logic-storyTypes.js';
 import { openTemplateEditor } from './ui-storyTemplateUI.js';

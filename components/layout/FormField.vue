@@ -28,7 +28,7 @@
         <input
           v-for="lang in activeLangs"
           :key="lang"
-          class="input form-i18n-lang"
+          class="my-input my-form-i18n-lang"
           :value="i18nValue(lang)"
           :placeholder="lang"
           @change="(e) => updateI18n(lang, e.target.value)"
@@ -39,8 +39,8 @@
     <!-- 普通输入 -->
     <template v-else-if="typeLabel === 'str' || typeLabel === 'num'">
       <input
-        class="input form-field"
-        :class="{ 'input-num': typeLabel === 'num' }"
+        class="my-input my-form-field"
+        :class="{ 'my-input-num': typeLabel === 'num' }"
         :value="stringValue"
         @change="(e) => updateValue(e.target.value)"
       />
@@ -48,19 +48,19 @@
 
     <!-- null -->
     <template v-else-if="typeLabel === 'nil'">
-      <input class="input form-field" value="" placeholder="null" disabled />
+      <input class="my-input my-form-field" value="" placeholder="null" disabled />
     </template>
 
     <!-- 对象/数组摘要 -->
     <template v-else-if="typeLabel === 'obj' || typeLabel === 'arr'">
       <span class="nested-preview">{{ summary }}</span>
-      <button class="btn-jump" @click="jumpTo">跳转</button>
+      <button class="my-btn-jump" @click="jumpTo">跳转</button>
     </template>
 
     <!-- 删除按钮 -->
     <button
       v-if="keyName"
-      class="btn-icon btn-del-field"
+      class="my-btn-icon my-btn-del-field"
       :data-del-key="keyName"
       title="删除属性"
       @click="deleteField"
@@ -100,7 +100,7 @@ const templateBadge = computed(() => {
   return '🔧'
 })
 const templateBadgeClass = computed(() => {
-  return templateBadge.value === '📋' ? 'badge-template' : 'badge-custom'
+  return templateBadge.value === '📋' ? 'my-badge-template' : 'my-badge-custom'
 })
 
 // ---- 类型识别 ----
@@ -187,7 +187,7 @@ function startRename(e) {
   const current = label.textContent.trim()
 
   const input = document.createElement('input')
-  input.className = 'input-sm label-editor'
+  input.className = 'my-input-sm label-editor'
   input.value = current
   input.style.width = Math.max(60, label.offsetWidth + 20) + 'px'
   label.replaceWith(input)
