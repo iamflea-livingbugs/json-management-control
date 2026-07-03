@@ -40,7 +40,7 @@
 import { ref, reactive, provide } from 'vue'
 import { useStoryStore } from '../../stores/storyStore.js'
 import TreeNode from './TreeNode.vue'
-import { showObjectAddDialog, showAlert } from '../base/useDialog.js'
+import { useObjectAdd } from '../base/useObjectAdd.js'
 import { resolveTemplateContext, createNodeFromTemplate } from '../../js/logic/logic-storyTypes.js'
 import ConfirmDialog from '../base/ConfirmDialog.vue'
 
@@ -145,18 +145,9 @@ function applySearch(term) {
 // ---- 添加 ----
 async function onAdd(path, type) {
   if (type === 'object') {
-    const result = await showObjectAddDialog()
-    if (!result || !result.key) return
-    // 检查重名
-    const parent = storyStore.getByPath(path)
-    if (parent && typeof parent === 'object' && result.key in parent) {
-      await showAlert('属性 "' + result.key + '" 已存在，请使用其他名称')
-      return
-    }
-    const val = result.type === 'number' ? 0 : result.type === 'array' ? [] : result.type === 'object' ? {} : ''
-    storyStore.addObjectProperty(path, result.key, val)
+    await useObjectAdd(storyStore, path)
   } else if (type === 'array') {
-    storyStore.addArrayItem(path)
+    await useObjectAdd(storyStore, path, { isArrayItem: true })
   }
 }
 </script>
