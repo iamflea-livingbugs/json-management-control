@@ -148,24 +148,24 @@ export function showPrompt(msg, defaultValue = '') {
 }
 
 /**
- * 添加对象属性弹窗
+ * 添加属性弹窗
  */
-export function showObjectAddDialog(msg = '请输入新属性名') {
+export function showObjectAddDialog(msg = '请输入新属性名', showKey = true, showType = true) {
   return createDialog({
-    title: '添加属性',
+    title: showKey ? '添加属性' : '添加数组元素',
     width: '420px',
-    focusSelector: '#modal-obj-key',
+    focusSelector: showKey ? '#modal-obj-key' : '#modal-obj-type',
     renderBody: ({ h, onInput, onSelect }) => h('div', [
       h('div', { style: 'margin-bottom:8px' }, msg),
-      h('input', {
+      showKey ? h('input', {
         id: 'modal-obj-key',
         class: 'my-input',
         attrs: { value: 'new_key' },
         style: 'width:100%;margin-bottom:6px',
         placeholder: '属性名',
         onInput: (e) => onInput(e.target.value)
-      }),
-      h('select', {
+      }) : null,
+      showType ? h('select', {
         id: 'modal-obj-type',
         class: 'my-input-sm',
         style: 'width:100%',
@@ -175,13 +175,13 @@ export function showObjectAddDialog(msg = '请输入新属性名') {
         h('option', { value: 'number' }, '数字 0'),
         h('option', { value: 'array' }, '空数组 []'),
         h('option', { value: 'object' }, '空对象 {}')
-      ])
+      ]) : null
     ]),
     buttons: [
       { label: '取消', returnNull: true },
       {
         label: '确定', primary: true,
-        getValue: (key, type) => key ? { key, type } : null
+        getValue: (key, type) => (showKey && !key) ? null : { key, type }
       }
     ]
   })

@@ -70,6 +70,7 @@ watch(() => storyStore.dataVersion, () => { renderKey.value++ })
 
 const currentPath = computed(() => storyStore.currentPath || [])
 const currentValue = computed(() => {
+  renderKey.value // 追踪版本变化，强制重算
   if (currentPath.value.length === 0) return storyStore.curJson
   return storyStore.getByPath(currentPath.value)
 })
