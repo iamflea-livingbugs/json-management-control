@@ -97,6 +97,8 @@ function createDialog(opts) {
   })
 }
 
+export { createDialog }
+
 /**
  * 信息提示（替代 alert）
  */

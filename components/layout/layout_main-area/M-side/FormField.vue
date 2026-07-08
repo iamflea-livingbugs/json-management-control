@@ -57,21 +57,33 @@
       <button class="my-btn-jump" @click="jumpTo">跳转</button>
     </template>
 
-    <!-- 删除按钮 -->
-    <button
-      v-if="keyName"
-      class="my-btn-icon my-btn-del-field"
-      :data-del-key="keyName"
-      title="删除属性"
-      @click="deleteField"
-    >✕</button>
+    <!-- 操作按钮组 -->
+    <span class="field-actions" v-if="keyName">
+      <button
+        class="my-btn-icon"
+        title="保存为模板"
+        @click.stop="saveFieldAsTemplate"
+      >💾</button>
+      <button
+        class="my-btn-icon"
+        title="复制属性"
+        @click.stop="copyField"
+      >⧉</button>
+      <button
+        class="my-btn-icon my-btn-del-field"
+        :data-del-key="keyName"
+        title="删除属性"
+        @click="deleteField"
+      >✕</button>
+    </span>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, nextTick } from 'vue'
-import { useStoryStore } from '../../stores/storyStore.js'
-import { getFieldLabel, getLanguages, loadEffectiveTemplates, resolveTemplateContext } from '../../js/logic/logic-storyTypes.js'
+import { useStoryStore } from '../../../../stores/storyStore.js'
+import { getFieldLabel, getLanguages, loadEffectiveTemplates, resolveTemplateContext, saveTemplate } from '../../../../js/logic/logic-storyTypes.js'
+import { createDialog } from '../../../base/useDialog.js'
 
 const props = defineProps({
   keyName: { type: String, default: '' },
@@ -157,17 +169,20 @@ function updateI18n(lang, newVal) {
 
 // ---- 普通值更新 ----
 function updateValue(newVal) {
-  const obj = storyStore.getByPath(props.parentPath)
-  if (obj && typeof obj === 'object') {
-    obj[props.keyName] = newVal
-    storyStore._emit()
-  }
+  const path = [...props.parentPath, props.keyName]
+  storyStore.setByPath(path, newVal)
 }
 
 // ---- 跳转 ----
 function jumpTo() {
   const path = [...props.parentPath, props.keyName]
   storyStore.selectPath(path)
+}
+
+// ---- 复制字段 ----
+function copyField() {
+  const fullPath = [...props.parentPath, props.keyName]
+  storyStore.duplicateEntry(fullPath)
 }
 
 // ---- 删除字段 ----
@@ -177,6 +192,34 @@ function deleteField() {
     delete obj[props.keyName]
     storyStore.setByPath(props.parentPath, obj)
   }
+}
+
+// ---- 保存为模板 ----
+async function saveFieldAsTemplate() {
+  const val = v.value
+  if (val === null || val === undefined) return
+
+  const cleaned = JSON.parse(JSON.stringify(val))
+
+  const name = await createDialog({
+    title: '保存字段为模板',
+    bodyHTML: `
+      <div style="margin-bottom:8px">字段「${props.keyName}」将保存为模板。输入模板名称：</div>
+      <input id="tpl-name-input" class="my-input" value="${props.keyName}_tpl"
+        style="width:100%" placeholder="模板名称" />
+    `,
+    focusSelector: '#tpl-name-input',
+    buttons: [
+      { label: '取消', value: null },
+      { label: '保存', primary: true, getValue: () => {
+        const input = document.querySelector('#tpl-name-input')
+        return input ? input.value.trim() : null
+      }}
+    ]
+  })
+
+  if (!name) return
+  saveTemplate(name, cleaned)
 }
 
 // ---- 双击改名 ----

@@ -74,11 +74,11 @@ function getDefaultTemplates() {
 }
 
 const HARDCODED_CONTEXTS = {
-    meta: { label: '元数据', description: '章节元数据', match: 'meta' },
-    content: { label: '对话', description: '对话节点', match: 'content' },
-    option: { label: '选项', description: '选项节点', match: 'content.*.options' },
-    action: { label: '动作', description: '动作命令', match: '*.actions' },
-    default: { label: '默认', description: '兜底模板', match: '*' },
+    meta: { label: '元数据', description: '章节元数据', match: 'meta', category: '元数据' },
+    content: { label: '对话', description: '对话节点', match: 'content', category: '内容结构' },
+    option: { label: '选项', description: '选项节点', match: 'content.*.options', category: '内容结构' },
+    action: { label: '动作', description: '动作命令', match: '*.actions', category: '内容结构' },
+    default: { label: '默认', description: '兜底模板', match: '*', category: '系统' },
 };
 
 export function getContextsConfig() {
@@ -87,7 +87,7 @@ export function getContextsConfig() {
     const tpls = loadEffectiveTemplates();
     for (const key of Object.keys(tpls)) {
         if (!(key in HARDCODED_CONTEXTS)) {
-            cfg[key] = { label: key, description: '自定义模板', match: key };
+            cfg[key] = { label: key, description: '自定义模板', match: key, category: '自定义' };
         }
     }
     return cfg;

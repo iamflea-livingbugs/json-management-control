@@ -19,7 +19,7 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue'
-import { useStoryStore } from '../../stores/storyStore.js'
+import { useStoryStore } from '../../../../stores/storyStore.js'
 
 const storyStore = useStoryStore()
 

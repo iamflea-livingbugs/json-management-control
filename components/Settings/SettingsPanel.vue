@@ -41,7 +41,7 @@
       </div>
       <div style="display:flex;gap:6px">
         <input class="my-input-sm" placeholder="如 fr" style="width:80px;font-family:var(--font-mono)" v-model="newLang" @keydown.enter="doAddLang" />
-        <button class="my-btn my-btn-sm my-btn-success" @click="doAddLang">＋ 添加语言</button>
+        <button class="my-btn my-btn-sm my-btn-create" @click="doAddLang">＋ 添加语言</button>
       </div>
     </div>
 
@@ -62,7 +62,7 @@
             <button class="my-btn-icon" style="font-size:0.6rem" @click="doRemoveField(st.id, f)">✕</button>
           </span>
           <input class="my-input-sm" style="width:70px;font-family:var(--font-mono)" :placeholder="'新字段'" v-model="fieldInputs[st.id]" @keydown.enter="doAddField(st.id)" />
-          <button class="my-btn my-btn-sm my-btn-success" @click="doAddField(st.id)">＋</button>
+          <button class="my-btn my-btn-sm my-btn-create" @click="doAddField(st.id)">＋</button>
         </div>
       </div>
       <div style="margin-top:8px"><button class="my-btn my-btn-sm" @click="newStruct">＋ 新建结构类型</button></div>

@@ -10,43 +10,31 @@
     <!-- 原始值（非对象） -->
     <div v-else-if="typeof currentValue !== 'object'" class="field-row">
       <label class="field-label">值</label>
-      <input
-        class="my-input my-form-simple-value"
-        :value="String(currentValue)"
-        @change="(e) => updateRootValue(e.target.value)"
-      />
+      <input class="my-input my-form-simple-value" :value="String(currentValue)"
+        @change="(e) => updateRootValue(e.target.value)" />
     </div>
 
     <!-- 对象/数组 -->
     <template v-else>
       <div class="editor-fields" :key="'fields-' + renderKey">
-        <FormField
-          v-for="(entry, idx) in entries"
-          :key="entry.key + '-' + idx + '-' + renderKey"
-          :key-name="entry.key"
-          :value="entry.value"
-          :parent-path="currentPath"
-        />
+        <FormField v-for="(entry, idx) in entries" :key="entry.key + '-' + idx + '-' + renderKey" :key-name="entry.key"
+          :value="entry.value" :parent-path="currentPath" />
       </div>
 
-      <!-- 数组添加按钮 -->
-      <div v-if="isArray" class="array-add-bar">
-        <select v-model="addType" class="my-input-sm" style="width:auto">
-          <option v-for="opt in addOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-        </select>
-        <button class="my-btn my-btn-sm my-btn-success" @click="addArrayItem">＋ 添加</button>
+      <!-- 添加按钮（数组/对象共用） -->
+      <div class="array-add-bar">
+        <n-space>
+          <select v-model="addType" class="my-input-sm " style="width:auto">
+            <option v-for="opt in addOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </n-space>
+        <n-space class="m-4">
+          <button class="my-btn my-btn-sm my-btn-create" @click="addItem">＋ 添加</button>
+          <button class="my-btn my-btn-sm my-btn-jump" @click="addByTemplate">+ 按模板添加</button>
+        </n-space>
+
       </div>
 
-      <!-- 对象添加属性按钮 -->
-      <div v-else :key="'obj-' + currentPath.join('.')" class="array-add-bar">
-        <select v-model="objAddType" class="my-input-sm" style="width:auto">
-          <option value="string">字符串 ""</option>
-          <option value="number">数字 0</option>
-          <option value="array">空数组 []</option>
-          <option value="object">空对象 {}</option>
-        </select>
-        <button class="my-btn my-btn-sm my-btn-success" @click="addObjectProperty">＋ 添加属性</button>
-      </div>
 
       <!-- 选项编辑器 -->
       <div v-if="showOptions" class="editor-options">
@@ -58,7 +46,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useStoryStore } from '../../stores/storyStore.js'
+import { useStoryStore } from '../../../../stores/storyStore.js'
+import { showTemplatePicker } from '../../../base_reusable/useCreateDialog.js'
 import FormField from './FormField.vue'
 import OptionsEditor from './OptionsEditor.vue'
 
@@ -91,7 +80,7 @@ const entries = computed(() => {
   return Object.entries(val).map(([k, v]) => ({ key: k, value: v }))
 })
 
-// ---- 数组添加类型选项 ----
+// ---- 添加类型选项（数组/对象共用）----
 const addType = ref('object')
 const addOptions = computed(() => {
   const pStr = currentPath.value.join('.')
@@ -110,40 +99,48 @@ const addOptions = computed(() => {
   return opts
 })
 
-const objAddType = ref('string')
-
-function addArrayItem() {
+/** 统一添加：数组 push，对象自动生成新 key */
+function addItem() {
   const selected = addType.value
+  const parent = storyStore.getByPath(currentPath.value)
+  if (!parent) return
+
+  // 模板类型 → 委托给 store 的模板方法
   if (selected === 'content' || selected === 'option' || selected === 'action') {
-    storyStore.addArrayItem(currentPath.value)
-  } else {
-    const parent = storyStore.getByPath(currentPath.value)
-    if (!parent || !Array.isArray(parent)) return
-    let item
-    switch (selected) {
-      case 'string': item = ''; break
-      case 'number': item = 0; break
-      case 'array': item = []; break
-      default: item = {}
+    if (Array.isArray(parent)) {
+      storyStore.addArrayItem(currentPath.value)
+    } else {
+      storyStore.addNode(selected, currentPath.value)
     }
-    parent.push(item)
-    storyStore._emit()
+    return
+  }
+
+  // 基本类型
+  let item
+  switch (selected) {
+    case 'string': item = ''; break
+    case 'number': item = 0; break
+    case 'array': item = []; break
+    default: item = {}
+  }
+
+  if (Array.isArray(parent)) {
+    // 追加到数组末尾
+    const idx = parent.length
+    storyStore.setByPath([...currentPath.value, String(idx)], item)
+  } else if (typeof parent === 'object') {
+    let newKey = 'new_key'
+    let i = 1
+    while (newKey in parent) newKey = 'new_key_' + i++
+    storyStore.setByPath([...currentPath.value, newKey], item)
   }
 }
 
-function addObjectProperty() {
-  const obj = storyStore.getByPath(currentPath.value)
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return
-  let newKey = 'new_key'
-  let i = 1
-  while (newKey in obj) newKey = 'new_key_' + i++
-  switch (objAddType.value) {
-    case 'number': obj[newKey] = 0; break
-    case 'array': obj[newKey] = []; break
-    case 'object': obj[newKey] = {}; break
-    default: obj[newKey] = ''
-  }
-  storyStore.setByPath(currentPath.value, obj)
+/** 按模板添加：弹窗选模板后创建节点 */
+async function addByTemplate() {
+  const ctx = await showTemplatePicker()
+  if (!ctx) return
+  storyStore.addNode(ctx, currentPath.value)
 }
 
 function updateRootValue(val) {

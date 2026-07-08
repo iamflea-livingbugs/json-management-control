@@ -16,13 +16,16 @@ export const useStoryStore = defineStore('story', () => {
   const selectedId = ref(original.selectedId)
   const dataVersion = ref(original._dataVersion)
   const autoSaveStatus = ref(getStatus())  // 'idle' | 'saving' | 'saved' | 'error'
+  const editorMeta = ref({ ...original.editorMeta })
 
   // ---- 同步函数：从原始 store 同步到 Pinia ----
+  // 深拷贝确保 Vue 组件持有的引用与原始 store 隔离
   function sync() {
-    curJson.value = { ...original.curJson }
+    curJson.value = JSON.parse(JSON.stringify(original.curJson))
     currentPath.value = [...original.currentPath]
     selectedId.value = original.selectedId
     dataVersion.value = original._dataVersion
+    editorMeta.value = { ...original.editorMeta }
   }
 
   // 监听原始 store 变更
@@ -31,8 +34,23 @@ export const useStoryStore = defineStore('story', () => {
   // 监听 auto-save 状态变更
   onStatusChange((status) => { autoSaveStatus.value = status })
 
-  // ---- 工具方法（委托给原始 store） ----
-  function getByPath(path) { return original.getByPath(path || currentPath.value) }
+  // ---- 工具方法（读取 Pinia 自有数据，不再委托给 original）----
+  /**
+   * 按路径取值（从 Pinia 的深拷贝副本中读取）
+   * 每次返回的引用都来自 curJson.value——sync() 后自动失效
+   * 组件可以安全地修改返回的引用，下次 sync() 会创建全新副本
+   */
+  function getByPath(path) {
+    const target = path || currentPath.value
+    if (!target || target.length === 0) return curJson.value
+    let cur = curJson.value
+    for (const seg of target) {
+      if (cur === null || cur === undefined) return undefined
+      if (Array.isArray(cur)) cur = cur[parseInt(seg)]
+      else cur = cur[seg]
+    }
+    return cur
+  }
   function getNode(id) { return original.getNode(id) }
   function getCurJsonName() { return original.getCurJsonName() }
   function getFilteredNodes() { return original.getFilteredNodes() }
@@ -42,6 +60,8 @@ export const useStoryStore = defineStore('story', () => {
   function loadCurJson(json) { original.loadCurJson(json) }
   function newCurJson(json) { original.newCurJson(json) }
   function setCurJsonName(name) { original.setCurJsonName(name) }
+  function getEditorMeta(key, fallback) { return original.getEditorMeta(key, fallback) }
+  function setEditorMeta(key, val) { original.setEditorMeta(key, val) }
 
   function addNode(ctx = null, path = null) { original.addNode(ctx, path) }
   function addBlankNode() { original.addBlankNode() }
@@ -59,6 +79,8 @@ export const useStoryStore = defineStore('story', () => {
   function addObjectProperty(path, key, val) { original.addObjectProperty(path, key, val) }
   function addArrayItem(path) { original.addArrayItem(path) }
 
+  function duplicateEntry(path) { original.duplicateEntry(path) }
+
   function addOption(nodeId) { original.addOption(nodeId) }
   function updateOption(nodeId, optIndex, patch) { original.updateOption(nodeId, optIndex, patch) }
   function updateOptionText(nodeId, optIndex, zhVal, enVal) { original.updateOptionText(nodeId, optIndex, zhVal, enVal) }
@@ -75,13 +97,13 @@ export const useStoryStore = defineStore('story', () => {
 
   return {
     // 状态
-    curJson, currentPath, selectedId, dataVersion, autoSaveStatus,
+    curJson, currentPath, selectedId, dataVersion, autoSaveStatus, editorMeta,
     // 方法（与原始 store 同名，直接委托）
     getByPath, getNode, getCurJsonName, getFilteredNodes, toCleanJSON,
-    loadCurJson, newCurJson, setCurJsonName,
+    loadCurJson, newCurJson, setCurJsonName, getEditorMeta, setEditorMeta,
     addNode, addBlankNode, duplicateNode, deleteNode, updateNode, updateNodeField, moveNode,
     selectNode, selectPath, setByPath, deleteAt,
-    addObjectProperty, addArrayItem,
+    addObjectProperty, addArrayItem, duplicateEntry,
     addOption, updateOption, updateOptionText, deleteOption,
     addAction, updateActionCmd, updateActionParams, deleteAction,
     setFilter, clearFilters, getFieldValues,

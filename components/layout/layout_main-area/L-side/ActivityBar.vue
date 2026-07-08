@@ -33,7 +33,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import AutoSaveIndicator from '../AutoSaveIndicator.vue'
+import AutoSaveIndicator from '../../../layout/layout_toolbar/AutoSaveIndicator.vue'
 
 // ===== 按钮数据 =====
 // view：视图标识，与 layout.html 中 #view-xxx 的 xxx 对应

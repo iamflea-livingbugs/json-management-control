@@ -40,8 +40,8 @@
 
 <script setup>
 import { computed, inject } from 'vue'
-import { resolveTemplateContext, loadEffectiveTemplates } from '../../js/logic/logic-storyTypes.js'
-import { useStoryStore } from '../../stores/storyStore.js'
+import { resolveTemplateContext, loadEffectiveTemplates } from '../../../../js/logic/logic-storyTypes.js'
+import { useStoryStore } from '../../../../stores/storyStore.js'
 // 递归组件需要自引用
 import TreeNode from './TreeNode.vue'
 
