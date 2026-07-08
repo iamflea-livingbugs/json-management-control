@@ -78,30 +78,22 @@ export function showTemplatePicker() {
     const visible = ref(true)
     let resolved = false
 
+    function cleanup(key) {
+      if (resolved) return
+      resolved = true
+      visible.value = false
+      setTimeout(() => {
+        resolve(key)
+        app.unmount()
+        if (container.parentNode) container.parentNode.removeChild(container)
+      }, 200)
+    }
+
     const app = createApp({
       render() {
         return h(TemplatePicker, {
           visible: visible.value,
-          'onSelect': (key) => {
-            if (resolved) return
-            resolved = true
-            visible.value = false
-            setTimeout(() => {
-              resolve(key)
-              app.unmount()
-              if (container.parentNode) container.parentNode.removeChild(container)
-            }, 200)
-          },
-          'onUpdate:visible': (v) => {
-            if (!v && !resolved) {
-              resolved = true
-              setTimeout(() => {
-                resolve(null)
-                app.unmount()
-                if (container.parentNode) container.parentNode.removeChild(container)
-              }, 200)
-            }
-          }
+          'onSelect': (key) => cleanup(key)
         })
       }
     })

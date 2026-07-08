@@ -44,9 +44,9 @@ const props = defineProps({
   visible: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['select', 'close', 'update:visible'])
+const emit = defineEmits(['select'])
 
-// ---- 数据来源（智能边界）----
+// 数据分组（快照加载，不随时间变化）
 const ctxKeys = getContextKeys()
 const ctxConfig = getContextsConfig()
 const templates = loadEffectiveTemplates()
@@ -60,30 +60,19 @@ ctxKeys.forEach(k => {
   groups[cat].push({ key: k, cfg })
 })
 
-// 当前选中的模板
 const selectedKey = ref(null)
-function onSelect(key) {
-  selectedKey.value = key
-}
+function onSelect(key) { selectedKey.value = key }
 
 const selectedConfig = computed(() => ctxConfig[selectedKey.value] || {})
 const selectedTemplate = computed(() => {
   const key = selectedKey.value
-  if (!key) return null
-  // 从已保存或默认模板中取实际字段
-  return templates[key] || {}
+  return key ? (templates[key] || {}) : null
 })
 
 function confirm() {
-  if (!selectedKey.value) return
   emit('select', selectedKey.value)
-  emit('close')
-  emit('update:visible', false)
 }
-
 function onCancel() {
   emit('select', null)
-  emit('close')
-  emit('update:visible', false)
 }
 </script>
