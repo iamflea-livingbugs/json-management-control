@@ -9,7 +9,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useStoryStore } from '../stores/storyStore.js'
+import { useStoryStore } from '../../../stores/storyStore.js'
 
 const store = useStoryStore()
 const status = computed(() => store.autoSaveStatus)

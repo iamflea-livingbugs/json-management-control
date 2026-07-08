@@ -26,7 +26,7 @@
       <div class="col-5 d-flex justify-content-end">
 
         <div class="container d-flex align-items-center">
-          <button class="my-btn my-btn-sm my-btn-success" @click="showAddDialog">＋ 新增</button>
+          <button class="my-btn my-btn-sm my-btn-create" @click="showAddDialog">按模板新增</button>
           <button class="my-btn my-btn-sm" @click="showAddCustom">＋ 自定义</button>
         </div>
         <div class="container d-flex align-items-center">
@@ -94,22 +94,35 @@
 
           <!-- 打开完整编辑按钮 → 跳转到表单 Tab -->
           <button class="my-btn-icon chapter-open-btn" title="打开完整编辑" @click="openEditRow(rowKey)">▶</button>
-          <button class="my-btn-icon" title="复制此行（含子结构）" @click="duplicateRow(rowKey)">⧉</button>
+          <button class="my-btn-icon" title="复制此行（含子结构）" @click.stop="duplicateRow(rowKey)" @dblclick.stop>⧉</button>
         </div>
       </div>
     </div>
+
+    <!-- ===== 模板选择弹窗 ===== -->
+    <Modal :visible="showTemplatePicker" title="选择模板" @close="showTemplatePicker = false">
+      <div v-for="key in templateKeys" :key="key" style="margin:4px 0">
+        <label>
+          <input type="radio" v-model="selectedTemplate" :value="key" /> 模板: {{ key }}
+        </label>
+      </div>
+      <template #footer>
+        <button class="my-btn my-btn-sm" @click="showTemplatePicker = false">取消</button>
+        <button class="my-btn my-btn-sm my-btn-primary" @click="confirmTemplate">确定</button>
+      </template>
+    </Modal>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useStoryStore } from '../../stores/storyStore.js'
+import { computed, ref } from 'vue'
+import { useStoryStore } from '../../../../stores/storyStore.js'
 import {
   getLanguages,
-  loadEffectiveTemplates,
-  loadTemplateKeys
-} from '../../js/logic/logic-storyTypes.js'
-import { useObjectAdd } from '../base/useObjectAdd.js'
+  loadEffectiveTemplates
+} from '../../../../js/logic/logic-storyTypes.js'
+import { useObjectAdd } from '../../../base_reusable/useObjectAdd.js'
+import Modal from '../../../base/Modal.vue'
 
 // ============================================================
 // 工具函数
@@ -182,6 +195,11 @@ const typeLabel = computed(() => {
 
 /** 当前可见列列表（过滤掉 speaker 列，因为 speaker 列固定显示） */
 const visibleColumns = computed(() => loadColumnConfig().filter(column => column !== 'speaker'))
+
+// ---- 模板选择弹窗状态 ----
+const showTemplatePicker = ref(false)
+const selectedTemplate = ref('content')
+const templateKeys = computed(() => Object.keys(loadEffectiveTemplates()))
 
 // ============================================================
 // 数据判断辅助函数
@@ -294,185 +312,31 @@ function showColumnConfig() {
 }
 
 /**
- * 新增条目弹窗
- * 显示模板列表供用户选择，确定后调用 addEntry 创建
+ * 按模板新增弹窗
+ * 数组/对象节点共用：打开 Modal 选模板 → 调用 addNode 创建
  */
 function showAddDialog() {
-  const templates = loadEffectiveTemplates()
-  const templateKeys = Object.keys(templates)
-
-  // 构建弹窗选项
-  let optionsHtml = ''
-  if (isArrayMode.value) {
-    if (templateKeys.length > 0) {
-      optionsHtml += templateKeys.map(key =>
-        `<label style="display:block;margin:4px 0">
-          <input type="radio" name="add-type" value="template:${key}" /> 模板: ${key}
-        </label>`
-      ).join('')
-    }
-    optionsHtml += `
-      <label style="display:block;margin:4px 0"><input type="radio" name="add-type" value="empty:object" checked /> 空对象 {}</label>
-      <label style="display:block;margin:4px 0"><input type="radio" name="add-type" value="empty:string" /> 字符串 ""</label>
-      <label style="display:block;margin:4px 0"><input type="radio" name="add-type" value="empty:number" /> 数字 0</label>
-      <label style="display:block;margin:4px 0"><input type="radio" name="add-type" value="empty:array" /> 空数组 []</label>
-    `
-  } else {
-    // 对象模式下使用旧有的 addEntry（自动键名）
-    addEntry()
+  const keys = templateKeys.value
+  if (keys.length === 0) {
+    storyStore.addNode('default', currentPath.value)
     return
   }
-
-  const modal = document.createElement('div')
-  modal.className = 'my-modal-overlay'
-  modal.innerHTML = `<div class="my-modal-box" style="width:360px">
-    <div class="my-modal-header"><h2>选择添加类型</h2><button class="my-modal-close" id="add-dlg-close">✕</button></div>
-    <div class="my-modal-body">${optionsHtml}</div>
-    <div class="my-modal-footer">
-      <button class="my-btn my-btn-sm" id="add-dlg-cancel">取消</button>
-      <button class="my-btn my-btn-sm my-btn-primary" id="add-dlg-ok">确定</button>
-    </div>
-  </div>`
-
-  document.body.appendChild(modal)
-  requestAnimationFrame(() => modal.classList.add('open'))
-
-  const closeModal = () => { modal.classList.remove('open'); setTimeout(() => modal.remove(), 200) }
-  modal.querySelector('#add-dlg-close').onclick = closeModal
-  modal.querySelector('#add-dlg-cancel').onclick = closeModal
-  modal.addEventListener('click', e => { if (e.target === modal) closeModal() })
-
-  modal.querySelector('#add-dlg-ok').onclick = () => {
-    const checked = modal.querySelector('input[name="add-type"]:checked')
-    if (checked) {
-      const value = checked.value
-      const dataPath = currentPath.value
-      const parent = storyStore.getByPath(dataPath)
-
-      if (value.startsWith('template:')) {
-        const ctx = value.slice(9)
-        storyStore.addNode(ctx, dataPath)
-      } else if (value.startsWith('empty:')) {
-        const type = value.slice(6)
-        if (!parent || !Array.isArray(parent)) return
-        let item
-        switch (type) {
-          case 'string': item = ''; break
-          case 'number': item = 0; break
-          case 'array': item = []; break
-          default: item = {}
-        }
-        parent.push(item)
-        storyStore._emit()
-      }
-    }
-    closeModal()
-  }
+  selectedTemplate.value = keys[0] || 'content'
+  showTemplatePicker.value = true
 }
 
-/**
- * 新增条目（使用下拉框选择的上下文）
- * 数组模式：调用 addNode 在末尾添加一个模板节点
- * 对象模式：按模板键名规则自动生成不重复的键名
- */
-function addEntry() {
-  const dataPath = currentPath.value
-
-  if (isArrayMode.value) {
-    storyStore.addNode('content', dataPath)
-    return
-  }
-
-  // ===== 对象模式：自动键名生成逻辑 =====
-  const allTemplates = loadEffectiveTemplates()
-  const template = allTemplates['content'] || {}
-  const templateKeys = loadTemplateKeys()
-  const keyPattern = templateKeys['content'] || ''
-  const parent = storyStore.getByPath(dataPath) || {}
-  const existingKeys = Object.keys(parent)
-
-  let baseKey = keyPattern || ''
-  const matchResult = baseKey.match(/^(.*?)(\d+)$/)
-
-  if (matchResult) {
-    baseKey = matchResult[1]
-    let startNumber = parseInt(matchResult[2])
-    const maxExists = existingKeys.reduce((maxValue, key) => {
-      const keyMatch = key.match(
-        new RegExp('^' + baseKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\d+)$')
-      )
-      return keyMatch ? Math.max(maxValue, parseInt(keyMatch[1]) + 1) : maxValue
-    }, 0)
-
-    let number = Math.max(startNumber, maxExists)
-    let newKey = baseKey + String(number)
-    while (newKey in parent) {
-      number++
-      newKey = baseKey + String(number)
-    }
-
-    const newValue = JSON.parse(JSON.stringify(template))
-    delete newValue.id
-    storyStore.addObjectProperty(dataPath, newKey, newValue)
-    return
-  }
-
-  let number = 0
-  let newKey
-
-  if (baseKey) {
-    const maxExists = existingKeys.reduce((maxValue, key) => {
-      const keyMatch = key.match(
-        new RegExp('^' + baseKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\d+)$')
-      )
-      return keyMatch ? Math.max(maxValue, parseInt(keyMatch[1]) + 1) : maxValue
-    }, 0)
-
-    number = maxExists
-    newKey = baseKey + String(number)
-    while (newKey in parent) {
-      number++
-      newKey = baseKey + String(number)
-    }
-  } else {
-    while (String(number) in parent) number++
-    newKey = String(number)
-  }
-
-  const newValue = JSON.parse(JSON.stringify(template))
-  delete newValue.id
-  storyStore.addObjectProperty(dataPath, newKey, newValue)
+function confirmTemplate() {
+  storyStore.addNode(selectedTemplate.value, currentPath.value)
+  showTemplatePicker.value = false
 }
 
 /**
  * 复制行（含子结构）
- * 深拷贝当前节点并添加到父数组中
+ * 委托给 storyStore.duplicateEntry 共享 API
  */
 function duplicateRow(rowKey) {
   const dataPath = currentPath.value
-  const parent = storyStore.getByPath(dataPath)
-  if (!parent) return
-
-  if (Array.isArray(parent)) {
-    const index = parseInt(rowKey)
-    const source = parent[index]
-    if (!source) return
-    const copy = JSON.parse(JSON.stringify(source))
-    // 如果有 id 字段，生成新 id
-    if (copy.id) copy.id = 'node_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
-    parent.splice(index + 1, 0, copy)
-    storyStore._emit()
-  } else if (typeof parent === 'object') {
-    const source = parent[rowKey]
-    if (!source) return
-    const copy = JSON.parse(JSON.stringify(source))
-    // 生成新键名
-    let newKey = rowKey + '_copy'
-    let i = 1
-    while (newKey in parent) newKey = rowKey + '_copy_' + i++
-    parent[newKey] = copy
-    storyStore._emit()
-  }
+  storyStore.duplicateEntry([...dataPath, isArrayMode.value ? parseInt(rowKey) : rowKey])
 }
 
 /**
@@ -491,42 +355,25 @@ async function showAddCustom() {
  * 更新说话人名称
  */
 function updateSpeaker(rowKey, value) {
-  const node = isArrayMode.value
-    ? currentValue.value[parseInt(rowKey)]
-    : currentValue.value[rowKey]
-  if (!node) return
-
-  if (typeof node.speaker !== 'object') node.speaker = { zh: '', en: '' }
-  node.speaker.zh = value
-  storyStore._emit()
+  const dataPath = [...currentPath.value, isArrayMode.value ? parseInt(rowKey) : rowKey, 'speaker', 'zh']
+  storyStore.setByPath(dataPath, value)
 }
 
 /**
  * 更新 i18n 多语言字段
  */
 function updateI18nField(rowKey, field, language, value) {
-  const node = isArrayMode.value
-    ? currentValue.value[parseInt(rowKey)]
-    : currentValue.value[rowKey]
-  if (!node) return
-
-  if (typeof node[field] !== 'object') node[field] = {}
-  node[field][language] = value
-  storyStore._emit()
+  const dataPath = [...currentPath.value, isArrayMode.value ? parseInt(rowKey) : rowKey, field, language]
+  storyStore.setByPath(dataPath, value)
 }
 
 /**
  * 更新普通字段值（自动识别数字类型）
  */
 function updateSimpleField(rowKey, field, value) {
-  const node = isArrayMode.value
-    ? currentValue.value[parseInt(rowKey)]
-    : currentValue.value[rowKey]
-  if (!node) return
-
-  // 纯数字字符串自动转为 Number 类型
-  node[field] = /^\d+$/.test(value) && !isNaN(value) ? Number(value) : value
-  storyStore._emit()
+  const dataPath = [...currentPath.value, isArrayMode.value ? parseInt(rowKey) : rowKey, field]
+  const finalValue = /^\d+$/.test(value) && !isNaN(value) ? Number(value) : value
+  storyStore.setByPath(dataPath, finalValue)
 }
 
 /**
@@ -535,17 +382,11 @@ function updateSimpleField(rowKey, field, value) {
  */
 function openEditRow(rowKey) {
   const dataPath = currentPath.value
-  const node = isArrayMode.value
-    ? currentValue.value[parseInt(rowKey)]
-    : currentValue.value[rowKey]
-  if (!node) return
-
   const newPath = [
     ...dataPath,
     isArrayMode.value ? parseInt(rowKey) : rowKey
   ]
-  storyStore.currentPath = newPath
-  storyStore._emit()
+  storyStore.selectPath(newPath)
 
   // 切换到表单 Tab
   const formTab = document.querySelector('[data-tab="form"]')

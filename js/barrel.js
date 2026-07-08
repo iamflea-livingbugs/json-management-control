@@ -21,7 +21,7 @@ export * as io from './logic/logic-storyIO.js';
 export { initUI } from './ui/ui-init.js';
 export { openLabelManager } from './ui/ui-labelManager.js';
 export { renderCurJsonView } from './ui/ui-chapterView.js';
-export { showCreateDialog, showTemplatePicker } from '../components/base/useCreateDialog.js';
+export { showCreateDialog, showTemplatePicker } from '../components/base_reusable/useCreateDialog.js';
 export { showAlert, showConfirm, showPrompt, showObjectAddDialog } from '../components/base/useDialog.js';
 
 // 迁移 & 存储层

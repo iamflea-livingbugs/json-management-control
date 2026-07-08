@@ -7,7 +7,7 @@
  * 供 ChapterView 和 OutlineView 共用
  */
 
-import { showObjectAddDialog, showAlert } from './useDialog.js'
+import { showObjectAddDialog, showAlert } from '../base/useDialog.js'
 
 /**
  * 弹出添加属性对话框
@@ -41,8 +41,8 @@ export async function useObjectAdd(storyStore, parentPath, options = {}) {
     // 取当前路径的父对象
     const parent = storyStore.getByPath(parentPath)
     if (Array.isArray(parent)) {
-      parent.push(defaultValue)
-      storyStore._emit()
+      const idx = parent.length
+      storyStore.setByPath([...parentPath, String(idx)], defaultValue)
     }
     return true
   }

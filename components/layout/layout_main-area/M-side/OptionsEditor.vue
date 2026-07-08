@@ -38,14 +38,14 @@
         </div>
       </div>
     </div>
-    <button class="my-btn my-btn-sm my-btn-success" @click="addOption">＋ 选项</button>
+    <button class="my-btn my-btn-sm my-btn-create" @click="addOption">＋ 选项</button>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { useStoryStore } from '../../stores/storyStore.js'
-import { getLanguages } from '../../js/logic/logic-storyTypes.js'
+import { useStoryStore } from '../../../../stores/storyStore.js'
+import { getLanguages } from '../../../../js/logic/logic-storyTypes.js'
 import ActionEditor from './ActionEditor.vue'
 
 const props = defineProps({
@@ -57,11 +57,8 @@ const activeLangs = computed(() => getLanguages())
 const nodeId = computed(() => props.node?.id || '')
 
 function updateOptionText(optIdx, lang, val) {
-  const opt = props.node?.options?.[optIdx]
-  if (!opt) return
-  if (typeof opt.text !== 'object') opt.text = {}
-  opt.text[lang] = val
-  storyStore._emit()
+  const path = ['content', nodeId.value, 'options', String(optIdx), 'text', lang]
+  storyStore.setByPath(path, val)
 }
 
 function updateOptionNext(optIdx, val) {

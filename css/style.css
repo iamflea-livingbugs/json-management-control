@@ -1,13 +1,27 @@
 /* ==========================================
-   style.css — StoryEditor 样式
-   结构：按组件/区域分组（Bootstrap风格）
-   命名：ui-前缀 对应 ui/ 目录
+   style.css — StoryEditor 全局样式
+   结构：按功能分区，每区以分隔线标注
+   命名约定：
+     .my-*        项目自定义样式，与 Bootstrap 隔离
+     .field-*     编辑区字段相关
+     .tree-*      树形导航相关
+     .editor-*    编辑器内容区相关
+     .settings-*  设置面板相关
+     .chapter-*   章节列表视图相关
+     .tpl-*       模板编辑相关
+     .config-*    配置弹窗相关
+     .panel-*     面板布局相关
+     .side-*      侧面板相关
+     .type-*      字段类型标签
+     .i18n-*      多语言输入组
+     .native-*    原生 JS 组件标记
    ========================================== */
 
 /* ==========================================
-   1. 基础层 — 字体、重置、变量
+   1. 基础层 — 字体、重置、CSS 变量
    ========================================== */
 
+/* -- 字体载入 -- */
 @font-face {
     font-family: '仓耳与墨W04';
     src: url('../fonts/仓耳与墨W04.ttf') format('truetype');
@@ -40,6 +54,7 @@
     font-display: swap;
 }
 
+/* -- 全局重置 -- */
 *,
 *::before,
 *::after {
@@ -56,6 +71,7 @@ textarea {
     font-size: inherit;
 }
 
+/* -- CSS 变量（主题系统）-- */
 :root {
     --font-family: '仓耳与墨W04', 'Segoe UI', 'Microsoft YaHei', sans-serif;
     --font-mono: 'FiraCode', 'Consolas', 'Courier New', monospace;
@@ -65,15 +81,18 @@ textarea {
     --bg-input: #0f3460;
     --border: #2a2a4a;
     --text: #e0e0e0;
-    --text-dim: #888;
+    --text-dim:
+    . #888;
     --accent: #e94560;
     --accent-hover: #ff6b81;
     --success: #4ecca3;
+    --create: #42c942;
     --warn: #f0a500;
     --radius: 6px;
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* -- 页面根元素 -- */
 html,
 body {
     height: 100%;
@@ -86,7 +105,7 @@ body {
     user-select: none;
 }
 
-/* 允许在可编辑/输入区域选择文本 */
+/* 允许在可编辑或输入区域选择文本 */
 input,
 textarea,
 select,
@@ -111,7 +130,7 @@ select,
 }
 
 /* ==========================================
-   2. 布局 — 工具栏、主区域、面板、分隔条
+   2. 布局 — 工具栏、活动栏、主区域、面板、分隔条
    ========================================== */
 
 /* -- 工具栏 -- */
@@ -126,13 +145,6 @@ select,
     gap: 8px;
 }
 
-.toolbar-left,
-.toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
 .sep {
     width: 1px;
     height: 24px;
@@ -140,7 +152,7 @@ select,
     margin: 0 4px;
 }
 
-/* -- 活动栏 -- */
+/* -- 活动栏（左侧图标列）-- */
 .activity-bar {
     width: 64px;
     min-width: 64px;
@@ -201,44 +213,39 @@ select,
     white-space: nowrap;
 }
 
-.activity-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text);
-}
-
-.activity-btn.active {
-    color: var(--accent);
-}
-
-.activity-btn.active::before {
-    content: '';
-    position: absolute;
-    left: -4px;
-    top: 6px;
-    bottom: 6px;
-    width: 3px;
-    background: var(--accent);
-    border-radius: 2px;
-}
-
-/* -- 主区域与面板 -- */
+/* -- 主区域（活动栏 + 三面板）-- */
 .main-area {
     display: flex;
     flex: 1;
     overflow: hidden;
 }
 
+/* -- 面板通用 -- */
 .panel {
     display: flex;
     flex-direction: column;
     border-right: 1px solid var(--border);
     overflow: hidden;
+    width: max-content;
 }
 
 .panel:last-child {
     border-right: none;
 }
 
+/* 面板 Header */
+.panel-header {
+    padding: 8px 12px;
+    font-weight: 600;
+    background: var(--bg-panel);
+    border-bottom: 2px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* -- 左侧面板（大纲树）-- */
 .panel-side {
     width: 320px;
     min-width: 180px;
@@ -256,7 +263,7 @@ select,
     border-right: none;
 }
 
-.panel-side.collapsed+.splitter {
+.panel-side.collapsed + .splitter {
     width: 0;
     min-width: 0;
     transition: none;
@@ -281,28 +288,18 @@ select,
     opacity: 0;
 }
 
+/* -- 中间面板（编辑区）-- */
 .panel-center {
     flex: 1;
     min-width: 200px;
     overflow: hidden;
 }
 
+/* -- 右侧面板（JSON 预览）-- */
 .panel-right {
     flex: 1;
     min-width: 200px;
     overflow: hidden;
-}
-
-/* -- 面板 Header -- */
-.panel-header {
-    padding: 8px 12px;
-    font-weight: 600;
-    background: var(--bg-panel);
-    border-bottom: 2px solid var(--border);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
 }
 
 /* -- 侧面板子视图 -- */
@@ -330,7 +327,7 @@ select,
     font-size: 1rem;
 }
 
-/* -- 原生 JS 组件标记 -- */
+/* -- 原生 JS 组件标记（用于标识未 Vue 化的模块）-- */
 .native-badge {
     position: absolute;
     top: 2px;
@@ -346,7 +343,7 @@ select,
     opacity: 0.6;
 }
 
-/* -- 分隔条 -- */
+/* -- 分隔条（可拖拽调整面板宽度）-- */
 .splitter {
     width: 5px;
     cursor: col-resize;
@@ -361,9 +358,10 @@ select,
 }
 
 /* ==========================================
-   3. Tab导航
+   3. Tab 导航
    ========================================== */
 
+/* Tab 标签按钮 */
 .tab-label {
     cursor: pointer;
     padding: 4px 14px;
@@ -383,9 +381,11 @@ select,
     font-weight: 600;
 }
 
+/* Tab 面板容器 */
 .editor-tab-panel {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
+    overflow-x: hidden;
     padding: 12px;
     position: relative;
 }
@@ -394,9 +394,10 @@ select,
     display: none;
 }
 
+/* 编辑区域 */
 .editor-area {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
     padding: 12px;
     resize: vertical;
     min-height: 150px;
@@ -406,6 +407,7 @@ select,
    4. 树形面板（大纲视图）
    ========================================== */
 
+/* -- 搜索框 -- */
 .tree-search-box {
     padding: 6px 8px;
     border-bottom: 1px solid var(--border);
@@ -438,6 +440,7 @@ select,
     color: var(--accent);
 }
 
+/* -- 树容器 -- */
 .tree-container {
     flex: 1;
     overflow-y: auto;
@@ -446,6 +449,7 @@ select,
     flex-direction: column;
 }
 
+/* -- 树节点行 -- */
 .tree-row {
     display: flex;
     align-items: center;
@@ -462,7 +466,7 @@ select,
 }
 
 .tree-row.selected {
-    background: rgba(233,69,96,0.15);
+    background: rgba(233, 69, 96, 0.15);
     border-left: 2px solid var(--accent);
 }
 
@@ -503,7 +507,7 @@ select,
     opacity: 1;
 }
 
-/* -- 树节点模板/自定义标记 -- */
+/* -- 树节点模板标记（📋 已应用模板 / 🔧 自定义）-- */
 .tree-badge {
     font-size: 0.6rem;
     margin-left: 4px;
@@ -512,21 +516,18 @@ select,
     flex-shrink: 0;
     line-height: 1.2;
 }
+
 .my-badge-template {
     color: var(--success);
     background: rgba(78, 204, 163, 0.15);
 }
+
 .my-badge-custom {
     color: var(--warn);
     background: rgba(240, 165, 0, 0.15);
 }
 
-.tree-footer {
-    margin-top: auto;
-    padding: 8px;
-    border-top: 1px solid var(--border);
-}
-
+/* -- 树节点按钮（添加/删除/搜索）-- */
 .tree-add-btn,
 .tree-del-btn,
 .tree-search-btn {
@@ -554,24 +555,10 @@ select,
     color: #61aeee;
 }
 
-.nested-preview {
-    color: var(--text-dim);
-    font-family: monospace;
-}
-
-.my-btn-jump {
-    padding: 2px 8px;
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    background: var(--bg-input);
-    color: var(--accent);
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.my-btn-jump:hover {
-    background: var(--accent);
-    color: #fff;
+.tree-footer {
+    margin-top: auto;
+    padding: 8px;
+    border-top: 1px solid var(--border);
 }
 
 /* ==========================================
@@ -596,14 +583,14 @@ select,
     gap: 8px;
 }
 
-.field-row>label {
+.field-row > label {
     width: 90px;
     color: var(--text-dim);
     text-align: right;
     flex-shrink: 0;
 }
 
-/* 字段标签（原始键名 + 可选别名） */
+/* -- 字段标签（原始键名 + 可选别名）-- */
 .field-label {
     display: flex;
     flex-direction: column;
@@ -650,7 +637,7 @@ select,
     opacity: 0.8;
 }
 
-/* i18n 双输入框组 */
+/* -- i18n 多语言输入组 -- */
 .i18n-group {
     display: flex;
     gap: 4px;
@@ -674,7 +661,7 @@ select,
     padding-left: 0;
 }
 
-/* 字段类型背景色 */
+/* -- 字段类型背景色（按类型识别）-- */
 .field-row-i18n {
     background: rgba(167, 139, 250, 0.03);
     border-radius: 4px;
@@ -702,7 +689,7 @@ select,
     font-style: italic;
 }
 
-/* 类型标签（str/num/i18n/arr/obj/nil） */
+/* -- 类型标签（str / num / i18n / arr / obj / nil）-- */
 .type-badge {
     font-family: var(--font-mono);
     font-size: 0.625rem;
@@ -747,8 +734,14 @@ select,
     text-align: right;
 }
 
+/* 嵌套对象摘要预览 */
+.nested-preview {
+    color: var(--text-dim);
+    font-family: monospace;
+}
+
 /* ==========================================
-   5b. 编辑区 — 选项（options）
+   6. 编辑区 — 选项编辑器
    ========================================== */
 
 .editor-options {
@@ -789,7 +782,7 @@ select,
 }
 
 /* ==========================================
-   6. JSON 镜像编辑器
+   7. 编辑区 — JSON 镜像编辑器
    ========================================== */
 
 .json-mirror {
@@ -858,7 +851,368 @@ select,
 }
 
 /* ==========================================
-   配置弹窗 — 上下文路径匹配表单
+   8. 组件 — 按钮、输入框、下拉框
+   ========================================== */
+
+/* -- 按钮基础 -- */
+.my-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-input);
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.my-btn:hover {
+    background: #1a4a7a;
+    border-color: #3a3a6a;
+}
+
+/* 主按钮（accent 色，用于确定/确认） */
+.my-btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.my-btn-primary:hover {
+    background: var(--accent-hover);
+}
+
+/* 创建按钮（绿色，用于添加/新建/确定） */
+.my-btn-create {    
+    background: var(--success);
+    color: var(--text);
+    border-color: var(--success);
+}
+
+.my-btn-create:hover {
+    background: var(--create);
+}
+
+/* 小号按钮 */
+.my-btn-sm {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+}
+
+/* 图标按钮（无边框，hover 显示背景） */
+.my-btn-icon {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.my-btn-icon:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+}
+
+/* 跳转按钮（嵌套字段→跳转编辑） */
+.my-btn-jump {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg-input);
+    color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.my-btn-jump:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* 删除按钮（默认隐藏，hover 行时显示） */
+.my-btn-del-field,
+.my-btn-del-tmpl {
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+
+.field-row:hover .my-btn-del-field,
+.field-row:hover .my-btn-del-tmpl {
+    opacity: 1;
+}
+
+.my-btn-del-field:hover,
+.my-btn-del-tmpl:hover {
+    opacity: 1;
+    background: rgba(233, 69, 96, 0.2);
+    color: var(--accent);
+}
+
+/* 按钮禁用状态 */
+button:disabled,
+.my-btn:disabled,
+.my-btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* -- 输入框 -- */
+.my-input {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-input);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+}
+
+.my-input:focus {
+    border-color: var(--accent);
+}
+
+.my-input-sm {
+    padding: 4px 8px;
+}
+
+/* 标签内联编辑器（双击字段名重命名） */
+.label-editor {
+    padding: 0 4px;
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    background: var(--bg-input);
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+    min-width: 50px;
+}
+
+/* -- 下拉框 -- */
+select {
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-input);
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+/* ==========================================
+   9. 模态框
+   ========================================== */
+
+.my-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.my-modal-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.my-modal-box {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: 700px;
+    max-width: 90vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transform: translateY(20px);
+    transition: transform 0.2s;
+}
+
+.my-modal-box.dragging {
+    transition: none;
+}
+
+.my-modal-overlay.open .my-modal-box {
+    transform: translateY(0);
+}
+
+/* -- 模态框头部（可拖拽）-- */
+.my-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    cursor: grab;
+    user-select: none;
+}
+
+.my-modal-header.dragging {
+    cursor: grabbing;
+}
+
+.my-modal-header h2 {
+    color: var(--text);
+    margin: 0;
+}
+
+.my-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.my-modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+}
+
+/* -- 模态框内容 -- */
+.my-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.my-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+/* -- 新建选择卡片 -- */
+.create-choices {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    padding: 8px 0;
+}
+
+.create-choice-card {
+    flex: 1;
+    max-width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    user-select: none;
+}
+
+.create-choice-card:hover {
+    border-color: var(--accent);
+    background: rgba(99, 175, 239, 0.08);
+    transform: translateY(-2px);
+}
+
+.create-choice-card:active {
+    transform: translateY(0);
+}
+
+.create-choice-icon {
+    margin-bottom: 8px;
+}
+
+.create-choice-label {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.create-choice-desc {
+    color: var(--text-dim);
+    line-height: 1.4;
+}
+
+/* ---- 模板树形选择器 ---- */
+.tpl-tree {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+.tpl-tree-folder {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    user-select: none;
+    font-weight: 600;
+}
+.tpl-tree-folder:hover {
+    background: var(--bg-input);
+}
+.tpl-tree-folder-icon {
+    flex-shrink: 0;
+}
+.tpl-tree-folder-name {
+    flex: 1;
+    font-size: 0.9rem;
+}
+.tpl-tree-folder-count {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+.tpl-tree-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px 6px 32px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    margin-left: 8px;
+    border-left: 2px solid var(--border);
+}
+.tpl-tree-item:hover {
+    background: var(--accent);
+    color: #000;
+    border-left-color: var(--accent);
+}
+.tpl-tree-item-indent {
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+.tpl-tree-item-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.tpl-tree-item-desc {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+/* ==========================================
+   10. 配置弹窗 — 上下文路径匹配表单
    ========================================== */
 
 .config-list {
@@ -927,7 +1281,7 @@ select,
     color: var(--accent);
 }
 
-/* 路径编辑器内的镜像高亮（继承自 json-highlight/json-editor） */
+/* -- 路径编辑器内的 JSON 镜像 -- */
 .path-mirror {
     position: relative;
     min-height: 40vh;
@@ -948,7 +1302,7 @@ select,
     line-height: 1.6;
 }
 
-/* 模板弹窗内的 JSON 镜像 */
+/* -- 模板弹窗内的 JSON 镜像 -- */
 .tpl-json-mirror {
     position: relative;
     min-height: 180px;
@@ -963,321 +1317,7 @@ select,
 }
 
 /* ==========================================
-   7. 通用组件 — 按钮、输入框、下拉框
-   ========================================== */
-
-/* -- 按钮层级：.my-btn → .my-btn-primary / .my-btn-success / .my-btn-sm / .my-btn-icon -- */
-.my-btn {
-    padding: 6px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-input);
-    color: var(--text);
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    white-space: nowrap;
-}
-
-.my-btn:hover {
-    background: #1a4a7a;
-    border-color: #3a3a6a;
-}
-
-.my-btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-}
-
-.my-btn-primary:hover {
-    background: var(--accent-hover);
-}
-
-.my-btn-success {
-    background: var(--success);
-    border-color: var(--success);
-    color: #000;
-}
-
-.my-btn-success:hover {
-    background: #3dd6a8;
-}
-
-.my-btn-sm {
-    padding: 4px 10px;
-    font-size: 0.8rem;
-}
-
-.my-btn-icon {
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-
-button:disabled,
-.my-btn:disabled,
-.my-btn[disabled] {
-    opacity: 0.5;
-    cursor: not-allowed;
-    pointer-events: none;
-}
-
-/* -- Bootstrap 容器（纯网格模式不包含，手动补充） -- */
-.container-fluid {
-    width: 100%;
-    padding-right: 12px;
-    padding-left: 12px;
-    margin-right: auto;
-    margin-left: auto;
-}
-
-/* 图标按钮（无边框） */
-.my-btn-icon {
-    padding: 2px 6px;
-    border: none;
-    border-radius: 3px;
-    background: transparent;
-    color: var(--text-dim);
-    cursor: pointer;
-    line-height: 1;
-}
-
-.my-btn-icon:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text);
-}
-
-/* 删除按钮（默认隐藏，hover 行时显示）—— 统一样式给 field/tmpl */
-.my-btn-del-field,
-.my-btn-del-tmpl {
-    opacity: 0;
-    transition: opacity 0.15s;
-    flex-shrink: 0;
-}
-
-.field-row:hover .my-btn-del-field,
-.field-row:hover .my-btn-del-tmpl {
-    opacity: 1;
-}
-
-.my-btn-del-field:hover,
-.my-btn-del-tmpl:hover {
-    opacity: 1;
-    background: rgba(233, 69, 96, 0.2);
-    color: var(--accent);
-}
-
-/* -- 输入框 -- */
-.my-input {
-    padding: 6px 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-input);
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.15s;
-    font-family: inherit;
-}
-
-.my-input:focus {
-    border-color: var(--accent);
-}
-
-.my-input-sm {
-    padding: 4px 8px;
-}
-
-/* -- 下拉框 -- */
-select {
-    padding: 5px 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-input);
-    color: var(--text);
-    outline: none;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-/* 标签内联编辑器 */
-.label-editor {
-    padding: 0 4px;
-    border: 1px solid var(--accent);
-    border-radius: 3px;
-    background: var(--bg-input);
-    color: var(--text);
-    font-family: inherit;
-    outline: none;
-    min-width: 50px;
-}
-
-/* 空状态 & 拖入高亮 */
-.empty-hint {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--text-dim);
-}
-
-.drop-active {
-    outline: 2px dashed var(--accent);
-    outline-offset: -8px;
-}
-
-/* ==========================================
-   8. 模态框
-   ========================================== */
-
-.my-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s, visibility 0.2s;
-}
-
-.my-modal-overlay.open {
-    opacity: 1;
-    visibility: visible;
-}
-
-.my-modal-box {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    width: 700px;
-    max-width: 90vw;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    transform: translateY(20px);
-    transition: transform 0.2s;
-}
-
-.my-modal-box.dragging {
-    transition: none;
-}
-
-.my-modal-overlay.open .my-modal-box {
-    transform: translateY(0);
-}
-
-.my-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    cursor: grab;
-    user-select: none;
-}
-
-.my-modal-header.dragging {
-    cursor: grabbing;
-}
-
-.my-modal-header h2 {
-    color: var(--text);
-    margin: 0;
-}
-
-.my-modal-close {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-}
-
-.my-modal-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text);
-}
-
-.my-modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-}
-
-.my-modal-footer {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    flex-shrink: 0;
-}
-
-/* -- 新建选择（createDialog） -- */
-.create-choices {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    padding: 8px 0;
-}
-
-.create-choice-card {
-    flex: 1;
-    max-width: 200px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px 16px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s, transform 0.1s;
-    user-select: none;
-}
-
-.create-choice-card:hover {
-    border-color: var(--accent);
-    background: rgba(99, 175, 239, 0.08);
-    transform: translateY(-2px);
-}
-
-.create-choice-card:active {
-    transform: translateY(0);
-}
-
-.create-choice-icon {
-    margin-bottom: 8px;
-}
-
-.create-choice-label {
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 4px;
-}
-
-.create-choice-desc {
-    color: var(--text-dim);
-    line-height: 1.4;
-}
-
-/* ==========================================
-   9. 视图 — 模板编辑
+   11. 视图 — 模板编辑
    ========================================== */
 
 .tpl-ctx-bar {
@@ -1314,7 +1354,7 @@ select {
 }
 
 /* ==========================================
-   10. 视图 — 标签管理
+   12. 视图 — 标签管理
    ========================================== */
 
 .label-manager-hint {
@@ -1351,7 +1391,7 @@ select {
 }
 
 /* ==========================================
-   11. 视图 — 章节对话列表
+   13. 视图 — 章节列表
    ========================================== */
 
 .chapter-count {
@@ -1371,11 +1411,11 @@ select {
     border: 1px solid var(--border);
 }
 
-
 .chapter-toolbar #btn-chapter-cols {
     margin-left: auto;
 }
 
+/* -- 列表容器 -- */
 .chapter-list {
     display: flex;
     flex-direction: column;
@@ -1402,7 +1442,7 @@ select {
     gap: 8px;
 }
 
-/* 说话人头像圆标 */
+/* -- 说话人头像圆标 -- */
 .chapter-speaker-badge {
     width: 28px;
     height: 28px;
@@ -1417,7 +1457,7 @@ select {
     flex-shrink: 0;
 }
 
-/* 列容器 & 可编辑输入框 */
+/* -- 列容器与可编辑输入框 -- */
 .chapter-cols {
     flex: 1;
     display: flex;
@@ -1436,7 +1476,7 @@ select {
     min-width: 0;
 }
 
-/* 行内输入框（说话人、文本、其他字段）使用统一样式 */
+/* -- 行内输入框（说话人、文本等）-- */
 .chapter-speaker-input,
 .chapter-cell-input {
     padding: 4px 6px;
@@ -1478,7 +1518,7 @@ select {
     font-style: italic;
 }
 
-/* 只读列显示 */
+/* -- 只读列显示 -- */
 .chapter-cell-display {
     display: block;
     padding: 4px 6px;
@@ -1494,7 +1534,7 @@ select {
 }
 
 /* ==========================================
-   12. 视图 — 设置面板
+   14. 视图 — 设置面板
    ========================================== */
 
 .settings-section {
@@ -1521,6 +1561,7 @@ select {
     margin-bottom: 8px;
 }
 
+/* -- 字体大小滑块 -- */
 .settings-font-row {
     display: flex;
     align-items: center;
@@ -1556,6 +1597,7 @@ select {
     text-align: right;
 }
 
+/* -- 主题色选择卡片 -- */
 .settings-themes {
     display: flex;
     flex-wrap: wrap;
@@ -1599,7 +1641,7 @@ select {
     color: var(--text-dim);
 }
 
-/* 结构类型卡片 */
+/* -- 结构类型管理卡片 -- */
 .settings-struct-card {
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -1652,10 +1694,38 @@ select {
     height: 24px;
 }
 
+/* -- 语言标签 -- */
+.settings-lang-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+    background: var(--bg-input);
+    color: var(--accent);
+    border: 1px solid var(--border);
+}
+
 /* ==========================================
-   13. 工具 — 滚动条
+   15. 工具 — 空状态、拖入高亮、滚动条
    ========================================== */
 
+/* -- 空状态提示 -- */
+.empty-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-dim);
+}
+
+/* -- 文件拖入高亮 -- */
+.drop-active {
+    outline: 2px dashed var(--accent);
+    outline-offset: -8px;
+}
+
+/* -- 自定义滚动条 -- */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -1674,13 +1744,37 @@ select {
     background: #555;
 }
 
-.settings-lang-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-family: var(--font-mono);
-    background: var(--bg-input);
-    color: var(--accent);
+/* ==========================================
+   16. Bootstrap 补充
+   ========================================== */
+
+/* ---- 模板选择器布局（Teleport 穿透，必须全局）---- */
+.tpl-picker-layout {
+    display: flex;
+    gap: 0;
+    height: 50vh;
     border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.tpl-picker-tree {
+    width: 260px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    background: var(--bg);
+}
+.tpl-picker-detail {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+/* Bootstrap 容器补充（纯网格模式不包含默认 container-fluid） */
+.container-fluid {
+    width: 100%;
+    padding-right: 12px;
+    padding-left: 12px;
+    margin-right: auto;
+    margin-left: auto;
 }

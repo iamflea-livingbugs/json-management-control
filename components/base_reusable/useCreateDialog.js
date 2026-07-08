@@ -3,8 +3,8 @@
 // API 与原生 ui-createDialog.js 兼容
 // ==========================================
 import { createApp, h, ref } from 'vue'
-import Modal from './Modal.vue'
-import { getContextKeys, getContextsConfig } from '../../js/logic/logic-storyTypes.js'
+import Modal from '../base/Modal.vue'
+import TemplatePicker from './TemplatePicker.vue'
 
 /**
  * 打开新建选择弹窗（回调式 API）
@@ -71,39 +71,37 @@ export function showCreateDialog(options) {
 }
 
 /**
- * 显示模板上下文选择弹窗（Promise API）
+ * 显示模板树形选择弹窗（Promise API）
  */
 export function showTemplatePicker() {
   return new Promise((resolve) => {
     const visible = ref(true)
-    const ctxKeys = getContextKeys()
-    const ctxConfig = getContextsConfig()
+    let resolved = false
 
     const app = createApp({
       render() {
-        return h(Modal, {
+        return h(TemplatePicker, {
           visible: visible.value,
-          title: '选择模板',
-          width: '480px',
-          'onUpdate:visible': () => close(null)
-        }, {
-          default: () => {
-            const cards = ctxKeys.map(k => {
-              const cfg = ctxConfig[k] || {}
-              return h('div', {
-                class: 'create-choice-card',
-                style: 'width:auto;flex:1;min-width:120px',
-                onClick: () => close(k)
-              }, [
-                h('div', { class: 'create-choice-label' }, cfg.label || k),
-                h('div', { class: 'create-choice-desc', style: 'font-size:0.75rem' }, cfg.description || '')
-              ])
-            })
-            return h('div', { class: 'create-choices', style: 'flex-wrap:wrap' }, cards)
+          'onSelect': (key) => {
+            if (resolved) return
+            resolved = true
+            visible.value = false
+            setTimeout(() => {
+              resolve(key)
+              app.unmount()
+              if (container.parentNode) container.parentNode.removeChild(container)
+            }, 200)
           },
-          footer: () => h('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
-            h('button', { class: 'my-btn my-btn-sm', onClick: () => close(null) }, '取消')
-          )
+          'onUpdate:visible': (v) => {
+            if (!v && !resolved) {
+              resolved = true
+              setTimeout(() => {
+                resolve(null)
+                app.unmount()
+                if (container.parentNode) container.parentNode.removeChild(container)
+              }, 200)
+            }
+          }
         })
       }
     })
@@ -111,15 +109,5 @@ export function showTemplatePicker() {
     const container = document.createElement('div')
     document.body.appendChild(container)
     app.mount(container)
-
-    function close(result) {
-      if (!visible.value) return
-      visible.value = false
-      setTimeout(() => {
-        app.unmount()
-        if (container.parentNode) container.parentNode.removeChild(container)
-        resolve(result)
-      }, 200)
-    }
   })
 }

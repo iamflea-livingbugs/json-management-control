@@ -10,9 +10,10 @@ import '../../css/style.css'
 import { createCurJson, createBlankCurJson } from '../logic/logic-storyTypes.js';
 import { openTemplateEditor } from './ui-storyTemplateUI.js';
 import { openLabelManager } from './ui-labelManager.js';
-import { showCreateDialog } from '../../components/base/useCreateDialog.js';
+import { showCreateDialog } from '../../components/base_reusable/useCreateDialog.js';
 import { showAlert } from '../../components/base/useDialog.js';
 import { store } from '../logic/logic-storyStore.js';
+import { setFileName } from '../logic/logic-autoSave.js';
 import { initSettings } from './ui-settingsPanel.js';
 import { createApp } from 'vue'
 import SettingsPanel from '../../components/Settings/SettingsPanel.vue'
@@ -26,13 +27,16 @@ export function initUI(store, io) {
 
     // 工具栏
     io.setupFilePicker($('#btn-import'), json => store.loadCurJson(json), (msg) => showAlert(msg));
-    $('#btn-export').addEventListener('click', () => { const clean = store.toCleanJSON(); io.exportJSON(clean); });
+    $('#btn-export').addEventListener('click', () => { const clean = store.toCleanJSON(); io.exportJSON(clean, store.getCurJsonName() + '.json'); });
     $('#btn-add-node').addEventListener('click', () => { showCreateDialog({ title: '新建章节', blankDesc: '仅返回 {}，不添加任何字段', onBlank: () => store.newCurJson(createBlankCurJson()), onTemplate: () => store.loadCurJson(createCurJson()) }); });
     $('#btn-edit-template').addEventListener('click', () => openTemplateEditor());
     $('#btn-label-manager').addEventListener('click', () => openLabelManager());
 
     // 章节名
-    $('#curjson-name').addEventListener('input', (e) => store.setCurJsonName(e.target.value));
+    $('#curjson-name').addEventListener('input', (e) => {
+        store.setCurJsonName(e.target.value);
+        setFileName((e.target.value || 'Untitled') + '.json');
+    });
 
     // 活动栏
     const VIEW_LABELS = { outline: '大纲', stats: '统计', settings: '设置' };
@@ -100,12 +104,6 @@ export function initUI(store, io) {
 
     $('#btn-close-side').addEventListener('click', () => {
         collapseSidePanel();
-    });
-
-    // store 监听（仅同步章节名到输入框）
-    store.onChange(() => {
-        const nameInput = $('#curjson-name');
-        if (nameInput) nameInput.value = store.getCurJsonName();
     });
 
     // 分隔条

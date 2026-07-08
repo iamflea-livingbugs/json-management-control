@@ -28,6 +28,9 @@ runMigration();
         const ok = await showConfirm('检测到未保存的编辑数据：\n文件：' + fileName + '\n最后编辑时间：' + time + '\n\n是否恢复？');
         if (ok) {
             store.loadCurJson(saved.data);
+            store.setCurJsonName(fileName.replace(/\.json$/i, ''));
+            const input = document.querySelector('#curjson-name');
+            if (input) input.value = store.getCurJsonName();
             showAlert('已恢复自动保存的数据');
         }
         discardSavedDocument();
@@ -55,7 +58,12 @@ store.onChange(() => { notifyChange(); });
 
 function updateFileName(json) {
     const name = json?.meta?.name;
-    if (name) setFileName(name + '.json');
+    if (name) {
+        store.setCurJsonName(name);
+        setFileName(name + '.json');
+        const input = document.querySelector('#curjson-name');
+        if (input) input.value = name;
+    }
 }
 
 // step 7: 开发调试 —— 通过 URL 参数 ?load=xxx.json 加载示例文件

@@ -5,19 +5,21 @@
        所有 ID 保持与原生 JS 的 querySelector 兼容
        ========================================== -->
   <div id="app-root">
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <button id="btn-add-node" class="my-btn my-btn-success">＋ 新建 JSON</button>
-        <button id="btn-import" class="my-btn">📥 导入 JSON</button>
-        <span class="sep"></span>
-        <button id="btn-export" class="my-btn my-btn-primary">📤 导出 JSON</button>
-        <span class="sep"></span>
-        <label>文件名：</label>
-        <input id="curjson-name" class="my-input-sm" value="Untitled" />
+    <div class="container-fluid row justify-content-around  mb-3  mt-3">
+      <div class="d-flex col-4 ">
+        <div class="btn-group">
+          <button id="btn-add-node" class="my-btn my-btn-create">＋ 新建 JSON</button>
+          <button id="btn-import" class="my-btn">📥 导入 JSON</button>
+          <button id="btn-export" class="my-btn my-btn-primary">📤 导出 JSON</button>
+        </div>
       </div>
-      <div class="toolbar-right">
-        <button id="btn-edit-template" class="my-btn my-btn-sm">📋 编辑模板</button>
-        <button id="btn-label-manager" class="my-btn my-btn-sm" title="管理字段显示名称">🏷️ 标签</button>
+      <div class="d-flex col-4 justify-content-center align-items-center">
+          <label for="curjson-name">文件名：</label>
+          <input id="curjson-name" class="my-input-sm" value="Untitled" />
+        </div>
+      <div class="d-flex  col-4 justify-content-end">
+        <button id="btn-edit-template" class="my-btn ">📋 编辑模板</button>
+        <button id="btn-label-manager" class="my-btn " title="管理字段显示名称">🏷️ 标签</button>
       </div>
     </div>
 
@@ -62,8 +64,8 @@
 </template>
 
 <script setup>
-import ActivityBar from './layout/ActivityBar.vue'
-import PanelRight from './layout/PanelRight.vue'
-import OutlineView from './layout/OutlineView.vue'
-import PanelCenter from './layout/PanelCenter.vue'
+import ActivityBar from './layout/layout_main-area/L-side/ActivityBar.vue'
+import PanelRight from './layout/layout_main-area/R-side/PanelRight.vue'
+import OutlineView from './layout/layout_main-area/L-side/OutlineView.vue'
+import PanelCenter from './layout/layout_main-area/M-side/PanelCenter.vue'
 </script>
