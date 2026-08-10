@@ -7,14 +7,23 @@
   >
     <!-- 字段名（可双击改名） -->
     <label
+      v-if="!editingLabel"
       class="editable-label field-label"
       :data-key="keyName"
       :title="'双击编辑标签' + (labelAlias ? ' · 显示名: ' + labelAlias : '')"
       @dblclick="startRename"
-      ref="labelEl"
     >
       {{ keyName }}<span v-if="labelAlias" class="field-label-alias">{{ labelAlias }}</span>
     </label>
+    <input
+      v-else
+      ref="labelInputEl"
+      class="my-input-sm label-editor"
+      v-model="editValue"
+      @blur="finishRename"
+      @keydown.enter.prevent="finishRename"
+      @keydown.escape="cancelRename"
+    />
 
     <!-- 模板/自定义标记 -->
     <span v-if="templateBadge" class="type-badge" :class="templateBadgeClass">{{ templateBadge }}</span>
@@ -92,7 +101,9 @@ const props = defineProps({
 })
 
 const storyStore = useStoryStore()
-const labelEl = ref(null)
+const labelInputEl = ref(null)
+const editingLabel = ref(false)
+const editValue = ref('')
 
 const parentPathStr = computed(() => props.parentPath.join('|'))
 
@@ -223,49 +234,38 @@ async function saveFieldAsTemplate() {
 }
 
 // ---- 双击改名 ----
-function startRename(e) {
-  const label = labelEl.value
-  if (!label) return
+function startRename() {
+  editValue.value = props.keyName
+  editingLabel.value = true
+  nextTick(() => {
+    const input = labelInputEl.value
+    if (input) {
+      input.style.width = Math.max(60, input.previousElementSibling?.offsetWidth + 20 || 100) + 'px'
+      input.focus()
+      input.select()
+    }
+  })
+}
+
+function finishRename() {
+  const newKey = editValue.value.trim()
   const oldKey = props.keyName
-  const current = label.textContent.trim()
-
-  const input = document.createElement('input')
-  input.className = 'my-input-sm label-editor'
-  input.value = current
-  input.style.width = Math.max(60, label.offsetWidth + 20) + 'px'
-  label.replaceWith(input)
-  input.focus()
-  input.select()
-
-  function finish() {
-    const newKey = input.value.trim()
-    if (newKey && newKey !== current) {
-      const parent = storyStore.getByPath(props.parentPath)
-      if (parent && typeof parent === 'object' && oldKey in parent) {
-        // 更新 currentPath 中的引用
-        if (storyStore.currentPath.includes(oldKey)) {
-          storyStore.currentPath = storyStore.currentPath.map(s => s === oldKey ? newKey : s)
-        }
-        parent[newKey] = parent[oldKey]
-        delete parent[oldKey]
-        storyStore.setByPath(props.parentPath, parent)
+  if (newKey && newKey !== oldKey) {
+    const parent = storyStore.getByPath(props.parentPath)
+    if (parent && typeof parent === 'object' && oldKey in parent) {
+      if (storyStore.currentPath.includes(oldKey)) {
+        storyStore.currentPath = storyStore.currentPath.map(s => s === oldKey ? newKey : s)
       }
-    } else {
-      // 恢复标签
-      const lbl = document.createElement('label')
-      lbl.className = 'editable-label field-label'
-      lbl.dataset.key = oldKey
-      lbl.textContent = current
-      lbl.title = '双击编辑标签'
-      lbl.addEventListener('dblclick', startRename)
-      input.replaceWith(lbl)
+      parent[newKey] = parent[oldKey]
+      delete parent[oldKey]
+      storyStore.setByPath(props.parentPath, parent)
     }
   }
+  editingLabel.value = false
+}
 
-  input.addEventListener('blur', finish)
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); input.blur() }
-    if (e.key === 'Escape') { input.value = current; input.blur() }
-  })
+function cancelRename() {
+  editValue.value = props.keyName
+  editingLabel.value = false
 }
 </script>

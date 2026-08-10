@@ -109,14 +109,15 @@ json-management-control/
 │           └── R-side/     ← 右侧（JSON 预览）
 │               └── PanelRight.vue
 ├── stores/
-│   └── storyStore.js       ← Pinia 状态管理，桥接原生 Store 与 Vue 组件
+│   └── storyStore.js       ← Pinia 唯一数据源：数据 CRUD、路径导航、导出、变更通知（原 logic-storyStore.js 逻辑已并入）
 ├── js/
 │   ├── main.js             ← 入口：启动加载 + 拖放绑定
 │   ├── barrel.js           ← 统一导出中枢
 │   ├── logic/              ← 纯数据层（不依赖 UI）
 │   │   ├── logic-storyTypes.js   ← 数据模型、模板读写、结构类型系统
-│   │   ├── logic-storyStore.js   ← 数据管理：CRUD、路径导航、导出
-│   │   └── logic-storyIO.js      ← 文件导入/导出、拖放绑定
+│   │   ├── logic-storyIO.js      ← 文件导入/导出、拖放绑定
+│   │   ├── logic-autoSave.js     ← 自动保存核心逻辑（防抖 + 心跳 + 状态通知）
+│   │   └── logic-migration.js    ← localStorage 三层结构 key 定义 + 数据迁移
 │   └── ui/                 ← 视图层（依赖 logic/）
 │       ├── ui-init.js            ← 主界面初始化、树形搜索、事件绑定
 │       ├── ui-chapterView.js     ← 列表视图（原版，已被 ChapterView.vue 替代）
@@ -139,27 +140,27 @@ json-management-control/
 ```
 main.js → barrel.js → logic/    ← 纯数据，不依赖 UI
                      → ui/       ← 依赖 logic/，不反向依赖
-- logic/ 层：纯数据模型、CRUD 操作、结构类型系统、文件 IO
+- logic/ 层：纯数据模型、CRUD 操作、结构类型系统、文件 IO、自动保存、数据迁移
 - ui/ 层：界面渲染、事件绑定、交互反馈
 - barrel.js：唯一同时引用 logic/ 和 ui/ 的中转文件
 - components/：Vue 组件，通过 Vite 编译，直接 import 到 ui/ 层使用
-- stores/：Pinia Store，桥接 Vue 组件与原生 StoryStore
+- stores/：Pinia Store，应用唯一数据源（数据 CRUD、路径导航、变更通知）
 ```
 
 ## 架构概览
 
-当前采用 **Vue 3 + 原生 JS 混合架构**：
+当前采用 **Vue 3 + Pinia 单一数据源架构**：
 
 - **App.vue** 渲染整个布局，替代了原先的 layout.html
-- **Pinia Store**（`stores/storyStore.js`）包装原生 `StoryStore`，使 Vue 组件可通过 `useStoryStore()` 响应式访问数据
-- **Vue 组件** 通过 Composition API 直接使用 Pinia，无需手动同步
-- **原生 JS** 仍直接操作 `logic-storyStore.js` 中的 store 实例，通过 `_emit()` 机制通知 Pinia 同步
+- **Pinia Store**（`stores/storyStore.js`）为应用唯一数据源，集数据 CRUD、路径导航、导出、变更通知于一身
+- **Vue 组件** 通过 Composition API 的 `useStoryStore()` 响应式访问数据
+- **原生 JS** 与 Vue 组件共用同一个 Pinia Store，通过 `onChange()` 订阅变更通知
+- 原 `js/logic/logic-storyStore.js` 已删除，其逻辑全部并入 Pinia Store
 
 ### 数据流
 
 ```
-原生 JS 操作 → StoryStore._emit() → Pinia sync() → Vue 组件响应式更新
-Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → 触发同步
+原生 JS / Vue 组件操作 → storyStore.xxx() → dataVersion++ / 新引用 → 响应式更新 + onChange 通知
 ```
 
 ## 持久化存储（localStorage）
@@ -178,7 +179,7 @@ Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → �
 
 - Vite 8 — 开发服务器与构建工具
 - Vue 3.5（Composition API + `<script setup>`）— UI 层
-- Pinia 3 — Vue 状态管理（桥接 Vue 组件与原生 StoryStore）
+- Pinia 3 — Vue 状态管理（应用唯一数据源）
 - Naive UI — 基础组件库（按钮、弹窗等）
 - SCSS — CSS 预处理器（可逐步采用）
 - Bootstrap 5 Grid — 响应式网格布局
@@ -188,6 +189,45 @@ Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → �
 - localStorage — 模板、标签、结构类型、设置持久化
 
 ## 改动记录
+
+### v0.08 (Pinia 单一数据源重构 + 交互修复)
+
+**Pinia 唯一数据源**
+- 删除 `js/logic/logic-storyStore.js`，数据 CRUD、路径导航、导出、变更通知全部并入 `stores/storyStore.js`
+- 移除 `logic-storyStore` 与 Pinia 双数据源间的 `sync()` 桥接机制，消除手动同步
+- 原生 JS 与 Vue 组件共用同一个 Pinia Store，通过 `onChange()` 订阅变更
+- 移除约 14 个未使用的冗余方法，精简 store 接口
+
+**交互 bug 修复**
+- 修复表单行双击编辑失焦后无法再次编辑：`FormField.vue` 由手动 DOM 替换改为 Vue 状态驱动（`editingLabel` 控制 label/input 切换）
+- 修复删除根级别字段（meta/content）后 JSON 编辑器失焦自动恢复：`PanelRight.vue` 根数据写入由 `loadCurJson`（触发规范化补全）改为 `setByPath([], parsed)` 直接写入
+
+### v0.07 — 组件目录结构化 + 共享复制 API + 测试框架
+- [x] **组件目录重组**：按 HTML 物理布局将组件归入 base / base_reusable / layout/L-side / layout/M-side / layout/R-side / layout_toolbar
+- [x] **复制功能共享 API**：`storyStore.duplicateEntry(path)` 统一数组 push 和对象键名生成，ChapterView 和 FormField 共用
+- [x] **Vitest 测试框架搭建**：引入 vitest + happy-dom，配置 `vitest.config.js`
+- [x] **纯逻辑层 TDD**：为 `duplicateEntry` 编写 8 个单元测试（数组/对象/键名递增/深拷贝隔离/边界情况），先红后绿
+- [x] **声明式 Modal 替代动态 createApp**：模板选择弹窗改为 `<Modal>` 声明式组件，使用 `v-for` / `v-model`
+- [x] **清理死代码**：删除 `addEntry` 函数和未使用 import
+- [x] **修复事件冒泡 bug**：复制按钮 `@click.stop` + `@dblclick.stop` 防止触发 `dblclick` 切到表单 Tab
+
+### v0.06 — 章节视图 Vue 化 + Bootstrap 完整引入 + 添加属性统一 API
+- [x] 章节列表视图（`ChapterView.vue`）Vue 组件化，替代原生 `ui-chapterView.js`
+- [x] 列配置弹窗：选择可见字段，持久化到 localStorage
+- [x] 复制行功能：深拷贝节点（含子结构），自动生成新 id 或键名
+- [x] 新增条目弹窗：模板选择 + 基础类型选择（对象/字符串/数字/数组）
+- [x] 自定义属性统一 API：大纲 / 表单 / 章节三处共用 `useObjectAdd` 组合式函数
+- [x] 重名检测、数组模式可选类型、模板匹配
+- [x] Bootstrap 5 完整引入（CSS + JS），替换 grid-only 导入
+- [x] 项目自定义 CSS 类名加 `my-` 前缀，与 Bootstrap 隔离
+- [x] 清理全部遗留 .html 片段
+- [x] 修复弹窗 Enter 键确认（Teleport 导致的查找范围问题）
+- [x] 修复表单视图及时刷新（`currentValue` 依赖 `renderKey` 强制重算）
+
+### v0.05 — 自动保存 + localStorage 三层结构整理
+- [x] 自动保存：防抖 10s + 心跳兜底 60s，状态通知（idle/saving/saved/error）
+- [x] localStorage 数据迁移：`logic-migration.js` 定义三层结构 key（config/schema/document）并迁移旧 key
+- [x] 编辑器元数据（文件名等）独立存储，不污染 JSON 数据
 
 ### v0.04 (Vue 渐进式迁移完成)
 

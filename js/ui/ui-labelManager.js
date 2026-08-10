@@ -4,10 +4,12 @@
 // ==========================================
 
 import { loadLabels, saveLabel } from '../logic/logic-storyTypes.js';
-import { store } from '../logic/logic-storyStore.js';
+import { useStoryStore } from '../../stores/storyStore.js';
 import { showConfirm, showPrompt } from '../../components/base/useDialog.js';
 import { makeModalDraggable } from './ui-modalDialog.js';
 import { readConfig, writeConfig } from '../logic/logic-migration.js';
+
+const store = new Proxy({}, { get(_, p) { const s = useStoryStore(); const v = s[p]; return typeof v === 'function' ? v.bind(s) : v } })
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);

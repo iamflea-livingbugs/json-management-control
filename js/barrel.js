@@ -14,7 +14,18 @@ export { loadTemplates, getContextKeys, getContextsConfig, resolveTemplateContex
     isI18nObj, addLanguage } from './logic/logic-storyTypes.js';
 
 // 数据层：数据 CRUD 管理 + 文件导入导出
-export { store } from './logic/logic-storyStore.js';
+import { useStoryStore } from '../stores/storyStore.js'
+export const store = new Proxy({}, {
+  get(_, prop) {
+    const s = useStoryStore()
+    const val = s[prop]
+    return typeof val === 'function' ? val.bind(s) : val
+  },
+  set(_, prop, value) {
+    useStoryStore()[prop] = value
+    return true
+  }
+})
 export * as io from './logic/logic-storyIO.js';
 
 // UI 层：主界面初始化 + 工具函数

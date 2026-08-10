@@ -4,9 +4,11 @@
 // ==========================================
 
 import { loadTemplates, loadEffectiveTemplates, loadTemplateKeys, saveTemplateKeys, getContextsConfig, getFieldLabel, saveLabel, saveTemplates } from '../logic/logic-storyTypes.js';
-import { store } from '../logic/logic-storyStore.js';
+import { useStoryStore } from '../../stores/storyStore.js';
 import { showConfirm } from '../../components/base/useDialog.js';
 import { makeModalDraggable } from './ui-modalDialog.js';
+
+const store = new Proxy({}, { get(_, p) { const s = useStoryStore(); const v = s[p]; return typeof v === 'function' ? v.bind(s) : v } })
 
 let _currentCtx = 'content';   // 当前正在编辑的上下文
 let _draft = null;             // 内存草稿：{ [ctx]: templateObj }

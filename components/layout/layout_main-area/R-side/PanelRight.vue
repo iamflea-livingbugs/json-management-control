@@ -129,7 +129,7 @@ function onBlur() {
     hideError()
     const path = storyStore.currentPath
     if (path && path.length > 0) storyStore.setByPath([...path], parsed)
-    else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) storyStore.loadCurJson(parsed)
+    else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) storyStore.setByPath([], parsed)
     else showError('根节点必须是对象 {}')
   } catch (e) { showError(e.message) }
 }
@@ -143,7 +143,7 @@ function formatJSON() {
     hideError()
     const path = storyStore.currentPath
     if (path && path.length > 0) storyStore.setByPath([...path], parsed)
-    else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) storyStore.loadCurJson(parsed)
+    else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) storyStore.setByPath([], parsed)
     else showError('根节点必须是对象 {}')
   } catch (e) { showError(e.message) }
 }

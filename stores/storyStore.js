@@ -1,45 +1,167 @@
 // ==========================================
-// stores/storyStore.js — Pinia 状态管理
-// 包装现有 StoryStore 实例，使 Vue 组件能
-// 通过 useStoryStore() 响应式访问数据
+// stores/storyStore.js — Pinia 唯一数据源
+// 所有数据逻辑集中在此，不再依赖外部 class
 // ==========================================
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
-import { store as original } from '../js/logic/logic-storyStore.js'
-import { resolveTemplateContext, createNodeFromTemplate } from '../js/logic/logic-storyTypes.js'
+import { createCurJson, createNodeFromTemplate, createOption, resolveTemplateContext } from '../js/logic/logic-storyTypes.js'
 import { getStatus, onStatusChange } from '../js/logic/logic-autoSave.js'
 
-export const useStoryStore = defineStore('story', () => {
-  // ---- 响应式状态（与原始 store 同步） ----
-  const curJson = shallowRef(original.curJson)
-  const currentPath = ref([...original.currentPath])
-  const selectedId = ref(original.selectedId)
-  const dataVersion = ref(original._dataVersion)
-  const autoSaveStatus = ref(getStatus())  // 'idle' | 'saving' | 'saved' | 'error'
-  const editorMeta = ref({ ...original.editorMeta })
+// ---- 编辑器元数据 ----
+const EDITOR_META_KEY = 'storyeditor_editor_meta'
 
-  // ---- 同步函数：从原始 store 同步到 Pinia ----
-  // 深拷贝确保 Vue 组件持有的引用与原始 store 隔离
-  function sync() {
-    curJson.value = JSON.parse(JSON.stringify(original.curJson))
-    currentPath.value = [...original.currentPath]
-    selectedId.value = original.selectedId
-    dataVersion.value = original._dataVersion
-    editorMeta.value = { ...original.editorMeta }
+function loadEditorMeta() {
+  try {
+    const raw = localStorage.getItem(EDITOR_META_KEY)
+    return raw ? JSON.parse(raw) : { fileName: 'Untitled' }
+  } catch {
+    return { fileName: 'Untitled' }
   }
+}
 
-  // 监听原始 store 变更
-  original.onChange(() => { sync() })
+function saveEditorMeta(meta) {
+  localStorage.setItem(EDITOR_META_KEY, JSON.stringify(meta))
+}
 
-  // 监听 auto-save 状态变更
+// ---- Pinia Store ----
+export const useStoryStore = defineStore('story', () => {
+  // ========== 响应式状态 ==========
+  const curJson = shallowRef(createCurJson())
+  const currentPath = ref([])
+  const selectedId = ref(null)
+  const dataVersion = ref(0)
+  const autoSaveStatus = ref(getStatus())
+  const editorMeta = ref(loadEditorMeta())
+
+  // 监听 auto-save 状态
   onStatusChange((status) => { autoSaveStatus.value = status })
 
-  // ---- 工具方法（读取 Pinia 自有数据，不再委托给 original）----
-  /**
-   * 按路径取值（从 Pinia 的深拷贝副本中读取）
-   * 每次返回的引用都来自 curJson.value——sync() 后自动失效
-   * 组件可以安全地修改返回的引用，下次 sync() 会创建全新副本
-   */
+  // ========== 内部方法 ==========
+
+  const _listeners = []
+
+  function onChange(fn) {
+    _listeners.push(fn)
+    return () => { const i = _listeners.indexOf(fn); if (i >= 0) _listeners.splice(i, 1) }
+  }
+
+  /** 触发变更通知 + 强制 Vue 响应式更新 */
+  function _emit() {
+    dataVersion.value++
+    // 创建新引用以触发 shallowRef 的响应式更新
+    curJson.value = JSON.parse(JSON.stringify(curJson.value))
+    _listeners.forEach(fn => fn())
+  }
+
+  /** 节点数据规范化 */
+  function _normalizeNode(raw) {
+    const defaults = createNodeFromTemplate('content', '_')
+    delete defaults.id
+    const merged = { ...defaults, ...raw }
+    if (typeof merged.speaker === 'string') merged.speaker = { zh: merged.speaker, en: '' }
+    if (typeof merged.text === 'string') merged.text = { zh: merged.text, en: '' }
+    if (!merged.speaker) merged.speaker = { zh: '', en: '' }
+    if (!merged.text) merged.text = { zh: '', en: '' }
+    merged.options = (merged.options || []).map(opt => ({
+      text: typeof opt.text === 'string' ? { zh: opt.text, en: '' } : (opt.text || { zh: '', en: '' }),
+      next: opt.next || '', showif: opt.showif || {}, actions: opt.actions || []
+    }))
+    return merged
+  }
+
+  // ========== 数据加载 ==========
+
+  function loadCurJson(json) {
+    curJson.value = json
+    if (!curJson.value.meta) curJson.value.meta = { name: 'Untitled' }
+    curJson.value.content = (curJson.value.content || []).map(n => _normalizeNode(n))
+    selectedId.value = null
+    currentPath.value = []
+    _emit()
+  }
+
+  function newCurJson(json) {
+    curJson.value = json
+    selectedId.value = null
+    currentPath.value = []
+    _emit()
+  }
+
+  // ========== 编辑器元数据 ==========
+
+  function getCurJsonName() { return editorMeta.value.fileName || 'Untitled' }
+
+  function setCurJsonName(name) {
+    editorMeta.value.fileName = name || 'Untitled'
+    saveEditorMeta(editorMeta.value)
+    _emit()
+  }
+
+  // ========== 节点 CRUD ==========
+
+  function addNode(ctx = null, path = null) {
+    const targetPath = path || currentPath.value
+    const parent = getByPath(targetPath)
+    if (!parent) return
+
+    const tpl = createNodeFromTemplate(ctx || 'default')
+    delete tpl.id
+
+    if (Array.isArray(parent)) {
+      parent.push(tpl)
+      currentPath.value = [...targetPath, String(parent.length - 1)]
+    } else if (typeof parent === 'object' && parent !== null) {
+      let key = 'new_key'
+      let i = 1
+      while (key in parent) key = 'new_key_' + i++
+      parent[key] = tpl
+      currentPath.value = [...targetPath, key]
+    }
+    _emit()
+  }
+
+  // ========== 选项操作 ==========
+
+  function addOption(nodeId) { const node = getNode(nodeId); if (!node) return; node.options.push(createOption()); _emit() }
+  function updateOption(nodeId, optIndex, patch) { const node = getNode(nodeId); if (!node || !node.options[optIndex]) return; Object.assign(node.options[optIndex], patch); _emit() }
+  function deleteOption(nodeId, optIndex) { const node = getNode(nodeId); if (!node) return; node.options.splice(optIndex, 1); _emit() }
+
+  // ========== 动作操作 ==========
+
+  function addAction(nodeId, optIndex) { const node = getNode(nodeId); if (!node || !node.options[optIndex]) return; node.options[optIndex].actions.push({ cmd: '', params: [] }); _emit() }
+  function updateActionCmd(nodeId, optIndex, actionIndex, cmd) { const node = getNode(nodeId); if (!node || !node.options[optIndex]) return; const act = node.options[optIndex].actions[actionIndex]; if (act) act.cmd = cmd; _emit() }
+  function updateActionParams(nodeId, optIndex, actionIndex, paramsStr) {
+    const node = getNode(nodeId); if (!node || !node.options[optIndex]) return
+    const act = node.options[optIndex].actions[actionIndex]
+    if (act) { try { act.params = JSON.parse(paramsStr) } catch { act.params = paramsStr.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')) } }
+    _emit()
+  }
+  function deleteAction(nodeId, optIndex, actionIndex) { const node = getNode(nodeId); if (!node || !node.options[optIndex]) return; node.options[optIndex].actions.splice(actionIndex, 1); _emit() }
+
+  // ========== 数据导出 ==========
+
+  function toCleanJSON() {
+    function clean(obj) {
+      if (Array.isArray(obj)) return obj.map(clean).filter(x => x !== undefined)
+      if (obj && typeof obj === 'object') {
+        if (obj.zh !== undefined && obj.en !== undefined) { if (!obj.zh && !obj.en) return undefined; const out = {}; if (obj.zh) out.zh = obj.zh; if (obj.en) out.en = obj.en; return out }
+        const out = {}
+        for (const [k, v] of Object.entries(obj)) { const c = clean(v); if (c !== undefined) out[k] = c }
+        if (Object.keys(out).length === 0) return undefined
+        return out
+      }
+      if (obj === '' || obj === null || obj === undefined) return undefined
+      return obj
+    }
+    return clean(curJson.value)
+  }
+
+  // ========== 节点查找 ==========
+
+  function getNode(id) { return curJson.value.content.find(n => n.id === String(id)) }
+
+  // ========== 路径导航 ==========
+
   function getByPath(path) {
     const target = path || currentPath.value
     if (!target || target.length === 0) return curJson.value
@@ -51,64 +173,97 @@ export const useStoryStore = defineStore('story', () => {
     }
     return cur
   }
-  function getNode(id) { return original.getNode(id) }
-  function getCurJsonName() { return original.getCurJsonName() }
-  function getFilteredNodes() { return original.getFilteredNodes() }
-  function toCleanJSON() { return original.toCleanJSON() }
 
-  // ---- 数据变更方法 ----
-  function loadCurJson(json) { original.loadCurJson(json) }
-  function newCurJson(json) { original.newCurJson(json) }
-  function setCurJsonName(name) { original.setCurJsonName(name) }
-  function getEditorMeta(key, fallback) { return original.getEditorMeta(key, fallback) }
-  function setEditorMeta(key, val) { original.setEditorMeta(key, val) }
+  function selectPath(path) {
+    currentPath.value = path || []
+    if (path.length === 2 && path[0] === 'content') selectedId.value = String(path[1])
+    else selectedId.value = null
+    _emit()
+  }
 
-  function addNode(ctx = null, path = null) { original.addNode(ctx, path) }
-  function addBlankNode() { original.addBlankNode() }
-  function duplicateNode(id) { original.duplicateNode(id) }
-  function deleteNode(id) { original.deleteNode(id) }
-  function updateNode(id, patch) { original.updateNode(id, patch) }
-  function updateNodeField(id, field, zhVal, enVal) { original.updateNodeField(id, field, zhVal, enVal) }
-  function moveNode(fromIndex, toIndex) { original.moveNode(fromIndex, toIndex) }
+  // ========== 数据写入 ==========
 
-  function selectNode(id) { original.selectNode(id) }
-  function selectPath(path) { original.selectPath(path) }
-  function setByPath(path, value) { original.setByPath(path, value) }
-  function deleteAt(path) { original.deleteAt(path) }
+  function setByPath(path, value) {
+    if (!path || path.length === 0) { curJson.value = value; _emit(); return }
+    const parentPath = path.slice(0, -1)
+    const lastSeg = path[path.length - 1]
+    const parent = getByPath(parentPath)
+    if (!parent) return
+    if (Array.isArray(parent)) parent[parseInt(lastSeg)] = value
+    else parent[lastSeg] = value
+    _emit()
+  }
 
-  function addObjectProperty(path, key, val) { original.addObjectProperty(path, key, val) }
-  function addArrayItem(path) { original.addArrayItem(path) }
+  function addObjectProperty(path, key, val) {
+    const parent = getByPath(path)
+    if (!parent || typeof parent !== 'object' || Array.isArray(parent)) return
+    parent[key] = val
+    _emit()
+  }
 
-  function duplicateEntry(path) { original.duplicateEntry(path) }
+  function addArrayItem(path) {
+    const parent = getByPath(path)
+    if (!parent || !Array.isArray(parent)) return
+    const ctx = resolveTemplateContext([...path, '0'])
+    const tpl = createNodeFromTemplate(ctx)
+    delete tpl.id
+    parent.push(tpl)
+    currentPath.value = [...path, String(parent.length - 1)]
+    _emit()
+  }
 
-  function addOption(nodeId) { original.addOption(nodeId) }
-  function updateOption(nodeId, optIndex, patch) { original.updateOption(nodeId, optIndex, patch) }
-  function updateOptionText(nodeId, optIndex, zhVal, enVal) { original.updateOptionText(nodeId, optIndex, zhVal, enVal) }
-  function deleteOption(nodeId, optIndex) { original.deleteOption(nodeId, optIndex) }
+  function duplicateEntry(path) {
+    if (!path || path.length === 0) return
+    const parentPath = path.slice(0, -1)
+    const lastSeg = path[path.length - 1]
+    const parent = getByPath(parentPath)
+    if (!parent) return
 
-  function addAction(nodeId, optIndex) { original.addAction(nodeId, optIndex) }
-  function updateActionCmd(nodeId, optIndex, actionIndex, cmd) { original.updateActionCmd(nodeId, optIndex, actionIndex, cmd) }
-  function updateActionParams(nodeId, optIndex, actionIndex, paramsStr) { original.updateActionParams(nodeId, optIndex, actionIndex, paramsStr) }
-  function deleteAction(nodeId, optIndex, actionIndex) { original.deleteAction(nodeId, optIndex, actionIndex) }
+    if (Array.isArray(parent)) {
+      const idx = parseInt(lastSeg)
+      if (isNaN(idx) || idx < 0 || idx >= parent.length) return
+      const source = parent[idx]
+      if (source === undefined || source === null) return
+      const copy = JSON.parse(JSON.stringify(source))
+      if (copy.id) copy.id = 'node_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
+      parent.splice(idx + 1, 0, copy)
+    } else if (typeof parent === 'object' && parent !== null) {
+      if (!(lastSeg in parent)) return
+      const source = parent[lastSeg]
+      if (source === undefined) return
+      const copy = JSON.parse(JSON.stringify(source))
+      let newKey = lastSeg + '_copy'
+      let i = 1
+      while (newKey in parent) newKey = lastSeg + '_copy_' + i++
+      parent[newKey] = copy
+    }
+    _emit()
+  }
 
-  function setFilter(field, value) { original.setFilter(field, value) }
-  function clearFilters() { original.clearFilters() }
-  function getFieldValues(field) { return original.getFieldValues(field) }
+  function deleteAt(path) {
+    if (!path || path.length === 0) return
+    const parentPath = path.slice(0, -1)
+    const lastSeg = path[path.length - 1]
+    const parent = getByPath(parentPath)
+    if (!parent) return
+    if (Array.isArray(parent)) { const idx = parseInt(lastSeg); if (idx >= 0 && idx < parent.length) parent.splice(idx, 1) }
+    else if (typeof parent === 'object') delete parent[lastSeg]
+    currentPath.value = parentPath
+    _emit()
+  }
 
+  // ========== 导出 ==========
   return {
     // 状态
     curJson, currentPath, selectedId, dataVersion, autoSaveStatus, editorMeta,
-    // 方法（与原始 store 同名，直接委托）
-    getByPath, getNode, getCurJsonName, getFilteredNodes, toCleanJSON,
-    loadCurJson, newCurJson, setCurJsonName, getEditorMeta, setEditorMeta,
-    addNode, addBlankNode, duplicateNode, deleteNode, updateNode, updateNodeField, moveNode,
-    selectNode, selectPath, setByPath, deleteAt,
+    // 方法
+    getByPath, getNode, getCurJsonName, toCleanJSON,
+    loadCurJson, newCurJson, setCurJsonName,
+    addNode, selectPath, setByPath, deleteAt,
     addObjectProperty, addArrayItem, duplicateEntry,
-    addOption, updateOption, updateOptionText, deleteOption,
+    addOption, updateOption, deleteOption,
     addAction, updateActionCmd, updateActionParams, deleteAction,
-    setFilter, clearFilters, getFieldValues,
-    // 内部方法
-    _emit: () => original._emit(),
-    _sync: sync
+    // 内部方法（供非 Vue 文件调用）
+    _emit, onChange
   }
 })

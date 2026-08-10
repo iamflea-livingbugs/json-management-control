@@ -1,7 +1,9 @@
-import { store } from '../logic/logic-storyStore.js';
+import { useStoryStore } from '../../stores/storyStore.js';
 import { showAlert } from '../../components/base/useDialog.js';
 import { getLanguages, loadStructs, saveStructs, addStructField, removeStructField, deleteStruct, syncStruct } from '../logic/logic-storyTypes.js';
 import { readConfig, writeConfig, readSchema, writeSchema } from '../logic/logic-migration.js';
+
+const store = new Proxy({}, { get(_, p) { const s = useStoryStore(); const v = s[p]; return typeof v === 'function' ? v.bind(s) : v } })
 
 const $ = (sel) => document.querySelector(sel);
 // ==========================================

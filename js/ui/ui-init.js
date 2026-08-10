@@ -1,6 +1,7 @@
 // ==========================================
 // init.js — 界面初始化入口
-// 工具栏、Tab切换、活动栏、渲染调度、右侧 JSON 预览
+// 工具栏、Tab切换、渲染调度、右侧 JSON 预览
+// 侧面板切换已移至 App.vue（Vue 驱动）
 // ==========================================
 
 import 'bootstrap/dist/css/bootstrap.min.css'
@@ -12,11 +13,7 @@ import { openTemplateEditor } from './ui-storyTemplateUI.js';
 import { openLabelManager } from './ui-labelManager.js';
 import { showCreateDialog } from '../../components/base_reusable/useCreateDialog.js';
 import { showAlert } from '../../components/base/useDialog.js';
-import { store } from '../logic/logic-storyStore.js';
 import { setFileName } from '../logic/logic-autoSave.js';
-import { initSettings } from './ui-settingsPanel.js';
-import { createApp } from 'vue'
-import SettingsPanel from '../../components/Settings/SettingsPanel.vue'
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -38,75 +35,7 @@ export function initUI(store, io) {
         setFileName((e.target.value || 'Untitled') + '.json');
     });
 
-    // 活动栏
-    const VIEW_LABELS = { outline: '大纲', stats: '统计', settings: '设置' };
-    let _sidePanelOpen = true;
-
-    function collapseSidePanel() {
-        const sidePanel = $('#panel-side');
-        // 保存当前宽度到元素属性，清内联样式让 transition 生效
-        sidePanel.dataset.savedWidth = sidePanel.style.width || (sidePanel.getBoundingClientRect().width + 'px');
-        sidePanel.style.width = '';
-        sidePanel.style.flex = '';
-        sidePanel.classList.add('collapsed');
-        _sidePanelOpen = false;
-    }
-
-    function expandSidePanel(view) {
-        const sidePanel = $('#panel-side');
-        sidePanel.classList.remove('collapsed');
-        // 恢复之前保存的宽度
-        const w = sidePanel.dataset.savedWidth;
-        if (w) {
-            sidePanel.style.width = w;
-            sidePanel.style.flex = 'none';
-        }
-        $$('.side-view').forEach(v => v.classList.add('hidden'));
-        const targetView = $('#view-' + view);
-        if (targetView) targetView.classList.remove('hidden');
-        $('#side-panel-title').textContent = VIEW_LABELS[view] || view;
-        _sidePanelOpen = true;
-    }
-
-    let _settingsApp = null
-
-    // 监听 Vue 活动栏发出的自定义事件
-    const activityBarEl = $('#activity-bar')
-    if (activityBarEl) {
-        activityBarEl.addEventListener('activity-change', (e) => {
-            const { view, action } = e.detail
-            if (action === 'collapse') {
-                collapseSidePanel()
-                return
-            }
-            // action === 'switch'
-            expandSidePanel(view)
-            if (view === 'settings') {
-                const container = document.querySelector('#view-settings .side-view-content')
-                if (container) {
-                    if (_settingsApp) { _settingsApp.unmount(); _settingsApp = null }
-                    _settingsApp = createApp(SettingsPanel)
-                    _settingsApp.mount(container)
-                }
-            }
-        })
-
-        activityBarEl.addEventListener('dblclick', (e) => {
-            if (e.target === activityBarEl) {
-                // 派发 outline 按钮的点击事件
-                activityBarEl.dispatchEvent(new CustomEvent('activity-change', {
-                    detail: { view: 'outline', action: 'switch' },
-                    bubbles: true
-                }))
-            }
-        })
-    }
-
-    $('#btn-close-side').addEventListener('click', () => {
-        collapseSidePanel();
-    });
-
-    // 分隔条
+    // 分隔条（拖拽调整面板宽度）
     initSplitters();
 }
 
@@ -122,7 +51,6 @@ function initSplitters() {
             if (targetPanel) startW = targetPanel.getBoundingClientRect().width;
             splitter.classList.add('dragging');
             document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
-            // 拖拽时禁用过渡
             if (targetPanel) targetPanel.classList.add('no-transition');
             e.preventDefault();
         });
@@ -136,7 +64,6 @@ function initSplitters() {
             if (!dragging) return;
             dragging = false; splitter.classList.remove('dragging');
             document.body.style.cursor = ''; document.body.style.userSelect = '';
-            // 恢复过渡
             if (targetPanel) targetPanel.classList.remove('no-transition');
             targetPanel = null;
         });

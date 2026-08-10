@@ -55,15 +55,15 @@ json-management-control/
 │   └── Settings/
 │       └── SettingsPanel.vue ← 设置面板
 ├── stores/
-│   └── storyStore.js       ← Pinia 状态管理，桥接原生 StoryStore 与 Vue 组件
+│   └── storyStore.js       ← Pinia 唯一数据源：数据 CRUD、路径导航、导出、变更通知
 ├── js/
 │   ├── main.js             ← 入口：启动加载 + 拖放绑定
 │   ├── barrel.js           ← 统一导出中枢
 │   ├── logic/              ← 纯数据层（不依赖 UI）
 │   │   ├── logic-storyTypes.js   ← 数据模型、模板读写、结构类型系统
-│   │   ├── logic-storyStore.js   ← 数据管理：CRUD、路径导航、导出、复制 API
-│   │   ├── logic-storyStore.test.js ← Vitest 单元测试（TDD）
-│   │   └── logic-storyIO.js      ← 文件导入/导出、拖放绑定
+│   │   ├── logic-storyIO.js      ← 文件导入/导出、拖放绑定
+│   │   ├── logic-autoSave.js     ← 自动保存核心逻辑（防抖 + 心跳 + 状态通知）
+│   │   └── logic-migration.js    ← localStorage 三层结构 key 定义 + 数据迁移
 │   └── ui/                 ← 视图层（依赖 logic/）
 │       ├── ui-init.js            ← 主界面初始化、树形搜索、事件绑定
 │       ├── ui-chapterView.js     ← 章节列表视图（原版，已被 ChapterView.vue 替代）
@@ -86,17 +86,17 @@ json-management-control/
 
 ### 架构概览
 
-当前采用 **Vue 3 + 原生 JS 混合架构**：
+当前采用 **Vue 3 + Pinia 单一数据源架构**：
 
 - **App.vue** 通过 `createApp(App).mount('#app')` 渲染整个布局，替代了原先的 layout.html
-- **Pinia Store**（`stores/storyStore.js`）包装原生 `StoryStore`，通过 `_emit()` 回调机制桥接 Vue 组件与原生层
+- **Pinia Store**（`stores/storyStore.js`）为应用唯一数据源，集数据 CRUD、路径导航、导出、变更通知于一身，不再依赖外部 class
 - **Vue 组件** 通过 Composition API 的 `useStoryStore()` 响应式访问数据
-- **原生 JS** 仍直接操作 `logic-storyStore.js` 中的 store 实例，通过 `_emit()` 通知 Pinia 同步
+- **原生 JS** 与 Vue 组件共用同一个 Pinia Store，通过 `onChange()` 订阅变更
+- 原 `js/logic/logic-storyStore.js` 已删除，其逻辑（含 `duplicateEntry` 复制 API）全部并入 Pinia Store
 
 数据流：
 ```
-原生 JS 操作 → StoryStore._emit() → Pinia sync() + 原生监听器
-Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → 触发同步
+原生 JS / Vue 组件操作 → storyStore.xxx() → dataVersion++ / curJson 新引用 → 响应式更新 + onChange 通知
 ```
 
 ---
@@ -152,7 +152,7 @@ Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → �
 
 **已完成：**
 - [x] `App.vue` 统领布局，通过 `createApp(App).mount('#app')` 渲染整个页面
-- [x] Pinia Store（`stores/storyStore.js`）桥接 Vue 组件与原生 StoryStore
+- [x] Pinia Store（`stores/storyStore.js`）作为应用唯一数据源，集 CRUD、路径导航、导出、变更通知于一身
 - [x] 布局组件：`PanelRight.vue`、`OutlineView.vue`、`TreeNode.vue`
 - [x] 编辑组件：`PanelCenter.vue`、`JsonEditor.vue`、`FormEditor.vue`、`FormField.vue`、`OptionsEditor.vue`、`ActionEditor.vue`
 - [x] 基础组件：`Modal.vue`、`ConfirmDialog.vue`、`useDialog.js`、`useObjectAdd.js`
@@ -162,8 +162,9 @@ Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → �
 - [x] 清理废弃文件：`layout.html`、`ui-editorForm.js`、`ui-storyTree.js` 及全部遗留 .html 片段已删除
 - [x] **组件目录重组**：按 base / base_reusable / layout (L-side/M-side/R-side) / layout_toolbar 分层归类
 - [x] **复制功能共享 API**：`storyStore.duplicateEntry(path)` 统一数组/对象的复制逻辑
-- [x] **Vitest 测试框架**：引入单元测试，纯逻辑层 TDD 流程
 - [x] **声明式 Modal**：模板选择弹窗从动态 `createApp` 改为声明式 `<Modal>` 组件
+- [x] **Pinia 单一数据源重构**：删除 `js/logic/logic-storyStore.js`，数据逻辑全部并入 Pinia Store，移除双数据源 sync 桥接
+- [x] **交互修复**：表单双击编辑状态驱动化（FormField.vue）；根字段删除失焦自动恢复修复（PanelRight.vue）
 
 **剩余待 Vue 化的原生模块：**
 - [ ] 标签管理器（`ui-labelManager.js`）
@@ -177,7 +178,7 @@ Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → �
 |------|------|
 | Vite 8 | 开发服务器 + 构建 |
 | Vue 3.5 (Composition API) | UI 层渐进式迁移 |
-| Pinia 3 | Vue 状态管理（桥接 Vue 组件与原生 StoryStore） |
+| Pinia 3 | Vue 状态管理（应用唯一数据源） |
 | Naive UI | 基础组件库（按钮、弹窗等） |
 | Bootstrap 5 | CSS 组件库（按钮、弹窗、表单、栅格等） |
 | SCSS | CSS 预处理器 |
@@ -202,6 +203,13 @@ Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → �
 ---
 
 ## 重要改动记录
+
+### v0.08 — Pinia 单一数据源重构 + 交互修复
+- [x] **Pinia 唯一数据源**：删除 `js/logic/logic-storyStore.js`，数据 CRUD、路径导航、导出、变更通知全部并入 `stores/storyStore.js`
+- [x] **移除双数据源 sync 桥接**：不再需要 `_emit()` → `sync()` 手动同步，原生 JS 与 Vue 组件共用同一 Pinia Store
+- [x] **精简冗余方法**：移除约 14 个未使用的冗余方法，精简 store 接口（保留 `duplicateEntry` 复制 API）
+- [x] **修复表单双击编辑 bug**：`FormField.vue` 由手动 DOM 替换改为 Vue 状态驱动（`editingLabel` 控制 label/input 切换），解决失焦后无法再次编辑
+- [x] **修复根字段删除自动恢复 bug**：`PanelRight.vue` 根数据写入由 `loadCurJson`（触发规范化补全）改为 `setByPath([], parsed)` 直接写入
 
 ### v0.07 — 组件目录结构化 + 共享复制 API + 测试框架
 - [x] **组件目录重组**：按 HTML 物理布局将组件归入 base / base_reusable / layout/L-side / layout/M-side / layout/R-side / layout_toolbar
@@ -285,13 +293,12 @@ Vue 组件操作 → useStoryStore().xxx() → 委托给原生 StoryStore → �
 ## 依赖层级
 
 ```
-logic/              ← 纯函数，0 依赖
-  └─ logic-storyStore.test.js  ← Vitest，依赖 logic/
+logic/              ← 纯函数，0 依赖（数据模型、文件 IO、自动保存、数据迁移）
 ui/                 ← 依赖 logic/
 base/               ← 纯 UI 组件，0 业务依赖
 base_reusable/      ← 依赖 base/ + logic/
 components/layout/  ← Vue 页面布局组件，依赖 logic/ + base/ + base_reusable + Pinia
-stores/             ← Pinia Store，桥接 Vue 组件与原生 StoryStore
+stores/             ← Pinia Store，应用唯一数据源（CRUD、路径导航、变更通知）
 ui-init.js          ← 桥梁：挂载 Vue 组件 + 绑定原生事件
 ```
 

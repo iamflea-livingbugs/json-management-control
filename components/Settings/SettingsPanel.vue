@@ -81,7 +81,8 @@
 <script setup>
 import { NConfigProvider } from 'naive-ui'
 import { ref, reactive, computed, onMounted } from 'vue'
-import { store } from '../../js/logic/logic-storyStore.js'
+import { useStoryStore } from '../../stores/storyStore.js'
+const store = useStoryStore()
 import { showAlert } from '../base/useDialog.js'
 import {
   getLanguages, loadStructs, saveStructs, getEffectiveFields, deleteStruct,
@@ -91,6 +92,8 @@ import {
 
 import AppButton from '../base/AppButton.vue'
 import { readConfig, writeConfig, readSchema, writeSchema } from '../../js/logic/logic-migration.js'
+
+const emit = defineEmits(['layout-reset'])
 
 const themes = {
   dark:   { label: '暗色默认', vars: { '--bg': '#1a1a2e', '--bg-panel': '#16213e', '--bg-input': '#0f3460', '--border': '#2a2a4a', '--text': '#e0e0e0', '--text-dim': '#888', '--accent': '#e94560', '--accent-hover': '#ff6b81', '--success': '#4ecca3', '--warn': '#f0a500' } },
@@ -283,10 +286,7 @@ function doReset() {
 }
 
 function doLayoutReset() {
-  const p = document.getElementById('panel-side')
-  if (p) { p.classList.remove('collapsed', 'no-transition'); p.style.width = ''; p.style.flex = ''; delete p.dataset.savedWidth }
-  const r = document.getElementById('panel-right')
-  if (r) { r.style.width = ''; r.style.flex = '' }
+  emit('layout-reset')
 }
 
 // 挂载时应用当前主题

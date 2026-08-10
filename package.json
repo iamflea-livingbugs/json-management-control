@@ -1,15 +1,13 @@
 {
   "name": "json-management-control",
-  "version": "1.0.0",
-  "description": "可视化编辑 JSON 格式对话剧本，支持多语言、树形导航、实时预览，专为游戏剧情设计。",
-  "main": "index.js",
-  "directories": {
-    "lib": "lib"
-  },
+  "version": "0.8.0",
+  "description": "通用 JSON 管理编辑器 — 可视化编辑和管理 JSON 数据，支持多语言字段、树形结构导航、实时预览。",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "repository": {
     "type": "git",
@@ -18,7 +16,7 @@
   "keywords": [],
   "author": "",
   "license": "MulanPSL-2.0",
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/test-utils": "^2.4.11",
