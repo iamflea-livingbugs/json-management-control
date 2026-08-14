@@ -19,6 +19,7 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue'
+import hljs from 'highlight.js'
 import { useStoryStore } from '../../../../stores/storyStore.js'
 
 const storyStore = useStoryStore()
@@ -31,11 +32,9 @@ function applyHighlight(text) {
   const code = highlightCode.value
   if (!code) return
   code.textContent = text
-  if (window.hljs) {
-    try {
-      code.innerHTML = window.hljs.highlight(text, { language: 'json' }).value
-    } catch (_) {}
-  }
+  try {
+    code.innerHTML = hljs.highlight(text, { language: 'json' }).value
+  } catch (_) {}
 }
 
 function renderJSON() {

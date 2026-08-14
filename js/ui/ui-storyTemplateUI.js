@@ -7,6 +7,7 @@ import { loadTemplates, loadEffectiveTemplates, loadTemplateKeys, saveTemplateKe
 import { useStoryStore } from '../../stores/storyStore.js';
 import { showConfirm } from '../../components/base/useDialog.js';
 import { makeModalDraggable } from './ui-modalDialog.js';
+import hljs from 'highlight.js';
 
 const store = new Proxy({}, { get(_, p) { const s = useStoryStore(); const v = s[p]; return typeof v === 'function' ? v.bind(s) : v } })
 
@@ -358,7 +359,7 @@ function rebindFieldEvents() {
 
 function applyHighlight(codeEl, text) {
     codeEl.textContent = text;
-    if (window.hljs) { try { codeEl.innerHTML = window.hljs.highlight(text, { language: 'json' }).value; } catch (e) {} }
+    try { codeEl.innerHTML = hljs.highlight(text, { language: 'json' }).value; } catch (e) {}
 }
 
 function syncJSONEditorFromDraft() {

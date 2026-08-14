@@ -12,6 +12,7 @@ import { runMigration } from './logic/logic-migration.js';
 import { start, notifyChange, hasSavedDocument, getSavedDocument, discardSavedDocument, setFileName } from './logic/logic-autoSave.js';
 import { showConfirm } from '../components/base/useDialog.js';
 import '../css/style.css';
+import '../lib/atom-one-dark.min.css';
 
 // step 1: 挂载 Vue 根组件 + Pinia（渲染整个页面布局）
 const app = createApp(App);
