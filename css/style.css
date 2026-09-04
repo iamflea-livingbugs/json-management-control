@@ -800,6 +800,7 @@ select,
     margin: 0;
     padding: 10px 12px;
     font-family: var(--font-mono);
+    font-size: inherit; /* 覆盖 Bootstrap pre 默认 0.875em，保证与 textarea 层字号一致 */
     line-height: 1.5;
     background: var(--bg);
     overflow: auto;
@@ -824,6 +825,7 @@ select,
     bottom: 0;
     padding: 10px 12px;
     font-family: var(--font-mono);
+    font-size: inherit; /* 与高亮层保持一致，防止浏览器默认值覆盖 */
     line-height: 1.5;
     color: transparent;
     caret-color: #fff;

@@ -65,8 +65,10 @@
           <button class="my-btn my-btn-sm my-btn-create" @click="doAddField(st.id)">＋</button>
         </div>
       </div>
-      <div style="margin-top:8px"><button class="my-btn my-btn-sm" @click="newStruct">＋ 新建结构类型</button></div>
+      <div style="margin-top:8px"><button class="my-btn my-btn-sm" @click="newStructOpen = true">＋ 新建结构类型</button></div>
     </div>
+
+    <NewStructDialog v-model:visible="newStructOpen" @created="onStructCreated" />
 
     <div class="settings-section settings-section-row">
       <AppButton type="success" @click="doExport">📤 导出配置</AppButton>
@@ -91,6 +93,7 @@ import {
 } from '../../js/logic/logic-storyTypes.js'
 
 import AppButton from '../base/AppButton.vue'
+import NewStructDialog from '../base_reusable/NewStructDialog.vue'
 import { readConfig, writeConfig, readSchema, writeSchema } from '../../js/logic/logic-migration.js'
 
 const emit = defineEmits(['layout-reset'])
@@ -205,10 +208,10 @@ function doDeleteStruct(sid) {
   structList.value = loadStructs()
 }
 
-function newStruct() {
-  import('../../js/ui/ui-settingsPanel.js').then(m => {
-    if (m.openNewStructDialog) m.openNewStructDialog()
-  })
+const newStructOpen = ref(false)
+function onStructCreated() {
+  structList.value = loadStructs()
+  store._emit()
 }
 
 function doExport(...args) {

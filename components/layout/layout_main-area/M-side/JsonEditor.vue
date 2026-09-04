@@ -80,8 +80,8 @@ function onKeydown(e) {
 function onBlur() {
   try {
     const parsed = JSON.parse(editor.value.value)
-    const path = storyStore.currentPath
-    if (path && path.length > 0) storyStore.setByPath([...path], parsed)
+    // 空路径（[]）表示编辑整个 JSON 根节点，setByPath 支持空路径直接写根
+    storyStore.setByPath([...(storyStore.currentPath || [])], parsed)
   } catch (_) { /* input 已显示错误 */ }
 }
 </script>

@@ -25,7 +25,9 @@ const props = defineProps({
   visible: { type: Boolean, default: false },
   title: { type: String, default: '' },
   width: { type: String, default: '480px' },
-  closable: { type: Boolean, default: true }
+  closable: { type: Boolean, default: true },
+  // 控制 ESC 键关闭（嵌套确认弹窗打开时置 false，避免一起关闭底层弹窗）
+  escClosable: { type: Boolean, default: true }
 })
 
 const emit = defineEmits(['close', 'update:visible'])
@@ -38,7 +40,7 @@ function onClose() {
 
 // ESC 键关闭
 function onKeydown(e) {
-  if (e.key === 'Escape' && props.visible) onClose()
+  if (e.key === 'Escape' && props.visible && props.escClosable) onClose()
 }
 
 watch(() => props.visible, (v) => {

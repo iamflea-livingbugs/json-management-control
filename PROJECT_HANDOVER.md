@@ -33,7 +33,9 @@ json-management-control/
 │   │   └── useDialog.js    ← 弹窗组合式函数（createApp 动态方式）
 │   ├── base_reusable/      ← 可复用组件（基于 base，有业务逻辑）
 │   │   ├── useObjectAdd.js ← 添加属性统一组合式函数
-│   │   └── useCreateDialog.js ← 新建 JSON 弹窗 + 模板选择器
+│   │   ├── useCreateDialog.js ← 新建 JSON 弹窗 + 模板选择器
+│   │   ├── TemplateEditor.vue ← 模板编辑弹窗（Vue 化完成）
+│   │   └── LabelManager.vue   ← 字段标签管理弹窗（Vue 化完成）
 │   ├── layout/             ← 页面布局组件
 │   │   ├── layout_main-area/      ← 主编辑区组件（按左中右分栏）
 │   │   │   ├── L-side/     ← 左栏：大纲树
@@ -57,20 +59,13 @@ json-management-control/
 ├── stores/
 │   └── storyStore.js       ← Pinia 唯一数据源：数据 CRUD、路径导航、导出、变更通知
 ├── js/
-│   ├── main.js             ← 入口：启动加载 + 拖放绑定
-│   ├── barrel.js           ← 统一导出中枢
+│   ├── main.js             ← 入口：启动加载 + 拖放绑定 + 自动保存注册
 │   ├── logic/              ← 纯数据层（不依赖 UI）
 │   │   ├── logic-storyTypes.js   ← 数据模型、模板读写、结构类型系统
 │   │   ├── logic-storyIO.js      ← 文件导入/导出、拖放绑定
 │   │   ├── logic-autoSave.js     ← 自动保存核心逻辑（防抖 + 心跳 + 状态通知）
-│   │   └── logic-migration.js    ← localStorage 三层结构 key 定义 + 数据迁移
-│   └── ui/                 ← 视图层（依赖 logic/）
-│       ├── ui-init.js            ← 主界面初始化、树形搜索、事件绑定
-│       ├── ui-chapterView.js     ← 章节列表视图（原版，已被 ChapterView.vue 替代）
-│       ├── ui-storyTemplateUI.js ← 模板编辑弹窗
-│       ├── ui-labelManager.js    ← 字段标签管理弹窗
-│       ├── ui-settingsPanel.js   ← 设置面板（原生，待废弃）
-│       └── ui-modalDialog.js     ← 已精简，仅保留 makeModalDraggable
+│   │   ├── logic-migration.js    ← localStorage 三层结构 key 定义 + 数据迁移
+│   │   └── logic-localFile.js    ← File System Access API 本地文件打开/保存（Chromium 系）
 ├── config/
 │   ├── template-content.json     ← 空白章节/节点/选项结构 + 默认模板
 │   └── template-contexts.json    ← 模板上下文配置
@@ -148,7 +143,7 @@ json-management-control/
 
 ### 4. Vue 渐进式迁移策略
 
-当前状态：Vue 3 统领布局 + 原生 JS 数据层混合。
+当前状态：Vue 3 统领全部界面，原生 JS 仅剩纯数据层（logic/）。
 
 **已完成：**
 - [x] `App.vue` 统领布局，通过 `createApp(App).mount('#app')` 渲染整个页面
@@ -166,9 +161,9 @@ json-management-control/
 - [x] **Pinia 单一数据源重构**：删除 `js/logic/logic-storyStore.js`，数据逻辑全部并入 Pinia Store，移除双数据源 sync 桥接
 - [x] **交互修复**：表单双击编辑状态驱动化（FormField.vue）；根字段删除失焦自动恢复修复（PanelRight.vue）
 
-**剩余待 Vue 化的原生模块：**
-- [ ] 标签管理器（`ui-labelManager.js`）
-- [ ] 模板编辑器（`ui-storyTemplateUI.js`）
+**原生模块 Vue 化收尾（v0.09 完成）：**
+- [x] 标签管理器（`LabelManager.vue` 替代 `ui-labelManager.js`）
+- [x] 模板编辑器（`TemplateEditor.vue` 替代 `ui-storyTemplateUI.js`）
 
 ---
 
@@ -203,6 +198,42 @@ json-management-control/
 ---
 
 ## 重要改动记录
+
+### v0.13 — 移除 barrel.js 导出中枢
+- [x] **删除 `js/barrel.js`**：此前仅 main.js 一个调用方，中转无意义
+- [x] **main.js 直接 import**：`useStoryStore` / `loadContentConfig` / `io` / `showAlert` 改为从源模块直接引入
+- [x] **移除 store Proxy**：原 barrel.js 用 Proxy 包装 Pinia store 供原生 JS 使用（历史遗留），现改为惰性 getter `store()` 在 Pinia 就绪后调用
+- [x] **依赖层级简化**：`main.js → logic/ + stores/ + components`，无中转层
+
+### v0.12 — 彻底清空 js/ui/ 原生层
+- [x] **新建结构类型弹窗 Vue 化**：新增 `components/base_reusable/NewStructDialog.vue`（替代原生 `openNewStructDialog`），含匹配方式切换 + 实时预览 + 创建同步
+- [x] **分隔条迁移**：原 `ui-init.js` 的 `initSplitters` 迁为 `components/layout/useSplitters.js`（Vue composable，App.vue 挂载）
+- [x] **删除 ui-init.js / ui-settingsPanel.js**：设置加载（主题应用）本就被 SettingsPanel.vue `onMounted` 覆盖，属死代码；main.js / barrel.js 清理引用
+- [x] **`js/ui/` 目录删除**：原生视图层彻底移除，所有界面逻辑已全部由 Vue 组件承担
+
+### v0.11 — 工具栏 Vue 化 + 全局样式入口统一
+- [x] **工具栏 5 按钮迁入 App.vue**：新建/导入/保存/另存为/下载 由原生 `addEventListener` 改为 Vue `@click`（`onCreate/onImport/onSave/onSaveAs/onDownload`），消除 `id` 隔空握手
+- [x] **文件名输入框 Vue 化**：`:value` + `@input` 响应式绑定，外部变更（导入/恢复/拖放）经 computed 自动回流
+- [x] **ui-init.js 职责收缩**：仅剩分隔条 + 设置加载，`initUI()` 改无参（不再依赖 store/io）
+- [x] **全局样式统一入口**：bootstrap css/js、style.css 从 ui-init.js 移入 main.js 单一引入，消除重复 import 隐患
+- [x] **降级导入重写**：非 FSA 浏览器改用动态 `input[type=file]` + `importJSON`（替代原 `setupFilePicker` 绑定），并同步更新文件名
+
+### v0.10 — File System Access API 本地文件读写
+- [x] **新增 `js/logic/logic-localFile.js`**：能力检测（`isFileSystemAccessSupported`）、打开（`openLocalJsonFile`）、覆盖写回（`saveLocalJsonFile`）、另存为（`saveLocalJsonFileAs`）、会话句柄状态
+- [x] **📥 导入优先 FSA**：`showOpenFilePicker` 打开本地 .json，记住句柄；文件名同步输入框 + 自动保存 + store
+- [x] **💾 保存（覆盖写回）**：显式按钮，写回当前关联文件（含 `requestPermission` 处理刷新后权限回收）；无关联文件时明确提示，绝不静默
+- [x] **另存为**：显式按钮，`showSaveFilePicker` 保存到新位置，成功后记住新句柄供「保存」直接写回
+- [x] **⬇️ 下载恢复纯下载**：下载副本，不触碰文件关联（消除原"有句柄就静默写回"的隐式行为；按钮文案"导出 JSON"→"下载 JSON"）
+- [x] **降级兼容**：Firefox/Safari 自动回落 `setupFilePicker` + `exportJSON`，原有行为不变
+- [x] **测试**：新增 9 个单测（mock FileSystemHandle，覆盖能力检测/打开/写回/另存为/句柄状态），35/35 通过
+- [x] **修复**：端到端验证发现 `applyFileName(store, name)` 调用漏传 store 导致文件名不更新，已修复
+
+### v0.09 — 原生模块 Vue 化收尾
+- [x] **标签管理器 Vue 化**：`LabelManager.vue` 替代 `ui-labelManager.js`，打开时从 `loadLabels()` 刷新，增删改实时保存并 `_emit()` 通知
+- [x] **模板编辑器 Vue 化**：`TemplateEditor.vue` 替代 `ui-storyTemplateUI.js`，保留内存草稿 + 脏状态关闭确认 + 上下文切换 + JSON 高亮镜像
+- [x] **Modal 增强**：新增 `esc-closable` prop，嵌套确认弹窗打开时置 false 抑制底层 ESC 关闭
+- [x] **App.vue 声明式接入**：两个按钮改 `@click` 驱动 `v-model:visible`，移除旧 `id` 绑定
+- [x] **清理**：删除 `ui-storyTemplateUI.js`、`ui-labelManager.js`、`ui-modalDialog.js`（含 `makeModalDraggable`），`ui-init.js` / `barrel.js` 移除对应导出
 
 ### v0.08 — Pinia 单一数据源重构 + 交互修复
 - [x] **Pinia 唯一数据源**：删除 `js/logic/logic-storyStore.js`，数据 CRUD、路径导航、导出、变更通知全部并入 `stores/storyStore.js`
@@ -282,7 +313,9 @@ json-management-control/
 |:----:|:----:|
 | 启动开发 | `npx vite` → http://localhost:5173 |
 | 导入 JSON | 工具栏「📥 导入 JSON」或拖拽文件到窗口 |
-| 导出 JSON | 工具栏「📤 导出 JSON」|
+| 保存（覆盖写回） | 工具栏「💾 保存」（需先导入获得文件关联，无关联时明确提示）|
+| 另存为 | 工具栏「另存为」（保存到新位置，成功后「保存」转写该文件）|
+| 导出 JSON 副本 | 工具栏「⬇️ 下载 JSON」（下载副本，不影响原文件）|
 | 新建空白 JSON | 工具栏「＋ 新建 JSON」|
 | 编辑模板 | 工具栏「📋 编辑模板」|
 | 编辑节点 | 左侧树形导航选中节点，中间表单编辑 |
@@ -293,13 +326,12 @@ json-management-control/
 ## 依赖层级
 
 ```
+main.js             ← 入口：直接 import logic/ + stores/ + components，无中转层
 logic/              ← 纯函数，0 依赖（数据模型、文件 IO、自动保存、数据迁移）
-ui/                 ← 依赖 logic/
 base/               ← 纯 UI 组件，0 业务依赖
 base_reusable/      ← 依赖 base/ + logic/
 components/layout/  ← Vue 页面布局组件，依赖 logic/ + base/ + base_reusable + Pinia
 stores/             ← Pinia Store，应用唯一数据源（CRUD、路径导航、变更通知）
-ui-init.js          ← 桥梁：挂载 Vue 组件 + 绑定原生事件
 ```
 
 ---

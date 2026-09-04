@@ -29,6 +29,19 @@ describe('getByPath / setByPath', () => {
     expect(store.curJson.content).toBeUndefined()
   })
 
+  it('回归：JSON 编辑器在根节点（空路径）失焦写入不应被丢弃', () => {
+    const store = useStoryStore()
+    store.loadCurJson({ meta: { name: '初始' }, content: [] })
+    // 模拟 JsonEditor.onBlur：编辑整个 JSON 后 currentPath 为空数组
+    expect(store.currentPath).toEqual([])
+    const edited = { meta: { name: '根节点编辑后' }, content: [{ id: '9', speaker: '主角' }] }
+    const path = store.currentPath
+    // 修复前逻辑等价于：if (path && path.length > 0) —— 空路径会静默丢弃
+    store.setByPath([...(path || [])], edited)
+    expect(store.curJson.meta.name).toBe('根节点编辑后')
+    expect(store.curJson.content).toHaveLength(1)
+  })
+
   it('按路径写入对象属性', () => {
     const store = useStoryStore()
     store.setByPath(['meta', 'author'], '张三')
