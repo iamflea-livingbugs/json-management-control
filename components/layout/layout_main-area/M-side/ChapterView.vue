@@ -26,7 +26,7 @@
             <span class="chapter-breadcrumb-full-hint">（点击复制）</span>
           </span>
         </span>
-        <button class="my-btn my-btn-sm" @click="showColumnConfig">⚙️ 显示列</button>
+        <button class="my-btn my-btn-sm" @click="openColumnConfig">⚙️ 显示列</button>
         <span class="badge bg-secondary">{{ typeLabel }}</span>
       </div>
       <div class="col-5 d-flex justify-content-end">
@@ -49,14 +49,39 @@
 
     <!-- ===== 数据列表 ===== -->
     <div v-else class="chapter-list">
+
+      <!-- 列标题行：与数据行结构对齐，像表格表头 -->
+      <div class="chapter-header">
+        <div class="chapter-row-main">
+          <span v-if="showSpeakerCol" class="chapter-speaker-badge chapter-header-badge"></span>
+          <div class="chapter-cols">
+            <div v-if="showSpeakerCol" class="chapter-col-speaker chapter-header-cell">
+              {{ isArrayMode ? getFieldLabel('speaker') : '属性' }}
+              <span v-if="isArrayMode && hasFieldLabel('speaker')" class="chapter-label-badge" title="自定义标签">🔖</span>
+            </div>
+            <div v-for="column in visibleColumns" :key="column" class="chapter-col chapter-header-cell"
+              :class="'chapter-col-' + column">
+              <template v-if="isI18nColumn(column)">
+                <span class="chapter-header-name">{{ getFieldLabel(column) }}</span>
+                <span class="chapter-header-langs">
+                  <span v-for="language in languages" :key="language" class="chapter-header-lang">{{ language }}</span>
+                </span>
+              </template>
+              <span v-else class="chapter-header-name">{{ getFieldLabel(column) }}</span>
+              <span v-if="hasFieldLabel(column)" class="chapter-label-badge" title="自定义标签">🔖</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div v-for="([rowKey, node], index) in entries" :key="rowKey" class="chapter-row"
         :data-index="isArrayMode ? rowKey : undefined" :data-key="isArrayMode ? undefined : rowKey"
         :data-id="node.id || rowKey" @dblclick="openEditRow(rowKey)">
 
         <div class="chapter-row-main">
 
-          <!-- 左侧头像 Badge -->
-          <span class="chapter-speaker-badge"
+          <!-- 左侧头像 Badge（随 speaker 标识列显示） -->
+          <span v-if="showSpeakerCol" class="chapter-speaker-badge"
             :style="{ background: speakerColor(isArrayMode ? (speakerName(node) || '?') : String(rowKey).charAt(0).toUpperCase() || '?') }">
             {{ isArrayMode ? (speakerName(node) || '?').charAt(0) || '?' : String(rowKey).charAt(0).toUpperCase() || '?'
             }}
@@ -65,9 +90,10 @@
           <!-- 数据列容器 -->
           <div class="chapter-cols">
 
-            <!-- 说话人列（仅数组模式）或属性名标签（仅对象模式） -->
-            <div class="chapter-col-speaker">
-              <input v-if="isArrayMode" class="chapter-speaker-input" :value="speakerName(node)" placeholder="说话人"
+            <!-- 行标识列（数组=说话人 / 对象=属性名），由显示列配置的 speaker 项控制 -->
+            <div v-if="showSpeakerCol" class="chapter-col-speaker">
+              <input v-if="isArrayMode" class="chapter-speaker-input" :value="speakerName(node)"
+                :placeholder="getFieldLabel('speaker')"
                 @change="event => updateSpeaker(rowKey, event.target.value)" />
               <span v-else class="chapter-key-label">{{ rowKey }}</span>
             </div>
@@ -105,6 +131,36 @@
       </div>
     </div>
 
+    <!-- ===== 显示列设置弹窗 ===== -->
+    <Modal :visible="columnModalVisible" title="显示列设置" width="420px" @close="columnModalVisible = false">
+      <div style="margin-bottom: 8px">
+        <span style="color: var(--text-dim)">选择要在列表中显示的字段：</span>
+        <span style="float: right">
+          <button class="my-btn my-btn-sm" @click="columnDraft = allColumns.map(f => f.key)">全选</button>
+          <button class="my-btn my-btn-sm" @click="columnDraft = []">清空</button>
+        </span>
+      </div>
+      <div class="col-tree">
+        <ColumnFieldNode
+          v-for="field in allColumns"
+          :key="field.key"
+          :key-name="field.key"
+          :value="field.value"
+          :draft="columnDraft"
+          :is-top="true"
+          @toggle="toggleColumnDraft"
+        />
+      </div>
+      <div v-if="allColumns.length === 0" class="empty-hint" style="padding: 8px 0">当前数据没有可配置的字段</div>
+      <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-dim)">
+        勾选顶层字段作为列；对象/数组可展开查看内部结构（仅供查看，不作为列）
+      </div>
+      <template #footer>
+        <button class="my-btn my-btn-sm" @click="columnModalVisible = false">取消</button>
+        <button class="my-btn my-btn-sm my-btn-primary" @click="confirmColumnConfig">确定</button>
+      </template>
+    </Modal>
+
     <!-- ===== 复制成功小通知 ===== -->
     <transition name="toast-fade">
       <div v-if="toastVisible" class="chapter-toast">✅ 已复制完整路径</div>
@@ -117,10 +173,15 @@ import { computed, ref } from 'vue'
 import { useStoryStore } from '../../../../stores/storyStore.js'
 import {
   getLanguages,
+  getFieldLabel,
+  getI18nMarker,
+  hasFieldLabel,
   loadEffectiveTemplates
 } from '../../../../js/logic/logic-storyTypes.js'
 import { useObjectAdd } from '../../../base_reusable/useObjectAdd.js'
 import { showTemplatePicker } from '../../../base_reusable/useCreateDialog.js'
+import Modal from '../../../base/Modal.vue'
+import ColumnFieldNode from '../../../base_reusable/ColumnFieldNode.vue'
 
 // ============================================================
 // 工具函数
@@ -128,16 +189,16 @@ import { showTemplatePicker } from '../../../base_reusable/useCreateDialog.js'
 
 /**
  * 从 localStorage 读取显示列配置
- * 如果从未配置过或数据损坏，返回默认值 ["text"]
+ * 返回 null 表示「从未配置」；返回数组表示用户显式选择过的列（可为空数组 = 显式清空）
  *
- * @returns {string[]} 选中的字段名数组
+ * @returns {string[]|null} 选中的字段名数组；未配置或数据损坏时返回 null
  */
 function loadColumnConfig() {
   try {
     const data = JSON.parse(localStorage.getItem('storyeditor_chapter_cols'))
-    return Array.isArray(data) ? data : ['text']
+    return Array.isArray(data) ? data : null
   } catch {
-    return ['text']
+    return null
   }
 }
 
@@ -257,8 +318,58 @@ const typeLabel = computed(() => {
   return typeof value
 })
 
-/** 当前可见列列表（过滤掉 speaker 列，因为 speaker 列固定显示） */
-const visibleColumns = computed(() => loadColumnConfig().filter(column => column !== 'speaker'))
+/** 显示列配置（响应式状态：null=未配置，数组=用户选择；保存后立即生效，无需页面重载） */
+const columnConfig = ref(loadColumnConfig())
+
+/** 当前可见列：未配置时显示数据实际存在的全部字段；已配置时按用户选择（含 speaker 标识列） */
+const visibleColumns = computed(() => {
+  if (columnConfig.value === null) return allColumns.value
+  return [...columnConfig.value]
+})
+
+/** 行标识列（数组=说话人 / 对象=属性名）是否显示：由配置中的 speaker 项控制 */
+const showSpeakerCol = computed(() => visibleColumns.value.includes('speaker'))
+
+// ---- 显示列配置弹窗状态 ----
+const columnModalVisible = ref(false)
+/** 弹窗内草稿：勾选状态确认后才写入生效，取消则丢弃 */
+const columnDraft = ref([])
+
+/** 当前数据所有可选字段（含 speaker 行标识列，由用户决定是否显示）
+ *  每个字段带一个示例值，用于弹窗里展示值结构（树形视图，不参与判断） */
+const allColumns = computed(() => {
+  const fieldMap = new Map()
+  entries.value.forEach(([, node]) => {
+    if (node && typeof node === 'object') {
+      Object.keys(node).forEach(fieldName => {
+        if (!fieldMap.has(fieldName)) fieldMap.set(fieldName, node[fieldName])
+      })
+    }
+  })
+  return [...fieldMap.entries()].map(([key, value]) => ({ key, value }))
+})
+
+/** 切换草稿中某个字段的勾选状态 */
+function toggleColumnDraft(key) {
+  const index = columnDraft.value.indexOf(key)
+  if (index >= 0) columnDraft.value.splice(index, 1)
+  else columnDraft.value.push(key)
+}
+
+/** 打开显示列弹窗：未配置时草稿默认为全部字段；已配置时复制当前生效配置 */
+function openColumnConfig() {
+  columnDraft.value = columnConfig.value === null
+    ? allColumns.value.map(f => f.key)
+    : [...columnConfig.value]
+  columnModalVisible.value = true
+}
+
+/** 确认：草稿写入生效配置并持久化 */
+function confirmColumnConfig() {
+  columnConfig.value = [...columnDraft.value]
+  saveColumnConfig(columnConfig.value)
+  columnModalVisible.value = false
+}
 
 // ============================================================
 // 数据判断辅助函数
@@ -269,7 +380,13 @@ const visibleColumns = computed(() => loadColumnConfig().filter(column => column
  * i18n 对象特征：非数组对象且含有 "zh" 键
  */
 function isI18nValue(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) && 'zh' in value
+  return value && typeof value === 'object' &&
+    !Array.isArray(value) && getI18nMarker() in value
+}
+
+/** 某列是否为 i18n 字段：任一行的该字段是 i18n 值即视为 i18n 列 */
+function isI18nColumn(column) {
+  return entries.value.some(([, node]) => isI18nValue(node?.[column]))
 }
 
 /**
@@ -307,68 +424,6 @@ function speakerColor(name) {
 // ============================================================
 // 事件处理函数
 // ============================================================
-
-/**
- * 显示列配置弹窗
- * 收集当前数据的所有字段名，让用户选择哪些列可见
- */
-function showColumnConfig() {
-  const fieldSet = new Set()
-
-  entries.value.forEach(([, node]) => {
-    if (node && typeof node === 'object') {
-      Object.keys(node).forEach(fieldName => fieldSet.add(fieldName))
-    }
-  })
-
-  const allFields = [...fieldSet]
-  const currentColumns = loadColumnConfig()
-
-  // 构建原生弹窗 DOM
-  const modal = document.createElement('div')
-  modal.className = 'my-modal-overlay'
-  modal.innerHTML = `<div class="my-modal-box" style="width: 360px">
-    <div class="my-modal-header"><h2>显示列设置</h2><button class="my-modal-close" id="modal-column-close">✕</button></div>
-    <div class="my-modal-body">
-      <div style="margin-bottom: 8px">选择要在列表中显示的字段：</div>
-      ${allFields.map(fieldName => `
-        <label style="display: block; margin: 4px 0">
-          <input type="checkbox" value="${fieldName}" ${currentColumns.includes(fieldName) ? 'checked' : ''} /> ${fieldName}
-        </label>
-      `).join('')}
-      <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-dim)">
-        提示：i18n 字段会根据语言设置自动展开为多列
-      </div>
-    </div>
-    <div class="my-modal-footer">
-      <button class="my-btn my-btn-sm" id="modal-column-cancel">取消</button>
-      <button class="my-btn my-btn-sm my-btn-primary" id="modal-column-ok">确定</button>
-    </div>
-  </div>`
-
-  document.body.appendChild(modal)
-  requestAnimationFrame(() => modal.classList.add('open'))
-
-  const closeModal = () => {
-    modal.classList.remove('open')
-    setTimeout(() => modal.remove(), 200)
-  }
-
-  // 绑定弹窗事件
-  modal.querySelector('#modal-column-close').onclick = closeModal
-  modal.querySelector('#modal-column-cancel').onclick = closeModal
-  modal.addEventListener('click', event => {
-    if (event.target === modal) closeModal()
-  })
-
-  // 确定按钮：收集选中的字段并保存
-  modal.querySelector('#modal-column-ok').onclick = () => {
-    const checkedColumns = [...modal.querySelectorAll('input[type=checkbox]:checked')]
-      .map(checkbox => checkbox.value)
-    saveColumnConfig(checkedColumns)
-    closeModal()
-  }
-}
 
 /**
  * 按模板新增弹窗

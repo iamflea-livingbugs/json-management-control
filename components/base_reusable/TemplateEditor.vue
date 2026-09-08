@@ -446,7 +446,7 @@ function onJsonBlur() {
 
 // ---- 类型识别 ----
 function isI18n(val) {
-  return val && typeof val === 'object' && !Array.isArray(val) && 'zh' in val
+  return val && typeof val === 'object' && !Array.isArray(val) && getI18nMarker() in val
 }
 function isComplex(val) {
   return val && typeof val === 'object'

@@ -1557,6 +1557,141 @@ select {
     padding: 4px 0;
 }
 
+/* -- 列标题行（像表格表头） -- */
+.chapter-header {
+    padding: 4px 8px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    user-select: none;
+}
+
+.chapter-header .chapter-row-main {
+    cursor: default;
+}
+
+.chapter-header-badge {
+    background: transparent !important;
+    font-size: 0;
+}
+
+.chapter-header-cell {
+    text-align: left;
+}
+
+.chapter-header .chapter-col-speaker {
+    width: 90px;
+}
+
+.chapter-header-name {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.chapter-header-langs {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.chapter-header-lang {
+    flex: 1;
+    min-width: 0;
+    color: var(--text-dim);
+    font-size: 0.65rem;
+}
+
+/* -- 自定义标签角标（🔖 表示该字段设置了别名） -- */
+.chapter-label-badge {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 0.7rem;
+    line-height: 1;
+    vertical-align: middle;
+    opacity: 0.9;
+    cursor: help;
+}
+
+/* -- 显示列设置：字段树形视图 -- */
+.col-tree {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+}
+
+.col-tree-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    border-radius: var(--radius);
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.col-tree-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.col-tree-row-top > .col-tree-key {
+    font-weight: 600;
+}
+
+.col-tree-check {
+    flex: none;
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.col-tree-connector {
+    flex: none;
+    width: 14px;
+}
+
+.col-tree-toggle {
+    flex: none;
+    width: 14px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    user-select: none;
+}
+
+.col-tree-toggle:hover {
+    color: var(--text);
+}
+
+.col-tree-toggle-empty {
+    cursor: default;
+}
+
+.col-tree-key {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.col-tree-summary {
+    margin-left: auto;
+    flex: none;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    opacity: 0.8;
+    padding-left: 8px;
+}
+
+.col-tree-children {
+    margin-left: 18px;
+    padding-left: 8px;
+    border-left: 1px solid var(--border);
+}
+
 .chapter-row {
     border: 1px solid transparent;
     border-radius: var(--radius);

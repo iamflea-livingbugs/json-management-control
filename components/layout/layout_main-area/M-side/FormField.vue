@@ -13,7 +13,7 @@
       :title="'双击编辑标签' + (labelAlias ? ' · 显示名: ' + labelAlias : '')"
       @dblclick="startRename"
     >
-      {{ keyName }}<span v-if="labelAlias" class="field-label-alias">{{ labelAlias }}</span>
+      {{ keyName }}<span v-if="labelAlias" class="field-label-alias">🔖 {{ labelAlias }}</span>
     </label>
     <input
       v-else
@@ -91,7 +91,7 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
 import { useStoryStore } from '../../../../stores/storyStore.js'
-import { getFieldLabel, getLanguages, loadEffectiveTemplates, resolveTemplateContext, saveTemplate } from '../../../../js/logic/logic-storyTypes.js'
+import { getFieldLabel, getI18nMarker, getLanguages, loadEffectiveTemplates, resolveTemplateContext, saveTemplate } from '../../../../js/logic/logic-storyTypes.js'
 import { createDialog } from '../../../base/useDialog.js'
 
 const props = defineProps({
@@ -130,7 +130,7 @@ const templateBadgeClass = computed(() => {
 const v = computed(() => props.value)
 const isI18n = computed(() => {
   const val = v.value
-  return typeof val === 'object' && !Array.isArray(val) && val && 'zh' in val
+  return typeof val === 'object' && !Array.isArray(val) && val && getI18nMarker() in val
 })
 
 const typeLabel = computed(() => {

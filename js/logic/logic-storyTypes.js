@@ -391,6 +391,12 @@ export function deleteStruct(structId, curJson) {
 }
 
 // 语言相关（向后兼容包装器）
+/** 获取 i18n 多语言结构的标记键（默认 zh；可通过结构类型管理配置 marker 修改） */
+export function getI18nMarker() {
+    const structs = loadStructs();
+    const i18n = structs.find(s => s.id === 'i18n');
+    return i18n?.match?.marker || 'zh';
+}
 export function getLanguages() {
     const structs = loadStructs();
     const i18n = structs.find(s => s.id === 'i18n');
@@ -407,7 +413,8 @@ export function saveLanguages(langs) {
 }
 
 export function isI18nObj(val) {
-    return val && typeof val === 'object' && !Array.isArray(val) && 'zh' in val;
+    const marker = getI18nMarker();
+    return val && typeof val === 'object' && !Array.isArray(val) && marker in val;
 }
 
 export function addLanguage(lang, curJson) {
@@ -437,6 +444,9 @@ export function saveLabel(key, label) {
     writeConfig(c);
 }
 export function getFieldLabel(key) { const custom = loadLabels(); return custom[key] || key; }
+
+/** 判断字段是否设置了自定义标签（别名） */
+export function hasFieldLabel(key) { return Boolean(loadLabels()[key]); }
 
 // 判断空值
 export function isEmpty(val) {

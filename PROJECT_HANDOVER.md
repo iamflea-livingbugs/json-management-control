@@ -40,6 +40,7 @@ json-management-control/
 │   │   ├── TemplatePicker.vue ← 模板选择器
 │   │   ├── TemplateEditor.vue ← 模板编辑弹窗（Vue 化完成）
 │   │   ├── LabelManager.vue   ← 字段标签管理弹窗（Vue 化完成）
+│   │   ├── ColumnFieldNode.vue ← 显示列配置字段树（递归，顶层勾选/子键展开查看）
 │   │   └── NewStructDialog.vue ← 新建结构类型弹窗（Vue 化完成）
 │   ├── layout/             ← 页面布局组件
 │   │   ├── useSplitters.js ← 分隔条拖拽逻辑（composable）
@@ -205,6 +206,21 @@ json-management-control/
 ---
 
 ## 重要改动记录
+
+### v0.16 — 章节视图显示列完善 + 显示列配置树形化
+- [x] **显示列功能完善**（`ChapterView.vue` + `style.css`）：
+  - **响应式修复**：列配置由"读 localStorage 的无依赖 computed"改为响应式 ref，保存后列表即时刷新（原实现保存后不生效）
+  - **对话框 Vue 化**：原生 `innerHTML` 拼接 → 声明式 `<Modal>`（字段别名 + 全选/清空 + 空态提示 + 草稿机制，取消丢弃）
+  - **三态语义**：未配置=自动显示数据实际存在的全部字段；显式选择=只显示所选；显式清空=不显示任何列（不再写死默认 `['text']`）
+  - **列表表头**：列标题行（数组模式=说话人、对象模式=属性），i18n 字段附加语言小标签与输入框对齐
+  - **speaker 列纳入配置**：行标识列不再固定显示，可勾选/清空（含头像 Badge 联动）；placeholder 跟随别名而非写死"说话人"
+- [x] **别名角标**：设置过字段标签的字段显示 🔖（章节列表头 + 表单字段），未设置不提供默认标签
+- [x] **消除硬编码 i18n 判断**：新增 `getI18nMarker()`（读结构类型配置的 marker，默认 zh），`isI18nObj` / ChapterView / FormField / TemplateEditor 共 4 处写死 `'zh'` 的判断统一改为读配置；新增 `hasFieldLabel()`
+- [x] **显示列设置树形视图**（新增 `ColumnFieldNode.vue`）：
+  - 递归字段树：顶层字段 checkbox 勾选作为列；对象/数组可展开查看内部结构（数组→索引项→对象可再展开），子键仅供查看不参与勾选
+  - **零语义判断**：不预设"多语言/文本"等分类，纯按值结构展示（别名 + 值摘要 `{ N 个属性 }` / `[ N 项 ]`）
+  - **修复编译错误**：`v-model` 绑 prop 导致 Vue 编译报错（整页白屏），改 `:checked` + `@change` + `emit('toggle')` 由父组件维护勾选数组
+- [x] **cursor 修复**：全局 `input { cursor: text }` 误伤勾选框，`.col-tree-check` 恢复手型
 
 ### v0.15 — 移除 Naive UI + 章节视图面包屑增强
 - [x] **移除 naive-ui**：全站仅使用 1 个 `n-button`（AppButton 封装）+ 1 个 `n-config-provider`（设置面板主题桥接），性价比极低，整体移除
