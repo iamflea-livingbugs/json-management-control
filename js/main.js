@@ -5,7 +5,6 @@
 
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import naive from 'naive-ui';
 import App from '../components/App.vue';
 import { useStoryStore } from '../stores/storyStore.js';
 import { loadContentConfig } from './logic/logic-storyTypes.js';
@@ -14,7 +13,6 @@ import { runMigration } from './logic/logic-migration.js';
 import { start, notifyChange, hasSavedDocument, getSavedDocument, discardSavedDocument, setFileName } from './logic/logic-autoSave.js';
 import { showAlert, showConfirm } from '../components/base/useDialog.js';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap';
 import '../css/style.css';
 import '../lib/atom-one-dark.min.css';
 
@@ -25,7 +23,6 @@ const store = () => useStoryStore();
 // step 1: 挂载 Vue 根组件 + Pinia（渲染整个页面布局）
 const app = createApp(App);
 app.use(createPinia());
-app.use(naive);
 app.mount('#app');
 
 // step 1.5: 执行 localStorage 迁移（旧 key → 新三层结构）

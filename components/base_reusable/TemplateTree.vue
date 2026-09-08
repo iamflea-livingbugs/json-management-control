@@ -15,6 +15,7 @@
     <div class="tpl-tree-scroll">
       <!-- 全部模板快捷项 -->
       <div
+        v-if="showAll"
         class="tpl-tree-all"
         :class="{ selected: !selectedKey }"
         @click="$emit('select', null)"
@@ -53,7 +54,9 @@ import { ref, computed, reactive } from 'vue'
 
 const props = defineProps({
   groups: { type: Object, default: () => ({}) },
-  selectedKey: { type: String, default: null }
+  selectedKey: { type: String, default: null },
+  // 是否显示"全部模板"快捷项（模板编辑场景设为 false）
+  showAll: { type: Boolean, default: true }
 })
 
 defineEmits(['select'])

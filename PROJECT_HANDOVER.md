@@ -21,6 +21,7 @@ json-management-control/
 ├── index.html              ← HTML 入口（Vue 挂载点）
 ├── vite.config.js          ← Vite 配置
 ├── vitest.config.js        ← 测试配置
+├── jsconfig.json           ← JS 路径/语法配置
 ├── package.json
 ├── css/
 │   └── style.css           ← 全部样式（CSS 变量主题系统）
@@ -34,13 +35,19 @@ json-management-control/
 │   ├── base_reusable/      ← 可复用组件（基于 base，有业务逻辑）
 │   │   ├── useObjectAdd.js ← 添加属性统一组合式函数
 │   │   ├── useCreateDialog.js ← 新建 JSON 弹窗 + 模板选择器
+│   │   ├── TemplateTree.vue   ← 模板树形选择
+│   │   ├── TemplateDetail.vue ← 模板字段明细
+│   │   ├── TemplatePicker.vue ← 模板选择器
 │   │   ├── TemplateEditor.vue ← 模板编辑弹窗（Vue 化完成）
-│   │   └── LabelManager.vue   ← 字段标签管理弹窗（Vue 化完成）
+│   │   ├── LabelManager.vue   ← 字段标签管理弹窗（Vue 化完成）
+│   │   └── NewStructDialog.vue ← 新建结构类型弹窗（Vue 化完成）
 │   ├── layout/             ← 页面布局组件
+│   │   ├── useSplitters.js ← 分隔条拖拽逻辑（composable）
 │   │   ├── layout_main-area/      ← 主编辑区组件（按左中右分栏）
 │   │   │   ├── L-side/     ← 左栏：大纲树
 │   │   │   │   ├── ActivityBar.vue ← 活动栏
 │   │   │   │   ├── OutlineView.vue ← 大纲视图
+│   │   │   │   ├── StatsPanel.vue  ← 统计面板
 │   │   │   │   └── TreeNode.vue    ← 树节点（递归组件）
 │   │   │   ├── M-side/     ← 中栏：编辑区
 │   │   │   │   ├── PanelCenter.vue  ← Tab 容器（表单/章节/JSON）
@@ -57,7 +64,8 @@ json-management-control/
 │   └── Settings/
 │       └── SettingsPanel.vue ← 设置面板
 ├── stores/
-│   └── storyStore.js       ← Pinia 唯一数据源：数据 CRUD、路径导航、导出、变更通知
+│   ├── storyStore.js       ← Pinia 唯一数据源：数据 CRUD、路径导航、导出、变更通知
+│   └── storyStore.test.js  ← store 单元测试
 ├── js/
 │   ├── main.js             ← 入口：启动加载 + 拖放绑定 + 自动保存注册
 │   ├── logic/              ← 纯数据层（不依赖 UI）
@@ -65,17 +73,19 @@ json-management-control/
 │   │   ├── logic-storyIO.js      ← 文件导入/导出、拖放绑定
 │   │   ├── logic-autoSave.js     ← 自动保存核心逻辑（防抖 + 心跳 + 状态通知）
 │   │   ├── logic-migration.js    ← localStorage 三层结构 key 定义 + 数据迁移
-│   │   └── logic-localFile.js    ← File System Access API 本地文件打开/保存（Chromium 系）
+│   │   ├── logic-localFile.js    ← File System Access API 本地文件打开/保存（Chromium 系）
+│   │   └── logic-localFile.test.js ← 本地文件读写单元测试
 ├── config/
-│   ├── template-content.json     ← 空白章节/节点/选项结构 + 默认模板
-│   └── template-contexts.json    ← 模板上下文配置
+│   └── template-content.json     ← 空白章节/节点/选项结构 + 默认模板
 ├── fonts/                       ← 字体文件（仓耳与墨 W04 + FiraCode）
 ├── lib/
-│   ├── highlight.min.js          ← JSON 语法高亮
 │   └── atom-one-dark.min.css     ← 高亮主题样式
 ├── docs/                        ← 设计文档
 │   ├── design/                   ← 功能设计文档
-│   └── system-analysis/         ← 系统分析
+│   ├── system-analysis/          ← 系统分析
+│   ├── architecture/             ← 架构文档
+│   └── deploy-report.md          ← 部署记录
+├── .github/workflows/deploy.yml ← GitHub Pages 自动部署（测试 + 构建 + 发布）
 └── LICENSE                       ← Mulan PSL v2
 ```
 
@@ -174,11 +184,9 @@ json-management-control/
 | Vite 8 | 开发服务器 + 构建 |
 | Vue 3.5 (Composition API) | UI 层渐进式迁移 |
 | Pinia 3 | Vue 状态管理（应用唯一数据源） |
-| Naive UI | 基础组件库（按钮、弹窗等） |
-| Bootstrap 5 | CSS 组件库（按钮、弹窗、表单、栅格等） |
-| SCSS | CSS 预处理器 |
-| Highlight.js | JSON 语法高亮 |
-| CSS 变量 | 四套主题色系统 |
+| Bootstrap 5 | CSS 栅格/flex 工具类（仅布局；JS 已移除） |
+| Highlight.js | JSON 语法高亮（npm 包） |
+| CSS 变量 | 四套主题色系统（纯 CSS，`sass` 依赖仅残留未使用） |
 | Vitest 4 | 单元测试（TDD 红-绿-重构流程） |
 | happy-dom | 测试用假浏览器环境 |
 
@@ -188,9 +196,8 @@ json-management-control/
 |------|------|
 | `vue` | Vue 3 运行时 |
 | `pinia` | Vue 状态管理 |
-| `naive-ui` | UI 组件库 |
-| `bootstrap` | CSS 组件库（按钮、弹窗、表单、栅格等） |
-| `sass` | SCSS 编译 |
+| `bootstrap` | CSS 栅格/flex 工具类（仅布局，JS 已移除） |
+| `sass` (dev) | 残留依赖，实际样式为纯 CSS，未使用 |
 | `vitest` (dev) | 测试运行器 |
 | `@vue/test-utils` (dev) | Vue 组件测试辅助 |
 | `happy-dom` (dev) | 假浏览器 DOM 环境 |
@@ -198,6 +205,26 @@ json-management-control/
 ---
 
 ## 重要改动记录
+
+### v0.15 — 移除 Naive UI + 章节视图面包屑增强
+- [x] **移除 naive-ui**：全站仅使用 1 个 `n-button`（AppButton 封装）+ 1 个 `n-config-provider`（设置面板主题桥接），性价比极低，整体移除
+  - `main.js` 删除全量 `app.use(naive)` 注册；`AppButton.vue` 改为原生 `<button class="my-btn">`，type/size 映射到 `my-btn-primary / my-btn-success / my-btn-sm`
+  - `SettingsPanel.vue` 删除 `<n-config-provider>` 包裹 + `naiveTheme` 桥接层（主题系统从 3 层降到 2 层：CSS 变量 + themes 对象）
+  - `FormEditor.vue` 的 `<n-space>` ×2 替换为原生 div + flex
+  - **补缺失样式**：`.my-btn-success` 此前从未定义（绿色按钮靠 naive 渲染撑起），现补进 style.css 复用 `--success` 变量
+  - `package.json` 移除依赖，`npm install` 清理 20 个包；测试 35/35 通过，浏览器实测无 `.n-button` 残留
+- [x] **移除 bootstrap JS 死代码**：删除 `import 'bootstrap'`（全站无 `data-bs-*` / `new bootstrap.*`），保留 CSS 栅格/flex 工具类
+- [x] **章节视图面包屑增强**（`ChapterView.vue` + `style.css`）：
+  - 路径 >3 段自动截断（`content → 0 → nested → …`），单段过长按字符省略
+  - hover 显示完整路径气泡（半透明阴影边框）；点击复制到剪贴板
+  - 复制内容用**点号分隔**（如 `content.0.nested.a`），便于直接粘贴搜索
+  - 复制成功底部 toast 通知 + 面包屑短暂高亮；复制采用同步 `execCommand`（用户手势内）保证剪贴板写入，失败才回退 Clipboard API
+
+### v0.14 — 文档对齐实际代码
+- [x] **结构树补全**：补齐 `NewStructDialog.vue`、`StatsPanel.vue`、`useSplitters.js`、`TemplateTree`/`TemplateDetail`/`TemplatePicker`、测试文件、`.github/`、`docs/`、`jsconfig.json`
+- [x] **删除过时项**：移除不存在的 `config/template-contexts.json`、已删的 `lib/highlight.min.js`
+- [x] **技术栈对齐**：SCSS 描述修正为"残留依赖未使用"（实际样式为纯 CSS）
+- [x] **待实现清单对齐**：移除已实现的"自动保存"，统一为撤销/重做、数据校验 Schema 等高优先级项
 
 ### v0.13 — 移除 barrel.js 导出中枢
 - [x] **删除 `js/barrel.js`**：此前仅 main.js 一个调用方，中转无意义
@@ -341,19 +368,20 @@ stores/             ← Pinia Store，应用唯一数据源（CRUD、路径导�
 ### 🔴 高优先级
 
 - **撤销 / 重做（Undo/Redo）** — 操作历史栈，支持 Ctrl+Z / Ctrl+Shift+Z
-- **自动保存（Auto-save）** — 定时将当前章节数据持久化到 localStorage
+- **数据校验与 Schema 支持** — 导入 JSON Schema 进行校验，必填字段检测、类型检查、引用完整性验证
 
 ### 🟡 中优先级
 
-- **键盘快捷键** — Ctrl+S 导出、Ctrl+F 搜索等
-- **数据校验** — 检查 next 引用的节点 ID 是否存在
-- **多章节管理** — 多标签页同时编辑多个章节文件
-- **统计面板** — 侧栏统计视图完善
-- **Bootstrap 5 组件替换** — 用 Bootstrap 组件逐步替换自定义样式
+- **键盘快捷键** — Ctrl+S 保存、Ctrl+F 搜索等
+- **多文件管理** — 多标签页同时编辑多个 JSON 文件，支持切换和对比
+- **统计面板** — 侧栏统计视图完善（节点数量、字段分布、数据类型统计）
+- **自定义样式组件化** — 持续推进自定义 CSS 组件化（已移除 Naive UI，Bootstrap 仅保留栅格）
+- **编辑器元数据扩展** — 允许用户将任意 JSON 属性与编辑器元数据进行双向绑定
 
 ### 🟢 低优先级
 
-- **对话流程图** — 可视化展示对话分支流向
-- **查找替换** — 跨整个章节批量查找和替换
+- **可视化流程图** — 图形化展示节点间引用关系
+- **查找替换** — 跨整个 JSON 批量查找和替换文本内容
+- **右键上下文菜单** — 树节点右键菜单（复制路径、删除节点、展开/折叠全部等）
 - **剪贴板操作** — Ctrl+C 复制节点、Ctrl+V 粘贴节点、Ctrl+X 剪切节点
-- **拖拽移动** — 拖拽行/节点到目标位置，支持排序和跨层级移动
+- **拖拽排序** — 拖拽行/节点到目标位置，支持排序和跨层级移动

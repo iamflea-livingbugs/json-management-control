@@ -19,7 +19,13 @@
     <!-- ===== 顶部工具栏 ===== -->
     <div class="container row">
       <div class="col-5">
-        <span class="chapter-count">{{ pathLabel }}</span>
+        <span class="chapter-count chapter-breadcrumb" :class="{ 'is-copied': copied }" @click="copyPath">
+          <span class="chapter-breadcrumb-text">{{ displayPathLabel }}</span>
+          <span class="chapter-breadcrumb-full">
+            {{ pathLabel }}
+            <span class="chapter-breadcrumb-full-hint">（点击复制）</span>
+          </span>
+        </span>
         <button class="my-btn my-btn-sm" @click="showColumnConfig">⚙️ 显示列</button>
         <span class="badge bg-secondary">{{ typeLabel }}</span>
       </div>
@@ -111,6 +117,11 @@
         <button class="my-btn my-btn-sm my-btn-primary" @click="confirmTemplate">确定</button>
       </template>
     </Modal>
+
+    <!-- ===== 复制成功小通知 ===== -->
+    <transition name="toast-fade">
+      <div v-if="toastVisible" class="chapter-toast">✅ 已复制完整路径</div>
+    </transition>
   </div>
 </template>
 
@@ -182,8 +193,74 @@ const entries = computed(() => {
   return Object.entries(value)
 })
 
-/** 当前路径的文字显示（如 "root → content → 0"） */
+/** 当前路径的文字显示（如 "content → 0 → text"，根为空时显示 "(root)"） */
 const pathLabel = computed(() => currentPath.value.join(' → ') || '(root)')
+
+/** 复制到剪贴板的内容：用点号分隔（如 "content.0.text"），便于直接粘贴搜索 */
+const copyText = computed(() => currentPath.value.join('.') || '(root)')
+
+/** 面包屑顶部最多展示的路径段数，超出部分收进 hover 提示 */
+const MAX_CRUMB_DEPTH = 3
+
+/** 路径段数是否超过顶部展示上限 */
+const isPathTruncated = computed(() => currentPath.value.length > MAX_CRUMB_DEPTH)
+
+/** 顶部展示的路径文字：最多 MAX_CRUMB_DEPTH 段，超出的以 "…" 省略 */
+const displayPathLabel = computed(() => {
+  if (currentPath.value.length === 0) return '(root)'
+  if (isPathTruncated.value) {
+    return [...currentPath.value.slice(0, MAX_CRUMB_DEPTH), '…'].join(' → ')
+  }
+  return pathLabel.value
+})
+
+/** 复制反馈状态（点击后短暂高亮） */
+const copied = ref(false)
+
+/** 复制成功小通知 */
+const toastVisible = ref(false)
+let toastTimer = null
+
+/** 点击面包屑 → 复制完整路径到剪贴板（点号分隔），并弹出小通知 */
+function copyPath() {
+  const text = copyText.value
+  // 1) 同步尝试 execCommand：必须在用户手势的同步调用栈内，浏览器才允许
+  // 2) 若同步失败，再异步回退到 Clipboard API（部分环境需要权限，可能被拒）
+  if (!fallbackCopy(text)) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).catch(() => {})
+    }
+  }
+  copied.value = true
+  toastVisible.value = true
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false
+    copied.value = false
+  }, 1800)
+}
+
+/** 复制兜底：临时 textarea + execCommand，返回是否复制成功 */
+function fallbackCopy(text) {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.top = '0'
+  textarea.style.left = '0'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  let ok = false
+  try {
+    ok = document.execCommand('copy')
+  } catch {
+    ok = false
+  }
+  textarea.remove()
+  return ok
+}
 
 /** 当前值的数据类型标签 */
 const typeLabel = computed(() => {

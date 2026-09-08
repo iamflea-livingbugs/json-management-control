@@ -31,6 +31,7 @@
 
 - **色彩方案** — 内置暗色 / 深海蓝 / 森林绿 / 浅色四套主题，可保存到 localStorage
 - **标签颜色模式** — 字段别名支持"跟随主题"或"按类型着色"（str 蓝 / i18n 紫 / arr 绿 / obj 橙 / num 黄 / nil 红）
+- **路径面包屑** — 章节视图顶部显示当前路径，超过 3 级自动省略，悬停查看完整路径，点击复制（点号分隔，如 `content.0.text`）便于直接搜索
 - **编辑器元数据** — 文件名、标签等编辑态元数据与 JSON 数据隔离存储，不污染数据本身
 
 ## 快速使用
@@ -93,16 +94,19 @@ json-management-control/
 │   │   ├── TemplatePicker.vue
 │   │   ├── TemplateEditor.vue ← 模板编辑弹窗
 │   │   ├── LabelManager.vue   ← 字段标签管理弹窗
+│   │   ├── NewStructDialog.vue ← 新建结构类型弹窗
 │   │   └── useCreateDialog.js
 │   ├── Settings/
 │   │   └── SettingsPanel.vue ← 设置面板
 │   └── layout/             ← 页面布局
+│       ├── useSplitters.js ← 分隔条拖拽逻辑（composable）
 │       ├── layout_toolbar/
 │       │   └── AutoSaveIndicator.vue ← 自动保存状态指示
 │       └── layout_main-area/
 │           ├── L-side/     ← 左侧（活动栏 + 树形大纲）
 │           │   ├── ActivityBar.vue
 │           │   ├── OutlineView.vue
+│           │   ├── StatsPanel.vue
 │           │   └── TreeNode.vue
 │           ├── M-side/     ← 中间（编辑区）
 │           │   ├── PanelCenter.vue
@@ -115,7 +119,8 @@ json-management-control/
 │           └── R-side/     ← 右侧（JSON 预览）
 │               └── PanelRight.vue
 ├── stores/
-│   └── storyStore.js       ← Pinia 唯一数据源：数据 CRUD、路径导航、导出、变更通知（原 logic-storyStore.js 逻辑已并入）
+│   ├── storyStore.js       ← Pinia 唯一数据源：数据 CRUD、路径导航、导出、变更通知（原 logic-storyStore.js 逻辑已并入）
+│   └── storyStore.test.js  ← store 单元测试
 ├── js/
 │   ├── main.js             ← 入口：启动加载 + 拖放绑定 + 自动保存注册
 │   ├── logic/              ← 纯数据层（不依赖 UI）
@@ -123,12 +128,17 @@ json-management-control/
 │   │   ├── logic-storyIO.js      ← 文件导入/导出、拖放绑定
 │   │   ├── logic-autoSave.js     ← 自动保存核心逻辑（防抖 + 心跳 + 状态通知）
 │   │   ├── logic-migration.js    ← localStorage 三层结构 key 定义 + 数据迁移
-│   │   └── logic-localFile.js    ← File System Access API 本地文件打开/保存（Chromium 系）
+│   │   ├── logic-localFile.js    ← File System Access API 本地文件打开/保存（Chromium 系）
+│   │   └── logic-localFile.test.js ← 本地文件读写单元测试
 ├── config/
 │   └── template-content.json     ← 默认节点/选项结构 + 模板
 ├── fonts/                       ← 字体文件（仓耳与墨 W04 + FiraCode）
 ├── lib/
 │   └── atom-one-dark.min.css     ← 高亮主题样式
+├── docs/                        ← 设计文档（design / system-analysis / architecture）
+├── .github/workflows/deploy.yml ← GitHub Pages 自动部署
+├── vitest.config.js             ← 测试配置
+├── jsconfig.json                ← JS 路径/语法配置
 └── LICENSE                       ← Mulan PSL v2
 ```
 
@@ -174,14 +184,28 @@ main.js → logic/ + stores/ + components    ← 直接 import，无中转
 - Vite 8 — 开发服务器与构建工具
 - Vue 3.5（Composition API + `<script setup>`）— UI 层
 - Pinia 3 — Vue 状态管理（应用唯一数据源）
-- Naive UI — 基础组件库（按钮、弹窗等）
-- Bootstrap 5 — 布局与基础交互（CSS + JS 完整引入）
+- Bootstrap 5 — 布局栅格/flex 工具类（仅 CSS，JS 已移除）
 - Highlight.js — JSON 语法高亮（npm 包）
 - 原生 JavaScript (ES Module) — 核心逻辑
 - CSS 变量主题系统 — 四套色彩方案
 - localStorage — 模板、标签、结构类型、设置持久化
 
 ## 改动记录
+
+### v0.15 — 移除 Naive UI + 章节视图面包屑增强
+
+- [x] **移除 naive-ui**：全站仅用 1 个按钮 + 1 个主题桥接 provider，性价比极低，整体移除（`main.js` 全量注册、`AppButton` 的 `n-button`、`SettingsPanel` 的 `n-config-provider`+`naiveTheme`、`FormEditor` 的 `n-space` 全部替换为原生实现）
+- [x] **补 `.my-btn-success` 样式**：此前从未定义（绿色按钮靠 naive 渲染），现复用 `--success` 变量
+- [x] **移除 bootstrap JS**：`import 'bootstrap'` 为纯死代码（全站无 JS 交互使用），删除；保留 CSS 栅格/flex 工具类
+- [x] **面包屑增强**：路径 >3 段自动截断 + hover 完整路径气泡 + 点击复制（点号分隔，便于搜索）+ toast 通知；复制采用同步 `execCommand` 保证用户手势内写入
+- [x] 依赖清理：`npm install` 移除 20 个包；测试 35/35 通过
+
+### v0.14 — 文档对齐实际代码
+
+- [x] **结构树补全**：README / PROJECT_HANDOVER 补齐 `NewStructDialog.vue`、`StatsPanel.vue`、`useSplitters.js`、`TemplateTree`/`TemplateDetail`/`TemplatePicker`、测试文件、`.github/`、`docs/`、`vitest.config.js`、`jsconfig.json`
+- [x] **删除过时项**：PROJECT_HANDOVER 移除不存在的 `config/template-contexts.json`、已删的 `lib/highlight.min.js`
+- [x] **技术栈对齐**：SCSS 描述修正为"残留依赖未使用"（实际样式为纯 CSS）
+- [x] **待实现清单对齐**：移除已实现的"自动保存"，统一为撤销/重做、数据校验 Schema 等高优先级项
 
 ### v0.13 — 移除 barrel.js 导出中枢
 
@@ -325,7 +349,7 @@ main.js → logic/ + stores/ + components    ← 直接 import，无中转
 - **键盘快捷键** — Ctrl+S 导出、Ctrl+F 搜索、Delete 删除节点、Ctrl+N 新建节点等
 - **多文件管理** — 多标签页同时编辑多个 JSON 文件，支持切换和对比
 - **统计面板** — 侧栏统计视图，展示节点数量、字段分布、数据类型统计等
-- **自定义样式组件化** — 用 Bootstrap / Naive UI 组件逐步替换自定义 CSS（按钮、弹窗、表单控件等）
+- **自定义样式组件化** — 持续推进自定义 CSS 组件化（已移除 Naive UI，Bootstrap 仅保留栅格）
 - **编辑器元数据扩展** — 允许用户将任意 JSON 属性与编辑器元数据进行双向绑定
 
 ### 🟢 低优先级

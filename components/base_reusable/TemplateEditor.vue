@@ -2,7 +2,7 @@
   <Modal
     :visible="visible"
     title="📋 模板编辑"
-    width="760px"
+    width="840px"
     :esc-closable="!confirming"
     @update:visible="requestClose"
   >
@@ -16,129 +16,139 @@
 
     <!-- 模板编辑区 -->
     <template v-else>
-      <!-- 上下文切换栏 -->
-      <div class="tpl-ctx-bar">
-        <label>模板上下文：</label>
-        <button
-          v-for="k in ctxKeys"
-          :key="k"
-          class="tpl-ctx-btn"
-          :class="{ active: k === currentCtx }"
-          :title="(ctxConfig[k] || {}).description || ''"
-          @click="switchCtx(k)"
-        >{{ (ctxConfig[k] || {}).label || k }}</button>
-        <button class="my-btn my-btn-sm" @click="newTemplate">＋ 新建</button>
-        <span style="flex:1"></span>
-        <button
-          class="my-btn my-btn-sm"
-          style="color:var(--accent)"
-          title="删除当前整个模板"
-          @click="deleteTemplate"
-        >✕ 删除此模板</button>
-      </div>
-
-      <!-- 自动增长键名 -->
-      <div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
-        <label style="font-size:0.75rem;color:var(--text-dim);white-space:nowrap">自动增长键名：</label>
-        <input
-          v-model="keyPattern"
-          class="my-input-sm"
-          style="width:120px;font-family:var(--font-mono)"
-          placeholder="留空=数字自增"
-          @input="dirty = true"
-        />
-        <span style="font-size:0.7rem;color:var(--text-dim)">属性模式新建时按此模式自动生成键名（如 content → content0 → content1）</span>
-      </div>
-
-      <!-- 字段列表 -->
-      <div class="editor-fields" id="tpl-fields">
-        <div v-if="emptyTemplate" class="empty-hint" style="padding:16px 0">此模板暂无字段，点击下方 "＋ 添加字段" 创建。</div>
-        <div
-          v-for="[key, val] in templateEntries"
-          :key="key"
-          class="field-row"
-          :class="rowClass(val)"
-        >
-          <!-- 字段名（可双击改名） -->
-          <label
-            v-if="editingKey !== key"
-            class="editable-label field-label"
-            :title="'双击编辑标签' + (labelAlias(key) ? ' · 显示名: ' + labelAlias(key) : '')"
-            @dblclick="startRename(key)"
-          >{{ key }}<span v-if="labelAlias(key)" class="field-label-alias">{{ labelAlias(key) }}</span></label>
-          <input
-            v-else
-            :ref="setRenameEl"
-            class="my-input-sm label-editor"
-            v-model="editValue"
-            @blur="finishRename(key)"
-            @keydown.enter.prevent="finishRename(key)"
-            @keydown.escape="cancelRename"
+      <div class="tpl-editor-layout">
+        <!-- 左栏：模板树形列表 -->
+        <div class="tpl-editor-tree">
+          <div class="tpl-editor-tree-head">
+            <span class="tpl-editor-tree-title">模板列表</span>
+            <button class="my-btn my-btn-sm my-btn-success" @click="newTemplate">＋ 新建</button>
+          </div>
+          <TemplateTree
+            :groups="treeGroups"
+            :selected-key="currentCtx"
+            :show-all="false"
+            @select="onTreeSelect"
           />
-
-          <!-- 类型标签 -->
-          <span class="type-badge" :class="'type-' + typeLabel(val)">{{ typeLabel(val) }}</span>
-
-          <!-- i18n 多语言输入组 -->
-          <template v-if="isI18n(val)">
-            <div class="i18n-group">
-              <input
-                v-for="lang in langs"
-                :key="lang"
-                class="my-input"
-                :value="val[lang] || ''"
-                :placeholder="lang"
-                @input="updateI18n(key, lang, $event)"
-              />
-            </div>
-          </template>
-          <!-- 对象/数组 → JSON 字符串编辑 -->
-          <template v-else-if="isComplex(val)">
-            <input
-              class="my-input tmpl-field"
-              :value="JSON.stringify(val)"
-              placeholder="{}"
-              @change="updateComplex(key, $event)"
-            />
-          </template>
-          <!-- 字符串 / 数字 -->
-          <template v-else>
-            <input
-              class="my-input tmpl-field"
-              :class="{ 'my-input-num': typeof val === 'number' }"
-              :value="scalarString(val)"
-              @change="updateScalar(key, $event)"
-            />
-          </template>
-
-          <button class="my-btn-icon my-btn-del-tmpl" :title="'删除字段 ' + key" @click="deleteField(key)">✕</button>
         </div>
-      </div>
 
-      <!-- 添加字段 -->
-      <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-        <button class="my-btn my-btn-sm my-btn-success" @click="addField">＋ 添加字段</button>
-        <select v-model="addType" class="my-input-sm" style="width:auto">
-          <option value="string">字符串</option>
-          <option value="number">数字</option>
-          <option value="array">数组</option>
-          <option value="object">对象</option>
-        </select>
-      </div>
+        <!-- 右栏：当前模板编辑区 -->
+        <div class="tpl-editor-main">
+          <!-- 当前模板头部 -->
+          <div class="tpl-editor-head">
+            <span class="tpl-editor-title">{{ currentCtxLabel }}</span>
+            <span class="tpl-editor-desc">{{ currentCtxDesc }}</span>
+            <button
+              class="my-btn my-btn-sm"
+              style="color:var(--accent)"
+              title="删除当前整个模板"
+              @click="deleteTemplate"
+            >✕ 删除此模板</button>
+          </div>
 
-      <!-- JSON 镜像编辑 -->
-      <div style="margin-top:12px;font-size:0.75rem;color:var(--text-dim)">JSON 编辑：</div>
-      <div class="tpl-json-mirror">
-        <pre class="json-highlight"><code ref="hlCode"></code></pre>
-        <textarea
-          ref="jsonEditor"
-          class="json-editor"
-          spellcheck="false"
-          @input="onJsonInput"
-          @scroll="onJsonScroll"
-          @keydown.tab.prevent="onJsonTab"
-          @blur="onJsonBlur"
-        ></textarea>
+          <!-- 自动增长键名 -->
+          <div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
+            <label style="font-size:0.75rem;color:var(--text-dim);white-space:nowrap">自动增长键名：</label>
+            <input
+              v-model="keyPattern"
+              class="my-input-sm"
+              style="width:120px;font-family:var(--font-mono)"
+              placeholder="留空=数字自增"
+              @input="dirty = true"
+            />
+            <span style="font-size:0.7rem;color:var(--text-dim)">属性模式新建时按此模式自动生成键名（如 content → content0 → content1）</span>
+          </div>
+
+          <!-- 字段列表 -->
+          <div class="editor-fields" id="tpl-fields">
+            <div v-if="emptyTemplate" class="empty-hint" style="padding:16px 0">此模板暂无字段，点击下方 "＋ 添加字段" 创建。</div>
+            <div
+              v-for="[key, val] in templateEntries"
+              :key="key"
+              class="field-row"
+              :class="rowClass(val)"
+            >
+              <!-- 字段名（可双击改名） -->
+              <label
+                v-if="editingKey !== key"
+                class="editable-label field-label"
+                :title="'双击编辑标签' + (labelAlias(key) ? ' · 显示名: ' + labelAlias(key) : '')"
+                @dblclick="startRename(key)"
+              >{{ key }}<span v-if="labelAlias(key)" class="field-label-alias">{{ labelAlias(key) }}</span></label>
+              <input
+                v-else
+                :ref="setRenameEl"
+                class="my-input-sm label-editor"
+                v-model="editValue"
+                @blur="finishRename(key)"
+                @keydown.enter.prevent="finishRename(key)"
+                @keydown.escape="cancelRename"
+              />
+
+              <!-- 类型标签 -->
+              <span class="type-badge" :class="'type-' + typeLabel(val)">{{ typeLabel(val) }}</span>
+
+              <!-- i18n 多语言输入组 -->
+              <template v-if="isI18n(val)">
+                <div class="i18n-group">
+                  <input
+                    v-for="lang in langs"
+                    :key="lang"
+                    class="my-input"
+                    :value="val[lang] || ''"
+                    :placeholder="lang"
+                    @input="updateI18n(key, lang, $event)"
+                  />
+                </div>
+              </template>
+              <!-- 对象/数组 → JSON 字符串编辑 -->
+              <template v-else-if="isComplex(val)">
+                <input
+                  class="my-input tmpl-field"
+                  :value="JSON.stringify(val)"
+                  placeholder="{}"
+                  @change="updateComplex(key, $event)"
+                />
+              </template>
+              <!-- 字符串 / 数字 -->
+              <template v-else>
+                <input
+                  class="my-input tmpl-field"
+                  :class="{ 'my-input-num': typeof val === 'number' }"
+                  :value="scalarString(val)"
+                  @change="updateScalar(key, $event)"
+                />
+              </template>
+
+              <button class="my-btn-icon my-btn-del-tmpl" :title="'删除字段 ' + key" @click="deleteField(key)">✕</button>
+            </div>
+          </div>
+
+          <!-- 添加字段 -->
+          <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+            <button class="my-btn my-btn-sm my-btn-success" @click="addField">＋ 添加字段</button>
+            <select v-model="addType" class="my-input-sm" style="width:auto">
+              <option value="string">字符串</option>
+              <option value="number">数字</option>
+              <option value="array">数组</option>
+              <option value="object">对象</option>
+            </select>
+          </div>
+
+          <!-- JSON 镜像编辑 -->
+          <div style="margin-top:12px;font-size:0.75rem;color:var(--text-dim)">JSON 编辑：</div>
+          <div class="tpl-json-mirror">
+            <pre class="json-highlight"><code ref="hlCode"></code></pre>
+            <textarea
+              ref="jsonEditor"
+              class="json-editor"
+              spellcheck="false"
+              @input="onJsonInput"
+              @scroll="onJsonScroll"
+              @keydown.tab.prevent="onJsonTab"
+              @blur="onJsonBlur"
+            ></textarea>
+          </div>
+        </div>
       </div>
     </template>
 
@@ -152,6 +162,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import Modal from '../base/Modal.vue'
+import TemplateTree from './TemplateTree.vue'
 import hljs from 'highlight.js'
 import { useStoryStore } from '../../stores/storyStore.js'
 import {
@@ -245,6 +256,31 @@ function switchCtx(key) {
   currentCtx.value = key
   editingKey.value = null
   nextTick(() => syncJsonMirror())
+}
+
+// ---- 树形列表数据（按 category 分组）----
+const treeGroups = computed(() => {
+  const groups = {}
+  ctxKeys.value.forEach(k => {
+    // ctxConfig 基于已保存模板；草稿中新建未保存的模板无配置 → 归"自定义"
+    const cfg = ctxConfig.value[k] || { label: k, description: '自定义模板', category: '自定义' }
+    const cat = cfg.category || '未分类'
+    if (!groups[cat]) groups[cat] = []
+    groups[cat].push({ key: k, cfg })
+  })
+  return groups
+})
+
+const currentCtxLabel = computed(() =>
+  (ctxConfig.value[currentCtx.value] || {}).label || currentCtx.value || ''
+)
+const currentCtxDesc = computed(() =>
+  (ctxConfig.value[currentCtx.value] || {}).description || ''
+)
+
+function onTreeSelect(key) {
+  if (!key) return // 忽略"全部模板"（null）
+  switchCtx(key)
 }
 
 function createFirstTemplate() {

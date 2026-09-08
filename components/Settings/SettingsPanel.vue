@@ -1,6 +1,5 @@
 <template>
-  <n-config-provider :theme-overrides="naiveTheme">
-    <div class="side-view-content">
+  <div class="side-view-content">
     <div class="settings-section">
       <label class="settings-label">字体大小</label>
       <div class="settings-font-row">
@@ -77,12 +76,10 @@
       <AppButton type="primary" @click="doLayoutReset">恢复默认布局</AppButton>
     </div>
   </div>
-  </n-config-provider>
 </template>
 
 <script setup>
-import { NConfigProvider } from 'naive-ui'
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useStoryStore } from '../../stores/storyStore.js'
 const store = useStoryStore()
 import { showAlert } from '../base/useDialog.js'
@@ -118,37 +115,6 @@ const langs = ref(getLanguages())
 const structList = ref(loadStructs())
 const newLang = ref('')
 const fieldInputs = reactive({})
-
-// Naive UI 主题覆盖：跟随全局 CSS 变量
-const naiveTheme = computed(() => ({
-  common: {
-    primaryColor: 'var(--accent)',
-    primaryColorHover: 'var(--accent-hover)',
-    primaryColorPressed: 'var(--accent-hover)',
-    bodyColor: 'var(--bg)',
-    cardColor: 'var(--bg-panel)',
-    borderColor: 'var(--border)',
-    textColor1: 'var(--text)',
-    textColor2: 'var(--text-dim)',
-    successColor: 'var(--success)',
-    warningColor: 'var(--warn)',
-    errorColor: 'var(--accent)'
-  },
-  Button: {
-    color: 'var(--bg-panel)',
-    textColor: 'var(--text)',
-    border: '1px solid var(--border)',
-    colorHover: 'var(--bg-input)',
-    colorPrimary: 'var(--accent)',
-    colorHoverPrimary: 'var(--accent-hover)',
-    textColorPrimary: '#fff',
-    colorSuccess: 'var(--success)',
-    textColorSuccess: '#fff',
-    colorError: 'var(--accent)',
-    textColorError: '#fff',
-    borderRadius: '6px'
-  }
-}))
 
 function applyTheme(key) {
   const t = themes[key]

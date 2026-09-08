@@ -23,15 +23,13 @@
 
       <!-- 添加按钮（数组/对象共用） -->
       <div class="array-add-bar">
-        <n-space>
-          <select v-model="addType" class="my-input-sm " style="width:auto">
-            <option v-for="opt in addOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-          </select>
-        </n-space>
-        <n-space class="m-4">
+        <select v-model="addType" class="my-input-sm" style="width:auto">
+          <option v-for="opt in addOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+        </select>
+        <div class="m-4" style="display:flex;gap:8px">
           <button class="my-btn my-btn-sm my-btn-create" @click="addItem">＋ 添加</button>
           <button class="my-btn my-btn-sm my-btn-jump" @click="addByTemplate">+ 按模板添加</button>
-        </n-space>
+        </div>
 
       </div>
 
