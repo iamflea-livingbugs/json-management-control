@@ -105,19 +105,6 @@
       </div>
     </div>
 
-    <!-- ===== 模板选择弹窗 ===== -->
-    <Modal :visible="showTemplatePicker" title="选择模板" @close="showTemplatePicker = false">
-      <div v-for="key in templateKeys" :key="key" style="margin:4px 0">
-        <label>
-          <input type="radio" v-model="selectedTemplate" :value="key" /> 模板: {{ key }}
-        </label>
-      </div>
-      <template #footer>
-        <button class="my-btn my-btn-sm" @click="showTemplatePicker = false">取消</button>
-        <button class="my-btn my-btn-sm my-btn-primary" @click="confirmTemplate">确定</button>
-      </template>
-    </Modal>
-
     <!-- ===== 复制成功小通知 ===== -->
     <transition name="toast-fade">
       <div v-if="toastVisible" class="chapter-toast">✅ 已复制完整路径</div>
@@ -133,7 +120,7 @@ import {
   loadEffectiveTemplates
 } from '../../../../js/logic/logic-storyTypes.js'
 import { useObjectAdd } from '../../../base_reusable/useObjectAdd.js'
-import Modal from '../../../base/Modal.vue'
+import { showTemplatePicker } from '../../../base_reusable/useCreateDialog.js'
 
 // ============================================================
 // 工具函数
@@ -273,11 +260,6 @@ const typeLabel = computed(() => {
 /** 当前可见列列表（过滤掉 speaker 列，因为 speaker 列固定显示） */
 const visibleColumns = computed(() => loadColumnConfig().filter(column => column !== 'speaker'))
 
-// ---- 模板选择弹窗状态 ----
-const showTemplatePicker = ref(false)
-const selectedTemplate = ref('content')
-const templateKeys = computed(() => Object.keys(loadEffectiveTemplates()))
-
 // ============================================================
 // 数据判断辅助函数
 // ============================================================
@@ -390,21 +372,14 @@ function showColumnConfig() {
 
 /**
  * 按模板新增弹窗
- * 数组/对象节点共用：打开 Modal 选模板 → 调用 addNode 创建
+ * 与表单视图共用共享树形选择器（TemplatePicker：搜索 + 分组 + 详情预览）
+ * 选中的模板 key 通过 Promise resolve 返回，关闭弹窗返回 null
+ * 创建后不跳转到新节点（navigate=false），留在当前列表继续编辑
  */
-function showAddDialog() {
-  const keys = templateKeys.value
-  if (keys.length === 0) {
-    storyStore.addNode('default', currentPath.value)
-    return
-  }
-  selectedTemplate.value = keys[0] || 'content'
-  showTemplatePicker.value = true
-}
-
-function confirmTemplate() {
-  storyStore.addNode(selectedTemplate.value, currentPath.value)
-  showTemplatePicker.value = false
+async function showAddDialog() {
+  const ctx = await showTemplatePicker()
+  if (!ctx) return
+  storyStore.addNode(ctx, currentPath.value, false)
 }
 
 /**

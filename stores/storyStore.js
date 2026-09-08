@@ -99,7 +99,13 @@ export const useStoryStore = defineStore('story', () => {
 
   // ========== 节点 CRUD ==========
 
-  function addNode(ctx = null, path = null) {
+  /**
+   * 按模板创建节点
+   * @param {string} ctx 模板上下文
+   * @param {Array} [path] 目标路径，默认当前路径
+   * @param {boolean} [navigate=true] 创建后是否将 currentPath 跳转到新节点
+   */
+  function addNode(ctx = null, path = null, navigate = true) {
     const targetPath = path || currentPath.value
     const parent = getByPath(targetPath)
     if (!parent) return
@@ -109,13 +115,13 @@ export const useStoryStore = defineStore('story', () => {
 
     if (Array.isArray(parent)) {
       parent.push(tpl)
-      currentPath.value = [...targetPath, String(parent.length - 1)]
+      if (navigate) currentPath.value = [...targetPath, String(parent.length - 1)]
     } else if (typeof parent === 'object' && parent !== null) {
       let key = 'new_key'
       let i = 1
       while (key in parent) key = 'new_key_' + i++
       parent[key] = tpl
-      currentPath.value = [...targetPath, key]
+      if (navigate) currentPath.value = [...targetPath, key]
     }
     _emit()
   }
