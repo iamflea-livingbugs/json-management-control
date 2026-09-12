@@ -14,6 +14,12 @@
       <span class="col-tree-key">{{ label }}</span>
       <span v-if="isTop && hasLabel" class="chapter-label-badge" title="自定义标签">🔖</span>
       <span class="col-tree-summary">{{ summary }}</span>
+
+      <!-- 顶层纯对象字段：可在列表中展开子字段直接编辑（数组暂不支持；对象模式的章节视图无此模型） -->
+      <label v-if="isTop && isExpandEditable && allowExpand" class="col-tree-expand" title="在列表中直接编辑该对象的子字段">
+        <input type="checkbox" :checked="isExpandChecked" @change="onToggleExpand" />
+        展开
+      </label>
     </div>
 
     <!-- 展开区：递归渲染子键 -->
@@ -44,25 +50,40 @@ const props = defineProps({
   /** 勾选数组（仅顶层参与判断，修改由父组件通过 toggle 事件处理） */
   draft: { type: Array, required: true },
   /** 是否为顶层字段（决定是否显示 checkbox） */
-  isTop: { type: Boolean, default: false }
+  isTop: { type: Boolean, default: false },
+  /** 展开标记对象（仅顶层判断，修改由父组件通过 toggle-expand 事件处理） */
+  expandDraft: { type: Object, default: () => ({}) },
+  /** 是否允许「展开子字段直接编辑」（数组模式章节视图为 true，对象模式为 false） */
+  allowExpand: { type: Boolean, default: true }
 })
 
-const emit = defineEmits(['toggle'])
+const emit = defineEmits(['toggle', 'toggle-expand'])
 
 const open = ref(false)
 
 /** 是否已勾选 */
 const isChecked = computed(() => props.draft.includes(props.keyName))
 
+/** 是否已勾选「展开子字段」 */
+const isExpandChecked = computed(() => props.expandDraft[String(props.keyName)] === true)
+
 /** 勾选状态切换：通知父组件增删该字段 */
 function onToggle() {
   emit('toggle', props.keyName)
+}
+
+/** 展开状态切换：通知父组件更新展开标记 */
+function onToggleExpand() {
+  emit('toggle-expand', props.keyName)
 }
 
 const isExpandable = computed(() => {
   const v = props.value
   return v !== null && typeof v === 'object'
 })
+
+/** 是否支持「展开子字段直接编辑」：仅顶层纯对象（数组暂不支持展开编辑） */
+const isExpandEditable = computed(() => isExpandable.value && !Array.isArray(props.value))
 
 /** 顶层显示别名，子层显示原始键名 */
 const label = computed(() =>

@@ -26,19 +26,6 @@ export function exportJSON(json, filename = 'curjson.json') {
     a.click();
 }
 
-export function setupFilePicker(btn, onLoad, onError) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.addEventListener('change', () => {
-        const file = input.files[0];
-        if (!file) return;
-        importJSON(file).then(onLoad).catch(err => { if (onError) onError(err.message); });
-        input.value = '';
-    });
-    btn.addEventListener('click', () => input.click());
-}
-
 export function setupDropZone(el, onLoad, onError) {
     el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop-active'); });
     el.addEventListener('dragleave', () => el.classList.remove('drop-active'));

@@ -13,7 +13,6 @@
      .panel-*     面板布局相关
      .side-*      侧面板相关
      .type-*      字段类型标签
-     .i18n-*      多语言输入组
      .native-*    原生 JS 组件标记
    ========================================== */
 
@@ -607,11 +606,6 @@ select,
 }
 
 /* 标签颜色模式：按类型着色 */
-[data-label-color="type"] .field-row-i18n .field-label-alias {
-    color: #a78bfa;
-    opacity: 0.8;
-}
-
 [data-label-color="type"] .field-row-arr .field-label-alias {
     color: #4ecca3;
     opacity: 0.8;
@@ -632,42 +626,12 @@ select,
     opacity: 0.8;
 }
 
-[data-label-color="type"] .field-row:not(.field-row-i18n):not(.field-row-arr):not(.field-row-obj):not(.field-row-num):not(.field-row-null) .field-label-alias {
+[data-label-color="type"] .field-row:not(.field-row-arr):not(.field-row-obj):not(.field-row-num):not(.field-row-null) .field-label-alias {
     color: #7ec8e3;
     opacity: 0.8;
 }
 
-/* -- i18n 多语言输入组 -- */
-.i18n-group {
-    display: flex;
-    gap: 4px;
-    flex: 1;
-}
-
-.i18n-group .my-input {
-    flex: 1;
-}
-
-.i18n-extra {
-    padding-left: 98px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-top: -4px;
-    margin-bottom: 4px;
-}
-
-.i18n-extra .field-row {
-    padding-left: 0;
-}
-
 /* -- 字段类型背景色（按类型识别）-- */
-.field-row-i18n {
-    background: rgba(167, 139, 250, 0.03);
-    border-radius: 4px;
-    padding: 4px 0;
-}
-
 .field-row-arr {
     background: rgba(78, 204, 163, 0.03);
     border-radius: 4px;
@@ -689,7 +653,7 @@ select,
     font-style: italic;
 }
 
-/* -- 类型标签（str / num / i18n / arr / obj / nil）-- */
+/* -- 类型标签（str / num / arr / obj / nil）-- */
 .type-badge {
     font-family: var(--font-mono);
     font-size: 0.625rem;
@@ -708,11 +672,6 @@ select,
 .type-num {
     color: #f9c859;
     background: rgba(249, 200, 89, 0.12);
-}
-
-.type-i18n {
-    color: #a78bfa;
-    background: rgba(167, 139, 250, 0.12);
 }
 
 .type-arr {
@@ -770,7 +729,7 @@ select,
     flex-shrink: 0;
 }
 
-.option-i18n {
+.option-block {
     flex: 1;
     min-width: 200px;
 }
@@ -1684,6 +1643,25 @@ select {
     font-family: var(--font-mono);
     opacity: 0.8;
     padding-left: 8px;
+}
+
+/* 顶层对象字段的「展开子字段」选项 */
+.col-tree-expand {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 4px;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.col-tree-expand input {
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
 }
 
 .col-tree-children {

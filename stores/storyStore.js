@@ -53,17 +53,13 @@ export const useStoryStore = defineStore('story', () => {
     _listeners.forEach(fn => fn())
   }
 
-  /** 节点数据规范化 */
+  /** 节点数据规范化：以模板默认值补齐缺失字段，字段类型保持纯值（字符串/数字/数组） */
   function _normalizeNode(raw) {
     const defaults = createNodeFromTemplate('content', '_')
     delete defaults.id
     const merged = { ...defaults, ...raw }
-    if (typeof merged.speaker === 'string') merged.speaker = { zh: merged.speaker, en: '' }
-    if (typeof merged.text === 'string') merged.text = { zh: merged.text, en: '' }
-    if (!merged.speaker) merged.speaker = { zh: '', en: '' }
-    if (!merged.text) merged.text = { zh: '', en: '' }
     merged.options = (merged.options || []).map(opt => ({
-      text: typeof opt.text === 'string' ? { zh: opt.text, en: '' } : (opt.text || { zh: '', en: '' }),
+      text: opt.text || '',
       next: opt.next || '', showif: opt.showif || {}, actions: opt.actions || []
     }))
     return merged
@@ -150,7 +146,6 @@ export const useStoryStore = defineStore('story', () => {
     function clean(obj) {
       if (Array.isArray(obj)) return obj.map(clean).filter(x => x !== undefined)
       if (obj && typeof obj === 'object') {
-        if (obj.zh !== undefined && obj.en !== undefined) { if (!obj.zh && !obj.en) return undefined; const out = {}; if (obj.zh) out.zh = obj.zh; if (obj.en) out.en = obj.en; return out }
         const out = {}
         for (const [k, v] of Object.entries(obj)) { const c = clean(v); if (c !== undefined) out[k] = c }
         if (Object.keys(out).length === 0) return undefined

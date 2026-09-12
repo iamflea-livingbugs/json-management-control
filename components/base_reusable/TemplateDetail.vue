@@ -31,7 +31,6 @@ function fieldType(val) {
   if (val === null || val === undefined) return 'nil'
   if (typeof val === 'object') {
     if (Array.isArray(val)) return 'arr'
-    if (val.zh !== undefined || val.en !== undefined) return 'i18n'
     return 'obj'
   }
   if (typeof val === 'number') return 'num'
@@ -39,7 +38,7 @@ function fieldType(val) {
 }
 
 function fieldTypeLabel(val) {
-  const labels = { str: 'str', num: 'num', arr: 'arr', obj: 'obj', i18n: 'i18n', nil: 'nil' }
+  const labels = { str: 'str', num: 'num', arr: 'arr', obj: 'obj', nil: 'nil' }
   return labels[fieldType(val)] || '?'
 }
 
@@ -48,14 +47,9 @@ function fieldPreview(val) {
   if (val === undefined) return 'undefined'
   if (typeof val === 'object') {
     if (Array.isArray(val)) return `[${val.length}]`
-    if (val.zh !== undefined) return `{ zh: "${trunc(val.zh)}", en: "${trunc(val.en)}" }`
     return `{ ${Object.keys(val).join(', ')} }`
   }
   return String(val)
-}
-
-function trunc(s, n = 20) {
-  return s && s.length > n ? s.slice(0, n) + '…' : s
 }
 </script>
 

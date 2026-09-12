@@ -34,17 +34,6 @@
     </div>
 
     <div class="settings-section">
-      <label class="settings-label">语言管理</label>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-        <span v-for="lang in langs" :key="lang" class="settings-lang-badge">{{ lang }}</span>
-      </div>
-      <div style="display:flex;gap:6px">
-        <input class="my-input-sm" placeholder="如 fr" style="width:80px;font-family:var(--font-mono)" v-model="newLang" @keydown.enter="doAddLang" />
-        <button class="my-btn my-btn-sm my-btn-create" @click="doAddLang">＋ 添加语言</button>
-      </div>
-    </div>
-
-    <div class="settings-section">
       <label class="settings-label">结构类型管理</label>
       <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:6px">定义数据中需要统一维护字段的"类型"</div>
       <div v-for="st in structList" :key="st.id" class="settings-struct-card">
@@ -52,7 +41,7 @@
           <span class="settings-struct-id">{{ st.id }}</span>
           <span class="settings-struct-label">{{ st.label }}</span>
           <span class="settings-struct-match">{{ matchLabel(st) }}</span>
-          <button v-if="st.id !== 'i18n'" class="my-btn-icon" style="color:var(--accent)" @click="doDeleteStruct(st.id)">✕</button>
+          <button class="my-btn-icon" style="color:var(--accent)" @click="doDeleteStruct(st.id)">✕</button>
         </div>
         <div class="settings-struct-fields">
           <span v-if="st.match.type === 'struct'" class="settings-lang-badge" style="opacity:0.7">{{ st.match.marker }} (标记)</span>
@@ -84,9 +73,9 @@ import { useStoryStore } from '../../stores/storyStore.js'
 const store = useStoryStore()
 import { showAlert } from '../base/useDialog.js'
 import {
-  getLanguages, loadStructs, saveStructs, getEffectiveFields, deleteStruct,
+  loadStructs, deleteStruct,
   addStructField,
-  removeStructField, syncStruct
+  removeStructField
 } from '../../js/logic/logic-storyTypes.js'
 
 import AppButton from '../base/AppButton.vue'
@@ -111,9 +100,7 @@ function loadSettings() {
 }
 const defaults = { theme: 'dark', fontSize: 16, labelColor: 'type' }
 const settings = reactive({ ...defaults, ...loadSettings() })
-const langs = ref(getLanguages())
 const structList = ref(loadStructs())
-const newLang = ref('')
 const fieldInputs = reactive({})
 
 function applyTheme(key) {
@@ -139,14 +126,6 @@ function saveLabelColor() {
   document.documentElement.dataset.labelColor = settings.labelColor || 'default'
   save()
 }
-function doAddLang() {
-  const lang = newLang.value.trim().toLowerCase()
-  if (!lang) return
-  addStructField('i18n', lang, store.curJson)
-  store._emit()
-  langs.value = getLanguages()
-  newLang.value = ''
-}
 function matchLabel(st) {
   if (st.match.type === 'struct') return `struct(${st.match.marker})`
   return `${st.match.type}(${st.match.pattern})`
@@ -168,7 +147,6 @@ function doRemoveField(sid, field) {
   structList.value = loadStructs()
 }
 function doDeleteStruct(sid) {
-  if (sid === 'i18n') { showAlert('不能删除内置类型'); return }
   deleteStruct(sid, store.curJson)
   store._emit()
   structList.value = loadStructs()
@@ -221,7 +199,7 @@ function doImport() {
           if (d.custom.structs) sch.structs = d.custom.structs
           if (Object.keys(sch).length > 0) { writeSchema(sch); c++ }
         } else if (!d.config && !d.schema) {
-          // 兼容旧版平铺格式：通过 runMigration 类似逻辑处理
+          // 兼容旧版平铺格式的配置文件（含 v0.5 前的 storyeditor_* key）
           const oldKeys = {
             settings: 'storyeditor_settings', labels: 'storyeditor_labels',
             chapterCols: 'storyeditor_chapter_cols', templates: 'storyeditor_templates',
@@ -237,7 +215,6 @@ function doImport() {
         showAlert(`导入成功！已恢复 ${c} 项配置。`)
         Object.assign(settings, { ...defaults, ...loadSettings() })
         applyTheme(settings.theme)
-        langs.value = getLanguages()
         structList.value = loadStructs()
         store._emit()
       } catch { showAlert('导入失败') }

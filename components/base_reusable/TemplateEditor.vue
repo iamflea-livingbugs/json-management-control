@@ -87,21 +87,8 @@
               <!-- 类型标签 -->
               <span class="type-badge" :class="'type-' + typeLabel(val)">{{ typeLabel(val) }}</span>
 
-              <!-- i18n 多语言输入组 -->
-              <template v-if="isI18n(val)">
-                <div class="i18n-group">
-                  <input
-                    v-for="lang in langs"
-                    :key="lang"
-                    class="my-input"
-                    :value="val[lang] || ''"
-                    :placeholder="lang"
-                    @input="updateI18n(key, lang, $event)"
-                  />
-                </div>
-              </template>
               <!-- 对象/数组 → JSON 字符串编辑 -->
-              <template v-else-if="isComplex(val)">
+              <template v-if="isComplex(val)">
                 <input
                   class="my-input tmpl-field"
                   :value="JSON.stringify(val)"
@@ -167,7 +154,7 @@ import hljs from 'highlight.js'
 import { useStoryStore } from '../../stores/storyStore.js'
 import {
   loadEffectiveTemplates, loadTemplateKeys, saveTemplateKeys,
-  getContextsConfig, getFieldLabel, saveTemplates, getLanguages
+  getContextsConfig, getFieldLabel, saveTemplates
 } from '../../js/logic/logic-storyTypes.js'
 import { showConfirm, showPrompt } from '../base/useDialog.js'
 
@@ -210,7 +197,6 @@ const templateEntries = computed(() =>
 const emptyTemplate = computed(() =>
   !currentTemplate.value || Object.keys(currentTemplate.value).length === 0
 )
-const langs = computed(() => getLanguages())
 
 const keyPattern = computed({
   get: () => (draftKeys.value[currentCtx.value] || ''),
@@ -357,14 +343,6 @@ function updateComplex(key, event) {
   nextTick(() => syncJsonMirror())
 }
 
-function updateI18n(key, lang, event) {
-  const cur = currentTemplate.value[key]
-  if (!cur || typeof cur !== 'object' || Array.isArray(cur)) currentTemplate.value[key] = {}
-  currentTemplate.value[key][lang] = event.target.value
-  dirty.value = true
-  nextTick(() => syncJsonMirror())
-}
-
 // ---- 双击改名 ----
 function startRename(key) {
   editingKey.value = key
@@ -445,15 +423,11 @@ function onJsonBlur() {
 }
 
 // ---- 类型识别 ----
-function isI18n(val) {
-  return val && typeof val === 'object' && !Array.isArray(val) && getI18nMarker() in val
-}
 function isComplex(val) {
   return val && typeof val === 'object'
 }
 function typeLabel(val) {
   if (val === null || val === undefined) return 'nil'
-  if (isI18n(val)) return 'i18n'
   if (Array.isArray(val)) return 'arr'
   if (typeof val === 'number') return 'num'
   if (typeof val === 'object') return 'obj'
@@ -462,7 +436,6 @@ function typeLabel(val) {
 function rowClass(val) {
   const t = typeLabel(val)
   if (t === 'nil') return 'field-row-null'
-  if (t === 'i18n') return 'field-row-i18n'
   if (t === 'arr') return 'field-row-arr'
   if (t === 'obj') return 'field-row-obj'
   if (t === 'num') return 'field-row-num'

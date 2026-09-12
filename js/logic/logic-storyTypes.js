@@ -3,32 +3,28 @@
 // ==========================================
 import { readConfig, writeConfig, readSchema, writeSchema } from './logic-migration.js';
 
-export function createI18nText(zh = '', en = '') {
-    return { zh, en };
-}
-
 const HARDCODED_CONTENT = {
     curJson: {
         meta: { name: 'Untitled', author: '', description: '' },
         content: []
     },
     node: {
-        id: '', speaker: { zh: '', en: '' }, text: { zh: '', en: '' },
+        id: '', speaker: '', text: '',
         headimage: '', room: '', bgm: '', next: '', transition: '',
         fx: '', cg: '', voice: '', dialog: '', animation: '', loop: '',
         goNext: '', indenpent: '', signal: '', roomHotspot: '', options: []
     },
     option: {
-        text: { zh: '', en: '' }, next: '', showif: {}, actions: []
+        text: '', next: '', showif: {}, actions: []
     },
     templates: {
         meta: { name: '' },
         content: {
-            speaker: { zh: '', en: '' }, headimage: '',
-            text: { zh: '', en: '' }, room: '', bgm: '',
+            speaker: '', headimage: '',
+            text: '', room: '', bgm: '',
             transition: '', fx: '', cg: '', voice: ''
         },
-        option: { text: { zh: '', en: '' }, next: '', showif: {}, actions: [] },
+        option: { text: '', next: '', showif: {}, actions: [] },
         action: { cmd: '', params: [] },
         default: {}
     }
@@ -49,12 +45,6 @@ export function createOption(text, next) {
     if (text) opt.text = text;
     if (next !== undefined) opt.next = next;
     return opt;
-}
-
-export function createNodeFromDefaults(id) {
-    const node = deepCopy(cc().node);
-    if (id !== undefined) node.id = String(id);
-    return node;
 }
 
 export function createCurJson(name = 'Untitled') {
@@ -186,25 +176,12 @@ export function createNodeFromTemplate(ctx, id) {
 //   path   — 路径匹配（content.*.options）
 // ==========================================
 
-const DEFAULT_STRUCTS = [
-    { id: 'i18n', label: '多语言文本', match: { type: 'struct', marker: 'zh' }, fields: ['zh', 'en'] }
-];
-
 export function loadStructs() {
     try {
         const schema = readSchema();
         const saved = schema?.structs || [];
-        if (saved.length === 0) return JSON.parse(JSON.stringify(DEFAULT_STRUCTS));
-        // 向后兼容：struct 类型的 marker 不在 fields 里时自动补入
-        for (const s of saved) {
-            if (s.match?.type === 'struct' && s.match.marker) {
-                if (!s.fields.includes(s.match.marker)) {
-                    s.fields.unshift(s.match.marker);
-                }
-            }
-        }
-        return saved;
-    } catch { return JSON.parse(JSON.stringify(DEFAULT_STRUCTS)); }
+        return JSON.parse(JSON.stringify(saved));
+    } catch { return []; }
 }
 
 export function saveStructs(structs) {
@@ -374,8 +351,6 @@ export function deleteStruct(structId, curJson) {
     const structs = loadStructs();
     const s = structs.find(x => x.id === structId);
     if (!s) return;
-    // 内置类型不允许删除
-    if (structId === 'i18n') return;
     // 先从 curJson 中清理所有字段（struct 类型的标记键不删除）
     if (curJson) {
         const matches = findMatchingValues(curJson, s);
@@ -388,48 +363,6 @@ export function deleteStruct(structId, curJson) {
     }
     // 再移除结构定义
     saveStructs(structs.filter(x => x.id !== structId));
-}
-
-// 语言相关（向后兼容包装器）
-/** 获取 i18n 多语言结构的标记键（默认 zh；可通过结构类型管理配置 marker 修改） */
-export function getI18nMarker() {
-    const structs = loadStructs();
-    const i18n = structs.find(s => s.id === 'i18n');
-    return i18n?.match?.marker || 'zh';
-}
-export function getLanguages() {
-    const structs = loadStructs();
-    const i18n = structs.find(s => s.id === 'i18n');
-    return i18n ? getEffectiveFields(i18n) : ['zh', 'en'];
-}
-export function saveLanguages(langs) {
-    // 从 i18n 结构类型更新字段（不包含 marker）
-    const structs = loadStructs();
-    const i18n = structs.find(s => s.id === 'i18n');
-    if (i18n && i18n.match?.type === 'struct') {
-        i18n.fields = langs; // 直接覆盖（marker 在 getLanguages 中保持逻辑）
-        saveStructs(structs);
-    }
-}
-
-export function isI18nObj(val) {
-    const marker = getI18nMarker();
-    return val && typeof val === 'object' && !Array.isArray(val) && marker in val;
-}
-
-export function addLanguage(lang, curJson) {
-    const structs = loadStructs();
-    const i18n = structs.find(s => s.id === 'i18n');
-    if (!i18n) return;
-    const all = getEffectiveFields(i18n);
-    if (all.includes(lang)) return;
-    // 如果是 marker 则跳过（marker 不能被 addStructField 添加）
-    if (i18n.match?.type === 'struct' && lang === i18n.match.marker) return;
-    i18n.fields.push(lang);
-    saveStructs(structs);
-    if (curJson) {
-        syncStruct(curJson, i18n);
-    }
 }
 
 // 标签管理
@@ -447,11 +380,3 @@ export function getFieldLabel(key) { const custom = loadLabels(); return custom[
 
 /** 判断字段是否设置了自定义标签（别名） */
 export function hasFieldLabel(key) { return Boolean(loadLabels()[key]); }
-
-// 判断空值
-export function isEmpty(val) {
-    if (val === '' || val === undefined || val === null) return true;
-    if (Array.isArray(val) && val.length === 0) return true;
-    if (typeof val === 'object' && val.zh === '' && val.en === '') return true;
-    return false;
-}

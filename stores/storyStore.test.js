@@ -50,9 +50,9 @@ describe('getByPath / setByPath', () => {
 
   it('按路径写入数组元素', () => {
     const store = useStoryStore()
-    store.setByPath(['content'], [{ id: '0', text: { zh: '你好' } }])
-    store.setByPath(['content', '0', 'speaker'], { zh: '主角' })
-    expect(store.curJson.content[0].speaker.zh).toBe('主角')
+    store.setByPath(['content'], [{ id: '0', text: '你好' }])
+    store.setByPath(['content', '0', 'speaker'], '主角')
+    expect(store.curJson.content[0].speaker).toBe('主角')
   })
 
   it('写入不存在的路径静默失败（不抛错）', () => {
@@ -65,9 +65,9 @@ describe('getByPath / setByPath', () => {
 describe('loadCurJson 规范化', () => {
   it('加载时自动补全 meta 与 content 并规范化节点', () => {
     const store = useStoryStore()
-    store.loadCurJson({ meta: { name: '章节' }, content: [{ id: '0', speaker: '直接字符串', text: { zh: '文本' } }] })
+    store.loadCurJson({ meta: { name: '章节' }, content: [{ id: '0', speaker: '直接字符串', text: '文本' }] })
     expect(store.curJson.meta.name).toBe('章节')
-    expect(store.curJson.content[0].speaker).toEqual({ zh: '直接字符串', en: '' })
+    expect(store.curJson.content[0].speaker).toBe('直接字符串')
     expect(store.curJson.content[0].options).toEqual([])
   })
 
@@ -125,14 +125,14 @@ describe('节点 CRUD', () => {
 describe('duplicateEntry 复制', () => {
   it('数组元素复制：深拷贝并生成新 id，插入原元素之后', () => {
     const store = useStoryStore()
-    store.setByPath(['content'], [{ id: '0', text: { zh: '原文' } }])
+    store.setByPath(['content'], [{ id: '0', text: '原文' }])
     store.duplicateEntry(['content', '0'])
     expect(store.curJson.content).toHaveLength(2)
-    expect(store.curJson.content[1].text).toEqual({ zh: '原文' })
+    expect(store.curJson.content[1].text).toBe('原文')
     expect(store.curJson.content[1].id).not.toBe('0')
     // 原对象不被引用共享（深拷贝隔离）
-    store.curJson.content[1].text.zh = '改后'
-    expect(store.curJson.content[0].text.zh).toBe('原文')
+    store.curJson.content[1].text = '改后'
+    expect(store.curJson.content[0].text).toBe('原文')
   })
 
   it('对象属性复制：键名自动去重', () => {
@@ -153,18 +153,18 @@ describe('duplicateEntry 复制', () => {
 })
 
 describe('toCleanJSON 导出清洗', () => {
-  it('剔除空字符串、null、空 i18n 对象', () => {
+  it('剔除空字符串、null、空对象', () => {
     const store = useStoryStore()
     store.setByPath([], {
-      meta: { name: '保留', author: '', desc: null },
-      content: [{ id: '0', text: { zh: '保留', en: '' } }]
+      meta: { name: '保留', author: '', desc: null, empty: {} },
+      content: [{ id: '0', text: '保留' }]
     })
     const clean = store.toCleanJSON()
     expect(clean.meta.author).toBeUndefined()
     expect(clean.meta.desc).toBeUndefined()
+    expect(clean.meta.empty).toBeUndefined()
     expect(clean.meta.name).toBe('保留')
-    expect(clean.content[0].text).toEqual({ zh: '保留' })
-    expect(clean.content[0].text.en).toBeUndefined()
+    expect(clean.content[0].text).toBe('保留')
   })
 })
 
@@ -219,7 +219,7 @@ describe('选项与动作', () => {
 
   it('addAction / updateActionParams / deleteAction 全链路', () => {
     const store = useStoryStore()
-    store.setByPath(['content'], [{ id: '0', options: [{ text: { zh: '' }, actions: [] }] }])
+    store.setByPath(['content'], [{ id: '0', options: [{ text: '', actions: [] }] }])
     store.addAction('0', 0)
     expect(store.curJson.content[0].options[0].actions).toHaveLength(1)
     store.updateActionCmd('0', 0, 0, 'play')

@@ -31,22 +31,8 @@
     <!-- 类型标签 -->
     <span class="type-badge" :class="'type-' + typeLabel">{{ typeLabel }}</span>
 
-    <!-- i18n 多语言输入组 -->
-    <template v-if="typeLabel === 'i18n'">
-      <div class="i18n-group">
-        <input
-          v-for="lang in activeLangs"
-          :key="lang"
-          class="my-input my-form-i18n-lang"
-          :value="i18nValue(lang)"
-          :placeholder="lang"
-          @change="(e) => updateI18n(lang, e.target.value)"
-        />
-      </div>
-    </template>
-
     <!-- 普通输入 -->
-    <template v-else-if="typeLabel === 'str' || typeLabel === 'num'">
+    <template v-if="typeLabel === 'str' || typeLabel === 'num'">
       <input
         class="my-input my-form-field"
         :class="{ 'my-input-num': typeLabel === 'num' }"
@@ -91,7 +77,7 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
 import { useStoryStore } from '../../../../stores/storyStore.js'
-import { getFieldLabel, getI18nMarker, getLanguages, loadEffectiveTemplates, resolveTemplateContext, saveTemplate } from '../../../../js/logic/logic-storyTypes.js'
+import { getFieldLabel, loadEffectiveTemplates, resolveTemplateContext, saveTemplate } from '../../../../js/logic/logic-storyTypes.js'
 import { createDialog } from '../../../base/useDialog.js'
 
 const props = defineProps({
@@ -128,15 +114,10 @@ const templateBadgeClass = computed(() => {
 
 // ---- 类型识别 ----
 const v = computed(() => props.value)
-const isI18n = computed(() => {
-  const val = v.value
-  return typeof val === 'object' && !Array.isArray(val) && val && getI18nMarker() in val
-})
 
 const typeLabel = computed(() => {
   const val = v.value
   if (val === null || val === undefined) return 'nil'
-  if (isI18n.value) return 'i18n'
   if (Array.isArray(val)) return 'arr'
   if (typeof val === 'number') return 'num'
   if (typeof val === 'object') return 'obj'
@@ -145,7 +126,6 @@ const typeLabel = computed(() => {
 
 const rowClass = computed(() => {
   if (typeLabel.value === 'nil') return 'field-row-null'
-  if (typeLabel.value === 'i18n') return 'field-row-i18n'
   if (typeLabel.value === 'num') return 'field-row-num'
   if (typeLabel.value === 'arr') return 'field-row-arr'
   if (typeLabel.value === 'obj') return 'field-row-obj'
@@ -163,20 +143,6 @@ const summary = computed(() => {
   if (typeof val === 'object' && val) return JSON.stringify(val).slice(0, 40)
   return ''
 })
-
-// ---- i18n ----
-const activeLangs = computed(() => getLanguages())
-
-function i18nValue(lang) {
-  const val = v.value
-  if (!val || typeof val !== 'object') return ''
-  return val[lang] || ''
-}
-
-function updateI18n(lang, newVal) {
-  const path = [...props.parentPath, props.keyName, lang]
-  storyStore.setByPath(path, newVal)
-}
 
 // ---- 普通值更新 ----
 function updateValue(newVal) {
@@ -253,8 +219,16 @@ function finishRename() {
   if (newKey && newKey !== oldKey) {
     const parent = storyStore.getByPath(props.parentPath)
     if (parent && typeof parent === 'object' && oldKey in parent) {
-      if (storyStore.currentPath.includes(oldKey)) {
-        storyStore.currentPath = storyStore.currentPath.map(s => s === oldKey ? newKey : s)
+      // 仅当被重命名字段是当前路径的祖先段（fieldPath 为 currentPath 前缀）时才同步路径，
+      // 避免与当前路径同名的平级子字段被误替换
+      const fieldPath = [...props.parentPath, oldKey]
+      const isPrefix = fieldPath.every((s, i) => storyStore.currentPath[i] === s)
+      if (isPrefix) {
+        storyStore.currentPath = [
+          ...fieldPath.slice(0, -1),
+          newKey,
+          ...storyStore.currentPath.slice(fieldPath.length)
+        ]
       }
       parent[newKey] = parent[oldKey]
       delete parent[oldKey]

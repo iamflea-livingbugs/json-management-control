@@ -43,8 +43,8 @@
     </div>
 
     <!-- ===== 空数据提示 ===== -->
-    <div v-if="entries.length === 0" class="empty-hint" style="padding: 40px 12px">
-      当前路径下无数据，点击「＋」添加
+    <div v-if="visibleEntries.length === 0" class="empty-hint" style="padding: 40px 12px">
+      {{ entries.length === 0 ? '当前路径下无数据，点击「＋」添加' : '所有属性均被隐藏，点击「⚙️ 显示列」勾选' }}
     </div>
 
     <!-- ===== 数据列表 ===== -->
@@ -55,32 +55,40 @@
         <div class="chapter-row-main">
           <span v-if="showSpeakerCol" class="chapter-speaker-badge chapter-header-badge"></span>
           <div class="chapter-cols">
-            <div v-if="showSpeakerCol" class="chapter-col-speaker chapter-header-cell">
-              {{ isArrayMode ? getFieldLabel('speaker') : '属性' }}
-              <span v-if="isArrayMode && hasFieldLabel('speaker')" class="chapter-label-badge" title="自定义标签">🔖</span>
-            </div>
-            <div v-for="column in visibleColumns" :key="column" class="chapter-col chapter-header-cell"
-              :class="'chapter-col-' + column">
-              <template v-if="isI18nColumn(column)">
-                <span class="chapter-header-name">{{ getFieldLabel(column) }}</span>
-                <span class="chapter-header-langs">
-                  <span v-for="language in languages" :key="language" class="chapter-header-lang">{{ language }}</span>
-                </span>
-              </template>
-              <span v-else class="chapter-header-name">{{ getFieldLabel(column) }}</span>
-              <span v-if="hasFieldLabel(column)" class="chapter-label-badge" title="自定义标签">🔖</span>
-            </div>
+            <!-- 对象模式表头：属性 | 值 -->
+            <template v-if="!isArrayMode">
+              <div class="chapter-col-speaker chapter-header-cell">属性</div>
+              <div class="chapter-col chapter-header-cell">值</div>
+            </template>
+            <!-- 数组模式表头：说话人 + 动态字段列 -->
+            <template v-else>
+              <div v-if="showSpeakerCol" class="chapter-col-speaker chapter-header-cell">
+                {{ getFieldLabel('speaker') }}
+                <span v-if="hasFieldLabel('speaker')" class="chapter-label-badge" title="自定义标签">🔖</span>
+              </div>
+              <div v-for="column in visibleColumns" :key="column" class="chapter-col chapter-header-cell"
+                :class="'chapter-col-' + column">
+                <template v-if="isExpandColumn(column)">
+                  <span class="chapter-header-name">{{ getFieldLabel(column) }}</span>
+                  <span class="chapter-header-langs">
+                    <span v-for="subKey in expandKeys(column)" :key="subKey" class="chapter-header-lang">{{ subKey }}</span>
+                  </span>
+                </template>
+                <span v-else class="chapter-header-name">{{ getFieldLabel(column) }}</span>
+                <span v-if="hasFieldLabel(column)" class="chapter-label-badge" title="自定义标签">🔖</span>
+              </div>
+            </template>
           </div>
         </div>
       </div>
 
-      <div v-for="([rowKey, node], index) in entries" :key="rowKey" class="chapter-row"
+      <div v-for="([rowKey, node], index) in visibleEntries" :key="rowKey" class="chapter-row"
         :data-index="isArrayMode ? rowKey : undefined" :data-key="isArrayMode ? undefined : rowKey"
-        :data-id="node.id || rowKey" @dblclick="openEditRow(rowKey)">
+        :data-id="node?.id || rowKey" @dblclick="openEditRow(rowKey)">
 
         <div class="chapter-row-main">
 
-          <!-- 左侧头像 Badge（随 speaker 标识列显示） -->
+          <!-- 左侧头像 Badge：数组=说话人首字 / 对象=属性名首字 -->
           <span v-if="showSpeakerCol" class="chapter-speaker-badge"
             :style="{ background: speakerColor(isArrayMode ? (speakerName(node) || '?') : String(rowKey).charAt(0).toUpperCase() || '?') }">
             {{ isArrayMode ? (speakerName(node) || '?').charAt(0) || '?' : String(rowKey).charAt(0).toUpperCase() || '?'
@@ -90,38 +98,59 @@
           <!-- 数据列容器 -->
           <div class="chapter-cols">
 
-            <!-- 行标识列（数组=说话人 / 对象=属性名），由显示列配置的 speaker 项控制 -->
-            <div v-if="showSpeakerCol" class="chapter-col-speaker">
-              <input v-if="isArrayMode" class="chapter-speaker-input" :value="speakerName(node)"
-                :placeholder="getFieldLabel('speaker')"
-                @change="event => updateSpeaker(rowKey, event.target.value)" />
-              <span v-else class="chapter-key-label">{{ rowKey }}</span>
-            </div>
+            <!-- ========== 对象模式：属性名 + 单个值单元格 ========== -->
+            <template v-if="!isArrayMode">
+              <div class="chapter-col-speaker">
+                <span class="chapter-key-label">{{ rowKey }}</span>
+              </div>
+              <div class="chapter-col chapter-col-value">
+                <!-- null / undefined -->
+                <input v-if="node === null || node === undefined"
+                  class="chapter-cell-input chapter-cell-null" placeholder="—" disabled />
+                <!-- 对象/数组：JSON 摘要（双击行可进入完整编辑） -->
+                <span v-else-if="typeof node === 'object'" class="chapter-cell-display">
+                  {{ Array.isArray(node) ? `[ ${node.length} 项 ]` : `{ ${Object.keys(node).length} 个属性 }` }}
+                </span>
+                <!-- 原始值：直接编辑（数字串自动转数字） -->
+                <input v-else class="chapter-cell-input chapter-simple-input" :value="String(node)"
+                  @change="event => updatePropertyValue(rowKey, event.target.value)" />
+              </div>
+            </template>
 
-            <!-- 动态列（按 visibleColumns 配置渲染） -->
-            <div v-for="column in visibleColumns" :key="column" class="chapter-col" :class="'chapter-col-' + column">
+            <!-- ========== 数组模式：说话人列 + 动态字段列 ========== -->
+            <template v-else>
+              <!-- 行标识列（说话人），由显示列配置的 speaker 项控制 -->
+              <div v-if="showSpeakerCol" class="chapter-col-speaker">
+                <input class="chapter-speaker-input" :value="speakerName(node)"
+                  :placeholder="getFieldLabel('speaker')"
+                  @change="event => updateSpeaker(rowKey, event.target.value)" />
+              </div>
 
-              <!-- i18n 多语言字段：为每种语言渲染一个输入框 -->
-              <template v-if="isI18nValue(node[column])">
-                <input v-for="language in languages" :key="column + '.' + language"
-                  class="chapter-cell-input chapter-i18n-input" :value="node[column]?.[language] || ''"
-                  :placeholder="language"
-                  @change="event => updateI18nField(rowKey, column, language, event.target.value)" />
-              </template>
+              <!-- 动态列（按 visibleColumns 配置渲染） -->
+              <div v-for="column in visibleColumns" :key="column" class="chapter-col" :class="'chapter-col-' + column">
 
-              <!-- null / undefined 空值字段 -->
-              <input v-else-if="node[column] === null || node[column] === undefined"
-                class="chapter-cell-input chapter-cell-null" placeholder="—" />
+                <!-- 展开模式：纯对象按实际键渲染子字段输入框 -->
+                <template v-if="isExpandColumn(column) && isPlainObject(node[column])">
+                  <input v-for="subKey in expandKeys(column)" :key="column + '.' + subKey"
+                    class="chapter-cell-input chapter-sub-input" :value="node[column]?.[subKey] ?? ''"
+                    :placeholder="subKey"
+                    @change="event => updateSubField(rowKey, column, subKey, event.target.value)" />
+                </template>
 
-              <!-- 对象类型字段：显示 JSON 字符串预览 -->
-              <span v-else-if="typeof node[column] === 'object'" class="chapter-cell-display">
-                {{ JSON.stringify(node[column]) }}
-              </span>
+                <!-- null / undefined 空值字段 -->
+                <input v-else-if="node[column] === null || node[column] === undefined"
+                  class="chapter-cell-input chapter-cell-null" placeholder="—" />
 
-              <!-- 普通字段：文本或数字输入框 -->
-              <input v-else class="chapter-cell-input chapter-simple-input" :value="String(node[column])"
-                @change="event => updateSimpleField(rowKey, column, event.target.value)" />
-            </div>
+                <!-- 对象类型字段：显示 JSON 字符串预览 -->
+                <span v-else-if="typeof node[column] === 'object'" class="chapter-cell-display">
+                  {{ JSON.stringify(node[column]) }}
+                </span>
+
+                <!-- 普通字段：文本或数字输入框 -->
+                <input v-else class="chapter-cell-input chapter-simple-input" :value="String(node[column])"
+                  @change="event => updateSimpleField(rowKey, column, event.target.value)" />
+              </div>
+            </template>
           </div>
 
           <!-- 打开完整编辑按钮 → 跳转到表单 Tab -->
@@ -147,13 +176,17 @@
           :key-name="field.key"
           :value="field.value"
           :draft="columnDraft"
+          :expand-draft="columnExpandDraft"
           :is-top="true"
+          :allow-expand="isArrayMode"
           @toggle="toggleColumnDraft"
+          @toggle-expand="toggleExpandDraft"
         />
       </div>
       <div v-if="allColumns.length === 0" class="empty-hint" style="padding: 8px 0">当前数据没有可配置的字段</div>
       <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-dim)">
-        勾选顶层字段作为列；对象/数组可展开查看内部结构（仅供查看，不作为列）
+        <template v-if="isArrayMode">勾选字段作为列表列；对象/数组可展开查看内部结构（仅供查看）；勾选「展开」可在列表中直接编辑对象子字段</template>
+        <template v-else>勾选要在列表中显示的属性；对象/数组可展开查看内部结构（仅供查看）</template>
       </div>
       <template #footer>
         <button class="my-btn my-btn-sm" @click="columnModalVisible = false">取消</button>
@@ -172,50 +205,26 @@
 import { computed, ref } from 'vue'
 import { useStoryStore } from '../../../../stores/storyStore.js'
 import {
-  getLanguages,
   getFieldLabel,
-  getI18nMarker,
   hasFieldLabel,
   loadEffectiveTemplates
 } from '../../../../js/logic/logic-storyTypes.js'
 import { useObjectAdd } from '../../../base_reusable/useObjectAdd.js'
 import { showTemplatePicker } from '../../../base_reusable/useCreateDialog.js'
+import {
+  buildSignature,
+  loadColumnConfigs,
+  saveColumnConfigs,
+  getColumnConfig
+} from '../../../../js/logic/logic-columnConfig.js'
 import Modal from '../../../base/Modal.vue'
 import ColumnFieldNode from '../../../base_reusable/ColumnFieldNode.vue'
-
-// ============================================================
-// 工具函数
-// ============================================================
-
-/**
- * 从 localStorage 读取显示列配置
- * 返回 null 表示「从未配置」；返回数组表示用户显式选择过的列（可为空数组 = 显式清空）
- *
- * @returns {string[]|null} 选中的字段名数组；未配置或数据损坏时返回 null
- */
-function loadColumnConfig() {
-  try {
-    const data = JSON.parse(localStorage.getItem('storyeditor_chapter_cols'))
-    return Array.isArray(data) ? data : null
-  } catch {
-    return null
-  }
-}
-
-/**
- * 保存显示列配置到 localStorage
- * @param {string[]} columns - 选中的字段名列表
- */
-function saveColumnConfig(columns) {
-  localStorage.setItem('storyeditor_chapter_cols', JSON.stringify(columns))
-}
 
 // ============================================================
 // 响应式状态与计算属性
 // ============================================================
 
 const storyStore = useStoryStore()
-const languages = getLanguages()
 
 /** 当前选中的路径 */
 const currentPath = computed(() => storyStore.currentPath || [])
@@ -318,36 +327,89 @@ const typeLabel = computed(() => {
   return typeof value
 })
 
-/** 显示列配置（响应式状态：null=未配置，数组=用户选择；保存后立即生效，无需页面重载） */
-const columnConfig = ref(loadColumnConfig())
-
-/** 当前可见列：未配置时显示数据实际存在的全部字段；已配置时按用户选择（含 speaker 标识列） */
-const visibleColumns = computed(() => {
-  if (columnConfig.value === null) return allColumns.value
-  return [...columnConfig.value]
-})
-
-/** 行标识列（数组=说话人 / 对象=属性名）是否显示：由配置中的 speaker 项控制 */
-const showSpeakerCol = computed(() => visibleColumns.value.includes('speaker'))
-
-// ---- 显示列配置弹窗状态 ----
+/** 显示列配置弹窗状态 */
 const columnModalVisible = ref(false)
 /** 弹窗内草稿：勾选状态确认后才写入生效，取消则丢弃 */
 const columnDraft = ref([])
+/** 弹窗内展开草稿：与列勾选一同确认生效 */
+const columnExpandDraft = ref({})
 
-/** 当前数据所有可选字段（含 speaker 行标识列，由用户决定是否显示）
- *  每个字段带一个示例值，用于弹窗里展示值结构（树形视图，不参与判断） */
+/**
+ * 当前数据所有可选字段（弹窗字段树与列配置的数据源）
+ *
+ * 两种模式语义不同：
+ * - 数组模式：每行是一个同类对象，字段 = 所有对象元素自身字段的并集
+ * - 对象模式：每行是对象的一个属性，字段 = 该对象自身的键（属性名）
+ */
 const allColumns = computed(() => {
-  const fieldMap = new Map()
-  entries.value.forEach(([, node]) => {
-    if (node && typeof node === 'object') {
-      Object.keys(node).forEach(fieldName => {
-        if (!fieldMap.has(fieldName)) fieldMap.set(fieldName, node[fieldName])
-      })
-    }
-  })
-  return [...fieldMap.entries()].map(([key, value]) => ({ key, value }))
+  const value = currentValue.value
+  if (isArrayMode.value) {
+    const fieldMap = new Map()
+    entries.value.forEach(([, node]) => {
+      if (node && isPlainObject(node)) {
+        Object.keys(node).forEach(fieldName => {
+          if (!fieldMap.has(fieldName)) fieldMap.set(fieldName, node[fieldName])
+        })
+      }
+    })
+    return [...fieldMap.entries()].map(([key, val]) => ({ key, value: val }))
+  }
+  // 对象模式：当前对象自身的键即「属性行」
+  if (value && isPlainObject(value)) {
+    return Object.entries(value).map(([key, val]) => ({ key, value: val }))
+  }
+  return []
 })
+
+/**
+ * 实际渲染的数据行
+ * - 数组模式：全部行（由列控制横向显隐）
+ * - 对象模式：只渲染被勾选为列的属性行（勾选 = 选中可见属性）；未配置时全部显示
+ */
+const visibleEntries = computed(() => {
+  if (isArrayMode.value) return entries.value
+  const shown = new Set(visibleColumns.value)
+  return entries.value.filter(([key]) => shown.has(key))
+})
+
+/**
+ * 当前列表的字段集签名（字段名排序去重 + 模式前缀）
+ * 带模式前缀：数组模式字段是「横向列」，对象模式字段是「纵向属性行」，
+ * 即使字段名集合相同（如 content 数组与 content[0] 对象），配置也不能共享
+ */
+const columnSignature = computed(() =>
+  buildSignature(isArrayMode.value ? 'arr' : 'obj', allColumns.value.map(f => f.key))
+)
+
+/** 配置版本计数：手动保存后自增，驱动 columnConfig 重新读取 localStorage */
+const columnConfigTick = ref(0)
+
+/**
+ * 当前字段集对应的显示列配置
+ * null = 该字段集从未配置（含导入结构不同的新文件）→ 默认显示全部字段
+ */
+const columnConfig = computed(() => {
+  columnConfigTick.value
+  return getColumnConfig(loadColumnConfigs(), columnSignature.value)
+})
+
+/** 当前可见列：未配置时显示数据实际存在的全部字段；已配置时按用户选择 */
+const visibleColumns = computed(() => {
+  if (columnConfig.value === null) return allColumns.value.map(f => f.key)
+  return [...columnConfig.value.cols]
+})
+
+/**
+ * 行标识列是否显示：
+ * - 数组模式：由配置中的 speaker 项控制（说话人列）
+ * - 对象模式：属性名是每行主标识，始终显示
+ */
+const showSpeakerCol = computed(() =>
+  !isArrayMode.value ||
+  (columnConfig.value === null
+    ? allColumns.value.some(f => f.key === 'speaker')
+    : columnConfig.value.cols.includes('speaker'))
+)
 
 /** 切换草稿中某个字段的勾选状态 */
 function toggleColumnDraft(key) {
@@ -356,18 +418,33 @@ function toggleColumnDraft(key) {
   else columnDraft.value.push(key)
 }
 
+/** 切换草稿中某个字段的「展开子字段」状态 */
+function toggleExpandDraft(key) {
+  columnExpandDraft.value = { ...columnExpandDraft.value, [key]: !columnExpandDraft.value[key] }
+}
+
 /** 打开显示列弹窗：未配置时草稿默认为全部字段；已配置时复制当前生效配置 */
 function openColumnConfig() {
   columnDraft.value = columnConfig.value === null
     ? allColumns.value.map(f => f.key)
-    : [...columnConfig.value]
+    : [...columnConfig.value.cols]
+  columnExpandDraft.value = columnConfig.value === null ? {} : { ...columnConfig.value.expand }
   columnModalVisible.value = true
 }
 
-/** 确认：草稿写入生效配置并持久化 */
+/** 确认：草稿按当前字段集签名写入，持久化后立即生效；不影响其他字段集的配置 */
 function confirmColumnConfig() {
-  columnConfig.value = [...columnDraft.value]
-  saveColumnConfig(columnConfig.value)
+  if (allColumns.value.length === 0) {
+    columnModalVisible.value = false
+    return
+  }
+  const configs = loadColumnConfigs()
+  configs[columnSignature.value] = {
+    cols: [...columnDraft.value],
+    expand: { ...columnExpandDraft.value }
+  }
+  saveColumnConfigs(configs)
+  columnConfigTick.value++
   columnModalVisible.value = false
 }
 
@@ -375,26 +452,31 @@ function confirmColumnConfig() {
 // 数据判断辅助函数
 // ============================================================
 
-/**
- * 判断一个值是否为 i18n 多语言对象
- * i18n 对象特征：非数组对象且含有 "zh" 键
- */
-function isI18nValue(value) {
-  return value && typeof value === 'object' &&
-    !Array.isArray(value) && getI18nMarker() in value
+/** 是否为纯对象（非数组、非 null） */
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-/** 某列是否为 i18n 字段：任一行的该字段是 i18n 值即视为 i18n 列 */
-function isI18nColumn(column) {
-  return entries.value.some(([, node]) => isI18nValue(node?.[column]))
+/** 某列是否配置为「展开子字段」模式 */
+function isExpandColumn(column) {
+  return columnConfig.value !== null && columnConfig.value.expand[column] === true
+}
+
+/** 展开列在所有行中对象键的并集（表头与输入框共用） */
+function expandKeys(column) {
+  const keys = new Set()
+  entries.value.forEach(([, node]) => {
+    const value = node?.[column]
+    if (isPlainObject(value)) Object.keys(value).forEach(key => keys.add(key))
+  })
+  return [...keys]
 }
 
 /**
- * 获取节点的说话人名称
- * 支持 { zh: '名称', en: 'name' } 对象格式和纯字符串格式
+ * 获取节点的说话人名称（纯字符串格式）
  */
 function speakerName(node) {
-  return typeof node?.speaker === 'object' ? (node.speaker.zh || '') : (node?.speaker || '')
+  return node?.speaker || ''
 }
 
 // ============================================================
@@ -459,18 +541,18 @@ async function showAddCustom() {
 }
 
 /**
- * 更新说话人名称
+ * 更新说话人名称（纯字符串）
  */
 function updateSpeaker(rowKey, value) {
-  const dataPath = [...currentPath.value, isArrayMode.value ? parseInt(rowKey) : rowKey, 'speaker', 'zh']
+  const dataPath = [...currentPath.value, isArrayMode.value ? parseInt(rowKey) : rowKey, 'speaker']
   storyStore.setByPath(dataPath, value)
 }
 
 /**
- * 更新 i18n 多语言字段
+ * 更新展开模式下的对象子字段
  */
-function updateI18nField(rowKey, field, language, value) {
-  const dataPath = [...currentPath.value, isArrayMode.value ? parseInt(rowKey) : rowKey, field, language]
+function updateSubField(rowKey, field, subKey, value) {
+  const dataPath = [...currentPath.value, isArrayMode.value ? parseInt(rowKey) : rowKey, field, subKey]
   storyStore.setByPath(dataPath, value)
 }
 
@@ -481,6 +563,14 @@ function updateSimpleField(rowKey, field, value) {
   const dataPath = [...currentPath.value, isArrayMode.value ? parseInt(rowKey) : rowKey, field]
   const finalValue = /^\d+$/.test(value) && !isNaN(value) ? Number(value) : value
   storyStore.setByPath(dataPath, finalValue)
+}
+
+/**
+ * 对象模式：直接更新某属性的值（路径即 当前路径 + 属性名；数字串自动转数字）
+ */
+function updatePropertyValue(rowKey, value) {
+  const finalValue = /^\d+$/.test(value) && !isNaN(value) ? Number(value) : value
+  storyStore.setByPath([...currentPath.value, rowKey], finalValue)
 }
 
 /**

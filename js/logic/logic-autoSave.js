@@ -116,15 +116,6 @@ export function start(store, fileName = '') {
   window.addEventListener('beforeunload', onBeforeUnload);
 }
 
-export function stop() {
-  clearTimeout(_debounceTimer);
-  clearInterval(_heartbeatTimer);
-  window.removeEventListener('beforeunload', onBeforeUnload);
-  _storeRef = null;
-  _currentStatus = Status.IDLE;
-  _savedVersion = -1;
-}
-
 function onBeforeUnload() {
   if (_storeRef && _storeRef._dataVersion > _savedVersion) {
     performSave();
@@ -144,12 +135,6 @@ export function getSavedDocument() {
 export function discardSavedDocument() {
   clearDocument();
   _savedVersion = -1;
-}
-
-// ---- 导出 JSON 后清除 ----
-
-export function onExported() {
-  discardSavedDocument();
 }
 
 // ---- 设置文件名 ----

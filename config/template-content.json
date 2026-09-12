@@ -5,8 +5,8 @@
     },
     "node": {
         "id": "",
-        "speaker": { "zh": "", "en": "" },
-        "text": { "zh": "", "en": "" },
+        "speaker": "",
+        "text": "",
         "headimage": "",
         "room": "",
         "bgm": "",
@@ -25,7 +25,7 @@
         "options": []
     },
     "option": {
-        "text": { "zh": "", "en": "" },
+        "text": "",
         "next": "",
         "showif": {},
         "actions": []
@@ -33,9 +33,9 @@
     "templates": {
         "meta": { "name": "" },
         "content": {
-            "speaker": { "zh": "", "en": "" },
+            "speaker": "",
             "headimage": "",
-            "text": { "zh": "", "en": "" },
+            "text": "",
             "room": "",
             "bgm": "",
             "transition": "",
@@ -44,7 +44,7 @@
             "voice": ""
         },
         "option": {
-            "text": { "zh": "", "en": "" },
+            "text": "",
             "next": "",
             "showif": {},
             "actions": []

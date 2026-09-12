@@ -41,7 +41,6 @@ import { ref, reactive, provide } from 'vue'
 import { useStoryStore } from '../../../../stores/storyStore.js'
 import TreeNode from './TreeNode.vue'
 import { useObjectAdd } from '../../../base_reusable/useObjectAdd.js'
-import { resolveTemplateContext, createNodeFromTemplate } from '../../../../js/logic/logic-storyTypes.js'
 import ConfirmDialog from '../../../base/ConfirmDialog.vue'
 
 const storyStore = useStoryStore()

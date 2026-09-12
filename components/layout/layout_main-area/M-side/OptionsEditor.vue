@@ -3,15 +3,14 @@
     <div class="section-title">选项 ({{ node.options.length }})</div>
     <div v-for="(opt, i) in node.options" :key="i" class="option-row">
       <span class="option-index">#{{ i }}</span>
-      <div class="option-i18n">
-        <div class="i18n-group">
+      <div class="option-block">
+        <div style="display:flex;gap:4px">
           <input
-            v-for="lang in activeLangs"
-            :key="lang"
-            class="my-input my-input-sm opt-text-lang"
-            :value="opt.text?.[lang] || ''"
-            :placeholder="'选项文本(' + lang + ')'"
-            @change="(e) => updateOptionText(i, lang, e.target.value)"
+            class="my-input my-input-sm opt-text"
+            :value="opt.text || ''"
+            placeholder="选项文本"
+            style="flex:1"
+            @change="(e) => updateOptionText(i, e.target.value)"
           />
         </div>
         <div style="display:flex;gap:4px;margin-top:4px">
@@ -45,7 +44,6 @@
 <script setup>
 import { computed } from 'vue'
 import { useStoryStore } from '../../../../stores/storyStore.js'
-import { getLanguages } from '../../../../js/logic/logic-storyTypes.js'
 import ActionEditor from './ActionEditor.vue'
 
 const props = defineProps({
@@ -53,11 +51,10 @@ const props = defineProps({
 })
 
 const storyStore = useStoryStore()
-const activeLangs = computed(() => getLanguages())
 const nodeId = computed(() => props.node?.id || '')
 
-function updateOptionText(optIdx, lang, val) {
-  const path = ['content', nodeId.value, 'options', String(optIdx), 'text', lang]
+function updateOptionText(optIdx, val) {
+  const path = ['content', nodeId.value, 'options', String(optIdx), 'text']
   storyStore.setByPath(path, val)
 }
 

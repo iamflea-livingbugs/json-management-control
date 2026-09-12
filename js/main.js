@@ -9,7 +9,6 @@ import App from '../components/App.vue';
 import { useStoryStore } from '../stores/storyStore.js';
 import { loadContentConfig } from './logic/logic-storyTypes.js';
 import * as io from './logic/logic-storyIO.js';
-import { runMigration } from './logic/logic-migration.js';
 import { start, notifyChange, hasSavedDocument, getSavedDocument, discardSavedDocument, setFileName } from './logic/logic-autoSave.js';
 import { showAlert, showConfirm } from '../components/base/useDialog.js';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -25,10 +24,7 @@ const app = createApp(App);
 app.use(createPinia());
 app.mount('#app');
 
-// step 1.5: 执行 localStorage 迁移（旧 key → 新三层结构）
-runMigration();
-
-// step 1.6: 检查自动保存数据，询问是否恢复
+// step 1.5: 检查自动保存数据，询问是否恢复
 (async function checkAutoSave() {
     if (hasSavedDocument()) {
         const saved = getSavedDocument();
